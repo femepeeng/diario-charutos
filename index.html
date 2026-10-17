@@ -129,6 +129,9 @@ input[type=range]{width:100%; accent-color:var(--ember); min-height:44px}
 .filebtn input{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; margin:0}
 .filebtn:focus-within{outline:2px solid var(--ember); outline-offset:2px}
 .withthumb{display:flex; gap:12px; min-width:0; align-items:flex-start}
+.durrow{display:grid; grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto; gap:10px; align-items:end}
+.durrow input{text-align:center; font-family:var(--f-mono); font-size:18px}
+input[type=number]{width:100%; min-height:44px; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg)}
 
 /* detalhe */
 .profile{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
@@ -381,12 +384,23 @@ function bandSlot(s){
   }
   return h+'</fieldset>';
 }
+function durMin(s){return Math.max(0,Math.round(elapsed(s)/60000));}
+function fmtDur(min){var h=Math.floor(min/60),m=min%60;return h?(h+' h'+(m?' '+m+' min':'')):(m+' min');}
+function setDuration(min){min=Math.max(1,Math.min(600,Math.round(min||0)));draft.timer={acc:min*60000,running:false,resumedAt:null};draft.durationMin=min;var c=document.getElementById('clock');if(c)c.textContent=fmtDur(min);return min;}
 function viewSession(){
-  var s=draft, run=s.timer&&s.timer.running;
+  var s=draft, run=s.timer&&s.timer.running, editing=s.status==='concluida';
   var steps=['1º terço','2º terço','3º terço','Fechamento'];
-  var h='<div class="sbar"><button class="btn small ghost" data-act="home" aria-label="Voltar ao início">Início</button><div class="who"><h2>'+esc(s.cigarName)+'</h2></div>'+
-    '<div class="tline"><div class="timer"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="16"></circle><circle class="prog" id="ring" cx="20" cy="20" r="16" stroke-dasharray="100.53" stroke-dashoffset="100.53"></circle></svg><span class="clock" id="clock">'+fmtClock(elapsed(s))+'</span></div><span class="ritmo">1 baforada por minuto</span>'+
+  var h='<div class="sbar"><button class="btn small ghost" data-act="home" aria-label="Voltar ao início">Início</button><div class="who"><h2>'+esc(s.cigarName)+'</h2></div>';
+  if(editing)h+='<div class="tline"><span class="eyebrow">Editando registro</span><span class="clock num" id="clock" style="margin-left:auto">'+fmtDur(durMin(s))+'</span></div></div>';
+  else h+='<div class="tline"><div class="timer"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="16"></circle><circle class="prog" id="ring" cx="20" cy="20" r="16" stroke-dasharray="100.53" stroke-dashoffset="100.53"></circle></svg><span class="clock" id="clock">'+fmtClock(elapsed(s))+'</span></div><span class="ritmo">1 baforada por minuto</span>'+
     '<button class="btn small" data-act="toggle">'+(run?'Pausar':'Retomar')+'</button></div></div>';
+  if(editing){var dm=durMin(s),hh=Math.floor(dm/60),mm=dm%60;
+    h+='<div class="panel"><fieldset><legend>Duração da sessão</legend><div class="durrow">'+
+      '<button type="button" class="btn" data-act="dur" data-val="-5" aria-label="Diminuir 5 minutos">−5</button>'+
+      '<label class="f" for="dur-h">Horas<input type="number" id="dur-h" min="0" max="10" inputmode="numeric" value="'+hh+'" data-input="dur"></label>'+
+      '<label class="f" for="dur-m">Minutos<input type="number" id="dur-m" min="0" max="59" inputmode="numeric" value="'+mm+'" data-input="dur"></label>'+
+      '<button type="button" class="btn" data-act="dur" data-val="5" aria-label="Aumentar 5 minutos">+5</button></div>'+
+      '<p class="faint" style="font-size:13px">Corrija aqui se o cronômetro ficou ligado ou foi pausado sem querer. Mínimo de 1 minuto.</p></fieldset></div>';}
   h+='<div class="panel"><fieldset><legend>Momento</legend>'+optBtns('moment',MOMENTS,s.moment)+'</fieldset><fieldset><legend>Bebida</legend>'+optBtns('drink',DRINKS,s.drink)+'</fieldset>'+bandSlot(s)+'</div>';
   h+='<div class="tabs" role="tablist">'+steps.map(function(t,i){return '<button role="tab" aria-selected="'+(state.step===i)+'" data-act="step" data-id="'+i+'">'+t+'</button>';}).join('')+'</div>';
   if(state.step<3){
@@ -406,7 +420,7 @@ function viewSession(){
     h+='<fieldset><legend>Nota geral</legend><div class="rating"><b class="num" id="ratingOut">'+(typeof s.rating==='number'?String(s.rating).replace('.',','):'—')+'</b><span class="muted">de 10</span></div><input type="range" id="rating" min="0" max="10" step="0.5" value="'+(typeof s.rating==='number'?s.rating:7)+'" data-input="rating" aria-label="Nota geral de 0 a 10"></fieldset>'+
       '<fieldset><legend>Recompraria?</legend>'+optBtns('rebuy',['Sim','Talvez','Não'],s.rebuy)+'</fieldset>'+
       '<label class="f" for="s-comment">Impressão final<textarea id="s-comment" data-input="comment" placeholder="ex.: cremoso do início ao fim; casou muito bem com o bourbon">'+esc(s.comment)+'</textarea></label>'+
-      '<div class="row"><button class="btn primary" data-act="finish">Encerrar e salvar sessão</button><button class="btn ghost" data-act="home">Salvar e continuar depois</button></div></div>';
+      (s.status==='concluida'?'<div class="row"><button class="btn primary" data-act="finish">Salvar alterações</button></div></div>':'<div class="row"><button class="btn primary" data-act="finish">Encerrar e salvar sessão</button><button class="btn ghost" data-act="home">Salvar e continuar depois</button></div></div>');
   }
   return h;
 }
@@ -439,7 +453,7 @@ function flush(){clearTimeout(saveTimer);if(!draft)return Promise.resolve();retu
 function leaveSession(){flush();draft=null;releaseWake();state.view='home';state.tab='acervo';render();window.scrollTo(0,0);}
 function startTick(){stopTick();tick=setInterval(updateClock,1000);updateClock();}
 function stopTick(){if(tick){clearInterval(tick);tick=null;}}
-function updateClock(){if(!draft)return;var ms=elapsed(draft),c=document.getElementById('clock'),r=document.getElementById('ring');if(c)c.textContent=fmtClock(ms);if(r)r.setAttribute('stroke-dashoffset',String(100.53*(1-((ms/1000)%60)/60)));}
+function updateClock(){if(!draft||draft.status==='concluida')return;var ms=elapsed(draft),c=document.getElementById('clock'),r=document.getElementById('ring');if(c)c.textContent=fmtClock(ms);if(r)r.setAttribute('stroke-dashoffset',String(100.53*(1-((ms/1000)%60)/60)));}
 function requestWake(){try{if(navigator.wakeLock&&navigator.wakeLock.request){navigator.wakeLock.request('screen').then(function(l){wakeLock=l;}).catch(function(){});}}catch(e){}}
 function releaseWake(){try{if(wakeLock)wakeLock.release();}catch(e){}wakeLock=null;}
 function compress(file){return new Promise(function(res){var url;try{url=URL.createObjectURL(file);}catch(e){res(file);return;}var img=new Image();
@@ -471,11 +485,13 @@ document.addEventListener('click',function(ev){
     case 'set': draft[field]=draft[field]===val?'':val; scheduleSave(); render(); break;
     case 'setnum': {var n=Number(val);if(field==='intensity'){var th=draft.thirds[state.step];th.intensity=th.intensity===n?0:n;}else draft[field]=draft[field]===n?0:n;scheduleSave();render();break;}
     case 'note': {var tt=draft.thirds[state.step],i=tt.notes.indexOf(val);if(i>=0)tt.notes.splice(i,1);else tt.notes.push(val);scheduleSave();render();break;}
+    case 'dur': {var nm=setDuration(durMin(draft)+Number(val));var ih=document.getElementById('dur-h'),im=document.getElementById('dur-m');if(ih)ih.value=Math.floor(nm/60);if(im)im.value=nm%60;scheduleSave();break;}
     case 'rmband': {var ob=draft.bandId;draft.bandId=null;flush();removePhoto(ob);render();toast('Foto removida');break;}
     case 'finish': {var tm=draft.timer;if(tm.running){tm.acc=(tm.acc||0)+(Date.now()-tm.resumedAt);tm.running=false;tm.resumedAt=null;}
-      draft.status='concluida';draft.endedAt=new Date().toISOString();draft.durationMin=Math.max(1,Math.round((tm.acc||0)/60000));
+      var wasDone=draft.status==='concluida';
+      draft.status='concluida';if(!wasDone||!draft.endedAt)draft.endedAt=new Date().toISOString();draft.durationMin=Math.max(1,Math.round((tm.acc||0)/60000));
       if(typeof draft.rating!=='number'){var r=document.getElementById('rating');draft.rating=r?Number(r.value):null;}
-      var sid=draft.id;flush().then(function(){toast('Sessão salva no diário');});draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);break;}
+      var sid=draft.id;flush().then(function(){toast(wasDone?'Alterações salvas':'Sessão salva no diário');});draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);break;}
     case 'detail': state.view='detail'; state.detailId=id; state.confirmDelete=false; render(); window.scrollTo(0,0); break;
     case 'askdel': state.confirmDelete=true; render(); break;
     case 'canceldel': state.confirmDelete=false; render(); break;
@@ -491,6 +507,7 @@ document.addEventListener('input',function(ev){
   var el=ev.target, k=el.getAttribute('data-input'); if(!k||!draft)return;
   if(k==='thirdText')draft.thirds[state.step].text=el.value;
   else if(k==='comment')draft.comment=el.value;
+  else if(k==='dur'){var hv=parseInt(document.getElementById('dur-h').value,10)||0,mv=parseInt(document.getElementById('dur-m').value,10)||0;if(hv*60+mv<1)return;setDuration(hv*60+mv);}
   else if(k==='rating'){draft.rating=Number(el.value);var o=document.getElementById('ratingOut');if(o)o.textContent=String(draft.rating).replace('.',',');}
   scheduleSave();
 });
