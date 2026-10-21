@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Diário de Degustação</title>
+<meta name="theme-color" content="#17110D">
+<meta name="color-scheme" content="dark light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: uma coluna para celular; cartões para charutos, sessões e posts do clube; cabeçalho fixo com cronômetro durante a sessão. Escuro por padrão (uso ao entardecer e à noite). */
+:root{
+  --bg:#17110D; --surface:#221912; --surface2:#2E231A; --line:#3E2F23;
+  --fg:#F2E8D8; --muted:#BBA98F; --faint:#93826B;
+  --ember:#E58A42; --ember-ink:#1A120C; --sand:#DDB66B;
+  --ok:#86B97F; --warn:#E3B84F; --bad:#E8735D;
+  --f-display:'Bricolage Grotesque', 'Trebuchet MS', sans-serif;
+  --f-body:'IBM Plex Sans', 'Segoe UI', Roboto, system-ui, sans-serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#F5EFE5; --surface:#FCF8F2; --surface2:#EDE3D3; --line:#DACDB8;
+  --fg:#2A1E15; --muted:#6B5945; --faint:#7E6C57;
+  --ember:#B4561A; --ember-ink:#FFF8F0; --sand:#8E6A1E;
+  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; color-scheme:light; } }
+:root[data-theme="light"]{
+  --bg:#F5EFE5; --surface:#FCF8F2; --surface2:#EDE3D3; --line:#DACDB8;
+  --fg:#2A1E15; --muted:#6B5945; --faint:#7E6C57;
+  --ember:#B4561A; --ember-ink:#FFF8F0; --sand:#8E6A1E;
+  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; color-scheme:light; }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--f-body); font-size:16px; line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-top:env(safe-area-inset-top, 0px); padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--bg)}
+img{max-width:100%}
+.wrap{max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:22px}
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0}
+h1{font-size:40px; font-weight:800; line-height:1; letter-spacing:-0.01em}
+h2{font-size:24px; font-weight:800}
+h3,.h3{font-family:var(--f-display); font-size:19px; font-weight:600; display:block}
+p{margin:0}
+.eyebrow{font-family:var(--f-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ember)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+button{font:inherit; color:inherit; cursor:pointer}
+button:disabled{opacity:.55; cursor:default}
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{outline:2px solid var(--ember); outline-offset:2px}
+
+header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
+.mode{font-size:13px; color:var(--faint); display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.sdot{width:8px; height:8px; border-radius:50%; background:var(--faint); flex-shrink:0}
+.sdot.ok{background:var(--ok)} .sdot.warn{background:var(--warn)} .sdot.bad{background:var(--bad)}
+
+.btn{min-height:44px; padding:10px 18px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface2); font-weight:600; text-decoration:none; color:var(--fg); display:inline-flex; align-items:center; justify-content:center; gap:8px}
+.btn.primary{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:var(--bad); color:var(--bad); background:transparent}
+.btn.small{min-height:36px; padding:6px 12px; font-size:14px}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.linkbtn{background:none; border:0; padding:0; color:var(--ember); font-weight:600; text-decoration:underline; text-underline-offset:3px}
+
+.tabs{display:flex; gap:4px; padding:4px; background:var(--surface); border-radius:14px; border:1px solid var(--line); overflow-x:auto; scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:1 0 auto; min-height:42px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
+.tabs button[aria-selected="true"]{background:var(--surface2); color:var(--fg)}
+.minitabs{display:flex; gap:6px}
+.minitabs button{flex:1; min-height:40px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
+.minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
+
+.stats{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
+.stat{padding:14px; border-radius:14px; background:var(--surface); display:flex; flex-direction:column; gap:2px; min-width:0}
+.stat b{font-family:var(--f-display); font-size:26px; font-weight:800; line-height:1.1; overflow-wrap:anywhere}
+.stat span{font-size:13px; color:var(--muted)}
+
+.list{display:flex; flex-direction:column; gap:12px}
+.card{padding:16px 18px; border-radius:16px; background:var(--surface); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px; min-width:0}
+.card.live{border-color:var(--ember)}
+.card .head{display:flex; justify-content:space-between; gap:12px; align-items:flex-start}
+.card .meta, .meta{font-size:14px; color:var(--muted)}
+.chip{display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:var(--surface2); font-size:13px; color:var(--fg); white-space:nowrap}
+.chip.st-cesta{color:var(--sand)} .chip.st-estoque{color:var(--ok)} .chip.st-hist{color:var(--muted)}
+.tags{display:flex; flex-wrap:wrap; gap:6px}
+.meter{display:flex; gap:3px} .meter i{width:16px; height:7px; border-radius:2px; background:var(--line)} .meter i.on{background:var(--ember)}
+.score{font-family:var(--f-display); font-weight:800; font-size:30px; line-height:1; color:var(--ember)}
+.empty{padding:22px; border-radius:16px; border:1.5px dashed var(--line); color:var(--muted); display:flex; flex-direction:column; gap:10px}
+.banner{padding:14px 16px; border-radius:14px; border:1.5px solid var(--warn); display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+
+/* clube */
+.phead{display:flex; gap:12px; align-items:center}
+.phead .who{flex:1; min-width:0}
+.phead b{font-weight:600}
+.avatar{width:40px; height:40px; border-radius:50%; background:var(--surface2); color:var(--ember); display:inline-flex; align-items:center; justify-content:center; font-family:var(--f-display); font-weight:800; font-size:18px; flex-shrink:0; border:1.5px solid var(--line)}
+.avatar.sm{width:30px; height:30px; font-size:14px}
+.plink{background:none; border:0; padding:0; text-align:left; color:var(--fg)}
+.like[aria-pressed="true"]{border-color:var(--ember); color:var(--ember)}
+.like[aria-pressed="true"] svg{fill:var(--ember)}
+.comments{display:flex; flex-direction:column; gap:12px}
+.cmt{display:flex; gap:10px; align-items:flex-start}
+.cmt .body{flex:1; min-width:0; background:var(--surface); border-radius:12px; padding:10px 12px}
+.cmt .body p{overflow-wrap:anywhere; white-space:pre-wrap}
+.badge{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted)}
+
+/* sessão */
+.sbar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:var(--bg); padding-block:12px 10px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px}
+.sbar .who{flex:1; min-width:0}
+.sbar .who h2{font-size:20px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tline{flex-basis:100%; display:flex; align-items:center; gap:10px}
+.tline .btn{margin-left:auto}
+.timer{display:flex; align-items:center; gap:8px}
+.timer .clock, .clock{font-family:var(--f-mono); font-size:22px; font-variant-numeric:tabular-nums}
+.ring{width:36px; height:36px; flex-shrink:0}
+.ring circle{fill:none; stroke-width:4}
+.ring .track{stroke:var(--line)} .ring .prog{stroke:var(--ember); stroke-linecap:round; transform:rotate(-90deg); transform-origin:50% 50%}
+.ritmo{font-size:12px; color:var(--faint)}
+fieldset{border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; min-width:0}
+legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
+.opts{display:flex; flex-wrap:wrap; gap:8px}
+.opt{min-height:40px; padding:7px 13px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); font-size:15px; display:inline-flex; align-items:center; gap:7px}
+.opt[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink); font-weight:600}
+.dot{width:10px; height:10px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.fam{display:flex; flex-direction:column; gap:6px}
+.fam .lbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.seg{display:flex; gap:6px}
+.seg button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); font-family:var(--f-mono); font-size:16px}
+.seg button[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
+.scale{display:flex; justify-content:space-between; font-size:12px; color:var(--faint)}
+textarea, input[type=text], input[type=email], input[type=password], input[type=number], select{width:100%; min-height:44px; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg); font:inherit}
+textarea{min-height:84px; resize:vertical}
+label.f{display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--muted)}
+label.check{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--fg)}
+label.check input{width:22px; height:22px; margin:1px 0 0; accent-color:var(--ember); flex-shrink:0}
+input[type=range]{width:100%; accent-color:var(--ember); min-height:44px}
+.rating{display:flex; align-items:baseline; gap:6px}
+.rating b{font-family:var(--f-display); font-size:44px; font-weight:800; color:var(--ember); line-height:1}
+.panel{padding:16px 18px; border-radius:14px; background:var(--surface); display:flex; flex-direction:column; gap:18px}
+.alert{padding:14px 16px; border-radius:12px; border:1.5px solid var(--warn); color:var(--fg); display:flex; flex-direction:column; gap:4px; font-size:15px}
+.alert b{color:var(--warn)}
+.alert.err{border-color:var(--bad)} .alert.err b{color:var(--bad)}
+.hint{font-size:14px; color:var(--muted); padding:12px 14px; border-radius:12px; background:var(--surface2)}
+details.terms{font-size:14px; color:var(--muted)}
+details.terms summary{cursor:pointer; color:var(--fg); font-weight:600}
+details.terms div{display:flex; flex-direction:column; gap:8px; padding-top:10px}
+
+/* fotos da anilha */
+.band{display:block; width:100%; max-width:100%; aspect-ratio:16/10; object-fit:contain; background:var(--surface2); border-radius:12px; border:1px solid var(--line)}
+.band.thumb{width:84px; aspect-ratio:4/3; object-fit:cover; flex-shrink:0; border-radius:10px}
+.band.cmpimg{aspect-ratio:4/3; object-fit:cover}
+.bandslot{display:flex; flex-direction:column; gap:10px}
+.filebtn{position:relative; overflow:hidden; display:inline-flex; align-items:center; gap:8px}
+.filebtn input{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; margin:0}
+.filebtn:focus-within{outline:2px solid var(--ember); outline-offset:2px}
+.withthumb{display:flex; gap:12px; min-width:0; align-items:flex-start}
+.durrow{display:grid; grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto; gap:10px; align-items:end}
+.durrow input{text-align:center; font-family:var(--f-mono); font-size:18px}
+
+/* detalhe */
+.profile{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
+.third{padding:14px 12px; border-radius:14px; background:var(--surface); display:flex; flex-direction:column; gap:10px; min-width:0}
+.bar{height:80px; display:flex; align-items:flex-end; border-bottom:1.5px solid var(--line)}
+.bar i{display:block; width:100%; border-radius:6px 6px 0 0; background:var(--ember)}
+.third .tags .chip{font-size:12px; padding:2px 8px}
+.facts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px}
+.fact{padding:12px 14px; border-radius:12px; background:var(--surface); min-width:0}
+.fact span{display:block; font-size:12px; color:var(--faint); font-family:var(--f-mono); letter-spacing:.08em; text-transform:uppercase}
+.fact b{font-weight:600; overflow-wrap:anywhere}
+.cmp{overflow-x:auto}
+.cmp table{width:100%; border-collapse:collapse; font-size:14px; min-width:420px}
+.cmp th, .cmp td{text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top}
+.cmp th{color:var(--faint); font-weight:500; width:28%}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px}
+.kv dt{color:var(--faint)} .kv dd{margin:0; font-weight:600; overflow-wrap:anywhere}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(20px + env(safe-area-inset-bottom, 0px)); background:var(--fg); color:var(--bg); padding:10px 16px; border-radius:12px; font-weight:600; z-index:20; max-width:calc(100% - 32px)}
+@media (max-width:420px){ h1{font-size:34px} .stat b{font-size:21px} .timer .clock{font-size:18px} .facts{grid-template-columns:1fr} .tabs button{font-size:14px; padding:0 8px} }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite">
+  <header class="top">
+    <div class="eyebrow">Charutos · paladar e sensações</div>
+    <h1>Diário de Degustação</h1>
+    <p class="mode">Carregando seus registros…</p>
+  </header>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script>
+(function(){
+'use strict';
+var APP_ID='diario-degustacao', BACKUP_VERSION=1;
+var FAMILIES=[
+  {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo']},
+  {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
+  {id:'madeira',label:'Madeira',color:'#A6713F',notes:['Cedro','Carvalho','Tostado']},
+  {id:'terra',label:'Terra',color:'#7F6B4F',notes:['Terroso','Couro','Feno']},
+  {id:'cacau',label:'Cacau e café',color:'#6A4330',notes:['Cacau','Café','Chocolate amargo']},
+  {id:'especiaria',label:'Especiarias',color:'#CF6339',notes:['Pimenta','Canela','Cravo']},
+  {id:'fruta',label:'Fruta e flor',color:'#B9A646',notes:['Frutas secas','Cítrico','Floral']}
+];
+var NOTE_COLOR={}; FAMILIES.forEach(function(f){f.notes.forEach(function(n){NOTE_COLOR[n]=f.color;});});
+var MOMENTS=['Pós-almoço','Entardecer','Fim de noite'];
+var DRINKS=['Café','Água de coco','Caipirinha','Whisky','Rum','Cachaça envelhecida','Água','Outra'];
+var STATUS={cesta:['Na cesta','st-cesta'],estoque:['Em estoque','st-estoque'],historico:['Histórico','st-hist']};
+var CAMERA_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>';
+var GALLERY_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M20.5 16l-5-5-8 8.5"></path></svg>';
+var HEART_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>';
+var CHAT_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>';
+var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 anos registrarem e compartilharem degustações de charutos.</p>'+
+  '<p>Para o app funcionar guardamos no Supabase: seu nome de exibição, e-mail, senha (criptografada pelo Supabase), sessões, curtidas, comentários e fotos de anilhas. Sessões marcadas como "Só eu" não aparecem para outros membros.</p>'+
+  '<p>Não é permitido anunciar, vender, divulgar preços, lojas ou links de compra de produtos de tabaco.</p>'+
+  '<p>Você pode excluir sua conta e todos os seus dados do clube a qualquer momento em Conta › Excluir minha conta. O diário guardado no seu celular continua com você.</p>'+
+  '<p>Dúvidas ou pedidos sobre seus dados: fale com o administrador do clube.</p>';
+
+var state={cigars:[],sessions:[],view:'home',tab:'acervo',detailId:null,postUid:null,step:0,cmpA:'',cmpB:'',confirmDelete:false,addOpen:false,loaded:false,dbError:false,confirm:''};
+var draft=null, saveTimer=null, tick=null, wakeLock=null, installPrompt=null;
+var photoURL={}, busy={uploading:false,importing:false,persisted:null};
+
+/* ---------- utilidades ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function uid(){try{return crypto.randomUUID().replace(/-/g,'').slice(0,20);}catch(e){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function toast(msg){var t=document.getElementById('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){t.hidden=true;},3000);}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return '';}}
+function fmtDateTime(iso){try{return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+function relTime(iso){var t=Date.parse(iso);if(!t)return '';var d=(Date.now()-t)/1000;if(d<60)return 'agora';if(d<3600)return 'há '+Math.floor(d/60)+' min';if(d<86400)return 'há '+Math.floor(d/3600)+' h';if(d<172800)return 'ontem';return fmtDate(iso);}
+function fmtClock(ms){var s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;function p(n){return (n<10?'0':'')+n;}return (h?h+':'+p(m):p(m))+':'+p(ss);}
+function elapsed(s){if(!s||!s.timer)return 0;var t=s.timer;return (t.acc||0)+(t.running&&t.resumedAt?Date.now()-t.resumedAt:0);}
+function cigarById(id){for(var i=0;i<state.cigars.length;i++)if(state.cigars[i].id===id)return state.cigars[i];return null;}
+function sessionById(id){for(var i=0;i<state.sessions.length;i++)if(state.sessions[i].id===id)return state.sessions[i];return null;}
+function done(){return state.sessions.filter(function(s){return s.status==='concluida';});}
+function openSession(){for(var i=0;i<state.sessions.length;i++)if(state.sessions[i].status==='aberta')return state.sessions[i];return null;}
+function meter(n){var h='<span class="meter" role="img" aria-label="Força '+(n||0)+' de 5">';for(var i=1;i<=5;i++)h+='<i class="'+(i<=n?'on':'')+'"></i>';return h+'</span>';}
+function strengthLabel(n){return ['—','Suave','Suave-médio','Médio','Médio-encorpado','Encorpado'][n||0]||'—';}
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null){localStorage.removeItem(k);return null;}localStorage.setItem(k,v);}catch(e){return null;}}
+function bandImg(id,cls,alt){var u=photoURL[id];if(!u)return '';return '<img class="band '+(cls||'')+'" src="'+u+'" alt="'+esc(alt||'Foto da anilha')+'">';}
+function bandOfCigar(cid){for(var i=0;i<state.sessions.length;i++){var s=state.sessions[i];if(s.cigarId===cid&&s.bandId&&photoURL[s.bandId])return s.bandId;}var c=cigarById(cid);return (c&&c.bandId&&photoURL[c.bandId])?c.bandId:null;}
+function numStr(n){return String(n).replace('.',',');}
+function initials(name){var s=String(name||'?').trim();return esc(s?s.charAt(0).toUpperCase():'?');}
+function topNotes(thirds,max){var c={};(thirds||[]).forEach(function(t){(t&&t.notes||[]).forEach(function(n){c[n]=(c[n]||0)+1;});});return Object.keys(c).sort(function(a,b){return c[b]-c[a];}).slice(0,max||5);}
+function noteChip(n){return '<span class="chip"><span class="dot" style="background:'+(NOTE_COLOR[n]||'#999')+'"></span>'+esc(n)+'</span>';}
+
+/* ---------- armazenamento local (IndexedDB) ---------- */
+var idb=null;
+function openDB(){return new Promise(function(res,rej){if(!window.indexedDB){rej(new Error('sem IndexedDB'));return;}var r=indexedDB.open(APP_ID,2);
+  r.onupgradeneeded=function(){var d=r.result;['cigars','sessions','photos','tombstones'].forEach(function(n){if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:'id'});});};
+  r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};r.onblocked=function(){rej(new Error('bloqueado'));};});}
+function tx(store,mode,fn){return new Promise(function(res,rej){if(!idb){res(undefined);return;}var t,out;try{t=idb.transaction(store,mode);}catch(e){rej(e);return;}var rq=fn(t.objectStore(store));if(rq)rq.onsuccess=function(){out=rq.result;};
+  t.oncomplete=function(){res(out);};t.onerror=function(){rej(t.error);};t.onabort=function(){rej(t.error||new Error('abortado'));};});}
+function getAll(n){return tx(n,'readonly',function(s){return s.getAll();}).then(function(r){return r||[];});}
+function getRec(n,id){return tx(n,'readonly',function(s){return s.get(id);});}
+function putRec(n,o){return tx(n,'readwrite',function(s){return s.put(o);});}
+function delRec(n,id){return tx(n,'readwrite',function(s){return s.delete(id);});}
+function clearStore(n){return tx(n,'readwrite',function(s){return s.clear();});}
+function saveErr(e){var q=e&&(e.name==='QuotaExceededError');toast(q?'Sem espaço no celular para salvar. Libere espaço ou remova fotos antigas.':'Não foi possível salvar. Tente de novo.');}
+
+function sortAll(){state.cigars.sort(function(a,b){return (a.order||999)-(b.order||999)||String(a.name).localeCompare(b.name);});state.sessions.sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));});}
+function upsertState(col,obj){var arr=col==='cigars'?state.cigars:state.sessions;var i=arr.findIndex(function(x){return x.id===obj.id;});if(i>=0)arr[i]=clone(obj);else arr.push(clone(obj));sortAll();}
+function put(col,obj){obj.updatedAt=Date.now();upsertState(col,obj);ls('diario-dirty',String(Date.now()));scheduleSync();return putRec(col,clone(obj)).catch(saveErr);}
+function removeSession(id){var s=sessionById(id);state.sessions=state.sessions.filter(function(x){return x.id!==id;});ls('diario-dirty',String(Date.now()));
+  return Promise.all([delRec('sessions',id),putRec('tombstones',{id:'sessions:'+id,col:'sessions',localId:id,photo:s&&s.bandId||null})]).then(scheduleSync).catch(saveErr);}
+function removePhoto(id){if(!id)return;if(photoURL[id]){try{URL.revokeObjectURL(photoURL[id]);}catch(e){}delete photoURL[id];}
+  getRec('photos',id).then(function(p){if(p&&p.remote)putRec('tombstones',{id:'photo:'+id,col:'photo',photo:id}).then(scheduleSync);return delRec('photos',id);}).catch(function(){});}
+function addPhoto(blob){var id=uid();return putRec('photos',{id:id,blob:blob,type:blob.type||'image/jpeg',createdAt:new Date().toISOString()}).then(function(){photoURL[id]=URL.createObjectURL(blob);scheduleSync();return id;});}
+
+function loadAll(){return Promise.all([getAll('cigars'),getAll('sessions'),getAll('photos')]).then(function(r){
+  state.cigars=r[0];state.sessions=r[1];
+  var keep={};r[2].forEach(function(p){keep[p.id]=1;});
+  Object.keys(photoURL).forEach(function(k){if(!keep[k]){try{URL.revokeObjectURL(photoURL[k]);}catch(e){}delete photoURL[k];}});
+  r[2].forEach(function(p){if(p.blob&&!photoURL[p.id])photoURL[p.id]=URL.createObjectURL(p.blob);});
+  sortAll();state.loaded=true;});}
+
+/* =====================================================================
+   CLUBE (Supabase)
+   ===================================================================== */
+var CFG=window.CLUBE_CONFIG||{};
+var cloud={configured:!!(CFG.url&&CFG.key&&window.supabase&&window.supabase.createClient),sb:null,user:null,profile:null,profileChecked:false,
+  status:'idle',statusDetail:'',lastSync:Number(ls('clube-last-sync')||0),feed:[],likes:{},comments:{},feedAt:0,feedLoading:false,feedError:'',
+  authMode:'entrar',authBusy:false,authMsg:'',inviteLink:'',ownerMismatch:false,commentBusy:false,_loginFor:null,photoReq:{}};
+(function(){try{var c=JSON.parse(ls('clube-feed')||'null');if(c){cloud.feed=c.items||[];cloud.likes=c.likes||{};cloud.comments=c.comments||{};cloud.feedAt=c.at||0;}}catch(e){}
+  try{var p=JSON.parse(ls('clube-profile')||'null');if(p)cloud.profile=p;}catch(e){}})();
+var inviteCode=(function(){var q=null;try{q=new URLSearchParams(location.search).get('convite');}catch(e){}
+  if(q){ls('clube-convite',q.trim().toUpperCase());try{history.replaceState(null,'',location.pathname);}catch(e){}state.tab='conta';cloud.authMode='criar';}
+  return ls('clube-convite')||'';})();
+var syncing=false, syncAgain=false, syncTimer=null, renderTimer=null;
+
+function isMember(){return !!(cloud.sb&&cloud.user&&cloud.profile&&cloud.profile.id===cloud.user.id);}
+function isDirty(r){return !r.syncedAt||(r.updatedAt||0)>r.syncedAt;}
+function rerender(){if(state.view==='session')return;clearTimeout(renderTimer);renderTimer=setTimeout(render,30);}
+function setStatus(s,detail){cloud.status=s;cloud.statusDetail=detail||'';rerender();}
+function scheduleSync(){if(!cloud.configured)return;clearTimeout(syncTimer);syncTimer=setTimeout(sync,2500);}
+function canSync(){return isMember()&&!cloud.ownerMismatch&&!!idb&&navigator.onLine!==false;}
+function authErr(e){var m=String(e&&(e.message||e.error_description||e)||'');
+  if(/invalid login credentials/i.test(m))return 'E-mail ou senha incorretos.';
+  if(/already registered|already been registered|user_already_exists/i.test(m))return 'Este e-mail já tem conta. Use "Entrar".';
+  if(/password should be at least|weak_password/i.test(m))return 'A senha precisa ter pelo menos 6 caracteres.';
+  if(/invalid_invite/i.test(m))return 'Convite inválido ou esgotado. Peça um novo link ao administrador do clube.';
+  if(/must_be_adult/i.test(m))return 'O clube é exclusivo para maiores de 18 anos.';
+  if(/terms_required/i.test(m))return 'É preciso aceitar as regras do clube.';
+  if(/email.*invalid|invalid.*email/i.test(m))return 'E-mail inválido.';
+  if(/not_admin/i.test(m))return 'Só o administrador pode gerar convites.';
+  if(/fetch|network|failed to/i.test(m))return 'Sem conexão com o clube. Verifique a internet.';
+  if(/rate limit|too many/i.test(m))return 'Muitas tentativas. Aguarde alguns minutos.';
+  return 'Erro: '+m;}
+
+function cloudInit(){
+  if(!cloud.configured)return;
+  try{cloud.sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});}catch(e){cloud.configured=false;return;}
+  /* O callback roda dentro da trava de autenticação do supabase-js: adiar qualquer chamada ao banco evita travamento. */
+  cloud.sb.auth.onAuthStateChange(function(evt,session){var u=session?session.user:null;
+    if((u&&u.id)!==(cloud.user&&cloud.user.id)){cloud.user=u;setTimeout(function(){if(cloud.user)afterLogin();else{cloud._loginFor=null;cloud.profileChecked=true;rerender();}},0);}});
+  cloud.sb.auth.getSession().then(function(r){var s=r&&r.data&&r.data.session;cloud.user=s?s.user:null;if(cloud.user)afterLogin();else{cloud.profileChecked=true;cloud.profile=null;rerender();}})
+    .catch(function(){cloud.profileChecked=true;rerender();});
+}
+function afterLogin(){
+  var u=cloud.user;if(!u||cloud._loginFor===u.id)return Promise.resolve();cloud._loginFor=u.id;
+  return loadProfile().then(function(){if(isMember()){checkOwner();sync();loadFeed();}rerender();});
+}
+function loadProfile(){
+  var seq=cloud._profSeq=(cloud._profSeq||0)+1;
+  return cloud.sb.from('profiles').select('id,display_name,is_admin').eq('id',cloud.user.id).maybeSingle().then(function(r){
+    if(seq!==cloud._profSeq)return;
+    if(r.error)throw r.error;cloud.profile=r.data||null;cloud.profileChecked=true;
+    if(cloud.profile)ls('clube-profile',JSON.stringify(cloud.profile));else ls('clube-profile',null);
+  }).catch(function(){if(seq!==cloud._profSeq)return;var c=null;try{c=JSON.parse(ls('clube-profile')||'null');}catch(e){}cloud.profile=(c&&c.id===cloud.user.id)?c:null;cloud.profileChecked=true;});
+}
+function checkOwner(){var owner=ls('clube-owner');cloud.ownerMismatch=!!(owner&&owner!==cloud.user.id&&(state.sessions.length||state.cigars.length));}
+
+/* ---- mapeamento local <-> nuvem ---- */
+function nz(v){return (v===''||v===undefined)?null:v;}
+function stamp(r){return r.updatedAt||Date.parse(r.createdAt||'')||Date.now();}
+function sessionRow(s,u){return {owner_id:u,local_id:s.id,cigar_local_id:nz(s.cigarId),cigar_name:s.cigarName||'Charuto',status:s.status==='concluida'?'concluida':'aberta',
+  visibility:s.visibility==='private'?'private':'club',started_at:nz(s.createdAt),ended_at:nz(s.endedAt),moment:nz(s.moment),drink:nz(s.drink),thirds:s.thirds||[],
+  strength:s.strength||null,burn:nz(s.burn),draw:nz(s.draw),feel:nz(s.feel),rating:typeof s.rating==='number'?s.rating:null,rebuy:nz(s.rebuy),comment:nz(s.comment),
+  duration_min:s.durationMin||null,timer:s.timer||null,band_photo:nz(s.bandId),client_updated_at:stamp(s),updated_at:new Date().toISOString()};}
+function rowToSession(r){var t=r.client_updated_at||Date.now();return {id:r.local_id,cigarId:r.cigar_local_id||'',cigarName:r.cigar_name,status:r.status,visibility:r.visibility,
+  createdAt:r.started_at||new Date(t).toISOString(),endedAt:r.ended_at||null,moment:r.moment||'',drink:r.drink||'',
+  thirds:(r.thirds&&r.thirds.length)?r.thirds:[{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''}],
+  strength:r.strength||0,burn:r.burn||'',draw:r.draw||'',feel:r.feel||'',rating:r.rating==null?null:Number(r.rating),rebuy:r.rebuy||'',comment:r.comment||'',
+  timer:r.timer||{acc:(r.duration_min||0)*60000,running:false,resumedAt:null},durationMin:r.duration_min||0,bandId:r.band_photo||null,updatedAt:t,syncedAt:t};}
+function cigarRow(c,u){return {owner_id:u,local_id:c.id,name:c.name||'Charuto',origin:nz(c.origin),vitola:nz(c.vitola),strength:c.strength||null,status:nz(c.status),
+  expected:nz(c.expected),pairing:nz(c.pairing),sort_order:c.order||null,band_photo:nz(c.bandId),client_updated_at:stamp(c),updated_at:new Date().toISOString()};}
+function rowToCigar(r){var t=r.client_updated_at||Date.now();return {id:r.local_id,name:r.name,origin:r.origin||'',vitola:r.vitola||'',strength:r.strength||0,status:r.status||'historico',
+  expected:r.expected||'',pairing:r.pairing||'',order:r.sort_order||999,bandId:r.band_photo||null,updatedAt:t,syncedAt:t};}
+
+/* ---- sincronização (o celular é a fonte; a nuvem é cópia e vitrine do clube) ---- */
+function sync(){
+  if(!canSync()){if(isMember()&&navigator.onLine===false)setStatus('offline');return Promise.resolve();}
+  if(syncing){syncAgain=true;return Promise.resolve();}
+  syncing=true;setStatus('syncing');
+  var sb=cloud.sb,u=cloud.user.id;
+  return (async function(){
+    ls('clube-owner',u);
+    var refs={};state.sessions.forEach(function(s){if(s.bandId)refs[s.bandId]=1;});state.cigars.forEach(function(c){if(c.bandId)refs[c.bandId]=1;});
+    var photos=await getAll('photos');
+    for(var i=0;i<photos.length;i++){var p=photos[i];if(p.foreign||p.remote||!refs[p.id])continue;
+      var up=await sb.storage.from('bands').upload(u+'/'+p.id+'.jpg',p.blob,{upsert:true,contentType:p.type||'image/jpeg'});
+      if(up.error)throw up.error;p.remote=true;await putRec('photos',p);}
+    var tombs=await getAll('tombstones');
+    for(var j=0;j<tombs.length;j++){var t=tombs[j];
+      if(t.col==='photo'){await sb.storage.from('bands').remove([u+'/'+t.photo+'.jpg']);}
+      else{var d=await sb.from(t.col).delete().eq('owner_id',u).eq('local_id',t.localId);if(d.error)throw d.error;
+        if(t.photo)await sb.storage.from('bands').remove([u+'/'+t.photo+'.jpg']);}
+      await delRec('tombstones',t.id);}
+    var dc=state.cigars.filter(isDirty),ds=state.sessions.filter(isDirty);
+    if(dc.length){var rc=await sb.from('cigars').upsert(dc.map(function(c){return cigarRow(c,u);}),{onConflict:'owner_id,local_id'});if(rc.error)throw rc.error;}
+    if(ds.length){var rs=await sb.from('sessions').upsert(ds.map(function(s){return sessionRow(s,u);}),{onConflict:'owner_id,local_id'});if(rs.error)throw rs.error;}
+    for(var a=0;a<dc.length;a++){var cur=await getRec('cigars',dc[a].id);if(cur&&cur.updatedAt===dc[a].updatedAt){cur.syncedAt=stamp(cur);await putRec('cigars',cur);}}
+    for(var b=0;b<ds.length;b++){var cs=await getRec('sessions',ds[b].id);if(cs&&cs.updatedAt===ds[b].updatedAt){cs.syncedAt=stamp(cs);await putRec('sessions',cs);}}
+    await loadAll();
+    var pc=await sb.from('cigars').select('*').eq('owner_id',u);if(pc.error)throw pc.error;
+    var ps=await sb.from('sessions').select('*').eq('owner_id',u);if(ps.error)throw ps.error;
+    await mergeRemote('cigars',pc.data||[],rowToCigar);
+    await mergeRemote('sessions',ps.data||[],rowToSession);
+    await loadAll();
+    var need=[];state.sessions.concat(state.cigars).forEach(function(r){if(r.bandId&&!photoURL[r.bandId]&&need.indexOf(r.bandId)<0)need.push(r.bandId);});
+    for(var k=0;k<need.length;k++){var dl=await sb.storage.from('bands').download(u+'/'+need[k]+'.jpg');
+      if(!dl.error&&dl.data){await putRec('photos',{id:need[k],blob:dl.data,type:dl.data.type||'image/jpeg',remote:true,createdAt:new Date().toISOString()});}}
+    if(need.length)await loadAll();
+    cloud.lastSync=Date.now();ls('clube-last-sync',String(cloud.lastSync));
+  })().then(function(){syncing=false;setStatus('ok');if(syncAgain){syncAgain=false;scheduleSync();}if(state.tab==='clube')loadFeed();})
+    .catch(function(e){syncing=false;setStatus(navigator.onLine===false?'offline':'error',authErr(e));});
+}
+async function mergeRemote(col,rows,conv){
+  var local={};(col==='cigars'?state.cigars:state.sessions).forEach(function(r){local[r.id]=r;});
+  var seen={};
+  for(var i=0;i<rows.length;i++){var r=conv(rows[i]);seen[r.id]=1;var l=local[r.id];
+    if(draft&&draft.id===r.id)continue;
+    if(!l||(!isDirty(l)&&(r.updatedAt||0)>(l.updatedAt||0)))await putRec(col,r);}
+  if(rows.length<1000){var ids=Object.keys(local);for(var j=0;j<ids.length;j++){var x=local[ids[j]];
+    if(!seen[x.id]&&x.syncedAt&&!isDirty(x)&&!(draft&&draft.id===x.id))await delRec(col,x.id);}}
+}
+function resetSyncFlags(){return Promise.all([getAll('cigars'),getAll('sessions'),getAll('photos')]).then(function(r){
+  var ops=[];r[0].forEach(function(c){delete c.syncedAt;ops.push(putRec('cigars',c));});r[1].forEach(function(s){delete s.syncedAt;ops.push(putRec('sessions',s));});
+  r[2].forEach(function(p){if(!p.foreign){delete p.remote;ops.push(putRec('photos',p));}});return Promise.all(ops).then(function(){return clearStore('tombstones');});}).then(loadAll);}
+
+/* ---- feed ---- */
+var FEED_COLS='uid,owner_id,local_id,cigar_name,started_at,ended_at,moment,drink,thirds,strength,rating,rebuy,comment,duration_min,band_photo,burn,draw,feel,profiles(display_name)';
+function loadFeed(){
+  if(!isMember()||cloud.feedLoading)return Promise.resolve();
+  cloud.feedLoading=true;rerender();var sb=cloud.sb;
+  return (async function(){
+    var r=await sb.from('sessions').select(FEED_COLS).eq('visibility','club').eq('status','concluida').order('ended_at',{ascending:false}).limit(60);
+    if(r.error)throw r.error;var items=r.data||[],ids=items.map(function(x){return x.uid;}),likes={},comments={};
+    if(ids.length){
+      var rr=await sb.from('reactions').select('session_uid,user_id').in('session_uid',ids);if(rr.error)throw rr.error;
+      (rr.data||[]).forEach(function(x){(likes[x.session_uid]=likes[x.session_uid]||[]).push(x.user_id);});
+      var rc=await sb.from('comments').select('id,session_uid,user_id,body,created_at,profiles(display_name)').in('session_uid',ids).order('created_at',{ascending:true});if(rc.error)throw rc.error;
+      (rc.data||[]).forEach(function(x){(comments[x.session_uid]=comments[x.session_uid]||[]).push(x);});}
+    cloud.feed=items;cloud.likes=likes;cloud.comments=comments;cloud.feedAt=Date.now();cloud.feedError='';
+    ls('clube-feed',JSON.stringify({items:items,likes:likes,comments:comments,at:cloud.feedAt}));
+  })().then(function(){cloud.feedLoading=false;rerender();fetchFeedPhotos();})
+    .catch(function(e){cloud.feedLoading=false;cloud.feedError=navigator.onLine===false?'Sem internet. Mostrando o último feed carregado.':authErr(e);rerender();});
+}
+function feedPhotoKey(it){if(!it.band_photo)return null;if(cloud.user&&it.owner_id===cloud.user.id&&photoURL[it.band_photo])return it.band_photo;return 'r:'+it.owner_id+'/'+it.band_photo;}
+function fetchFeedPhotos(){
+  if(!isMember())return;
+  cloud.photoFail=cloud.photoFail||{};
+  cloud.feed.forEach(function(it){var key=feedPhotoKey(it);if(!key||photoURL[key]||cloud.photoReq[key]||(Date.now()-(cloud.photoFail[key]||0)<60000))return;cloud.photoReq[key]=1;
+    getRec('photos',key).then(function(p){if(p&&p.blob){photoURL[key]=URL.createObjectURL(p.blob);rerender();return;}
+      return cloud.sb.storage.from('bands').download(it.owner_id+'/'+it.band_photo+'.jpg').then(function(dl){if(dl.error||!dl.data){cloud.photoFail[key]=Date.now();return;}
+        photoURL[key]=URL.createObjectURL(dl.data);rerender();return putRec('photos',{id:key,blob:dl.data,type:dl.data.type,foreign:true,remote:true,createdAt:new Date().toISOString()});});
+    }).catch(function(){}).then(function(){delete cloud.photoReq[key];});});
+}
+function feedItem(u){for(var i=0;i<cloud.feed.length;i++)if(cloud.feed[i].uid===u)return cloud.feed[i];return null;}
+function toggleLike(su){
+  if(!isMember())return;var me=cloud.user.id,arr=cloud.likes[su]||(cloud.likes[su]=[]),i=arr.indexOf(me);
+  if(i>=0){arr.splice(i,1);rerender();cloud.sb.from('reactions').delete().eq('session_uid',su).eq('user_id',me).then(function(r){if(r.error){arr.push(me);toast(authErr(r.error));rerender();}});}
+  else{arr.push(me);rerender();cloud.sb.from('reactions').insert({session_uid:su,user_id:me}).then(function(r){if(r.error&&!/duplicate/i.test(r.error.message||'')){arr.splice(arr.indexOf(me),1);toast(authErr(r.error));rerender();}});}
+}
+function addComment(su){
+  var el=document.getElementById('c-body');if(!el)return;var body=el.value.trim();if(!body){toast('Escreva um comentário.');return;}if(body.length>500){toast('Máximo de 500 caracteres.');return;}
+  cloud.commentBusy=true;render();
+  cloud.sb.from('comments').insert({session_uid:su,user_id:cloud.user.id,body:body}).select('id,session_uid,user_id,body,created_at,profiles(display_name)').single().then(function(r){
+    cloud.commentBusy=false;if(r.error){toast(authErr(r.error));render();var e2=document.getElementById('c-body');if(e2)e2.value=body;return;}
+    (cloud.comments[su]=cloud.comments[su]||[]).push(r.data);render();toast('Comentário publicado');});
+}
+function deleteComment(cid,su){
+  cloud.sb.from('comments').delete().eq('id',cid).then(function(r){if(r.error){toast(authErr(r.error));return;}
+    cloud.comments[su]=(cloud.comments[su]||[]).filter(function(c){return c.id!==cid;});render();toast('Comentário apagado');});
+}
+
+/* ---- conta ---- */
+async function submitAuth(form){
+  var mode=form.getAttribute('data-mode'),sb=cloud.sb;
+  var email=(document.getElementById('au-email')||{}).value||'',pass=(document.getElementById('au-pass')||{}).value||'';
+  var name=((document.getElementById('au-name')||{}).value||'').trim(),code=((document.getElementById('au-code')||{}).value||'').trim().toUpperCase();
+  var adult=!!(document.getElementById('au-adult')||{}).checked,terms=!!(document.getElementById('au-terms')||{}).checked;
+  cloud.form={name:name,email:email,pass:pass,code:code,adult:adult,terms:terms};
+  cloud.authMsg='';
+  if(mode!=='entrar'){if(!name){cloud.authMsg='Informe seu nome de exibição.';render();return;}if(!code){cloud.authMsg='Informe o código do convite.';render();return;}
+    if(!adult){cloud.authMsg='O clube é exclusivo para maiores de 18 anos.';render();return;}if(!terms){cloud.authMsg='É preciso aceitar as regras do clube.';render();return;}}
+  cloud.authBusy=true;render();
+  try{
+    if(mode==='entrar'){var r=await sb.auth.signInWithPassword({email:email.trim(),password:pass});if(r.error)throw r.error;cloud.user=r.data.user;}
+    else if(mode==='criar'){
+      var s=await sb.auth.signUp({email:email.trim(),password:pass,options:{data:{display_name:name}}});if(s.error)throw s.error;
+      if(!s.data.session){cloud.authBusy=false;cloud.authMsg='Conta criada, mas o clube está exigindo confirmação por e-mail. Avise o administrador: é preciso desligar "Confirm email" no Supabase.';render();return;}
+      cloud.user=s.data.user;}
+    if(mode!=='entrar'){var j=await sb.rpc('join_club',{p_code:code,p_name:name,p_adult:adult,p_terms:terms});if(j.error)throw j.error;ls('clube-convite',null);inviteCode='';}
+    cloud._loginFor=null;await afterLogin();cloud.authBusy=false;cloud.form=null;
+    toast(isMember()?'Bem-vindo ao clube, '+cloud.profile.display_name+'!':'Conectado.');render();
+  }catch(e){cloud.authBusy=false;cloud.authMsg=authErr(e);render();}
+}
+function signOut(){
+  cloud.sb.auth.signOut().catch(function(){}).then(function(){cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.likes={};cloud.comments={};cloud.inviteLink='';
+    ls('clube-feed',null);ls('clube-profile',null);cloud.status='idle';state.confirm='';render();toast('Você saiu do clube. O diário continua neste celular.');});
+}
+async function deleteAccount(){
+  var sb=cloud.sb,u=cloud.user.id;state.confirm='';cloud.authBusy=true;render();
+  try{
+    var l=await sb.storage.from('bands').list(u,{limit:1000});
+    if(!l.error&&l.data&&l.data.length){await sb.storage.from('bands').remove(l.data.map(function(f){return u+'/'+f.name;}));}
+    var d=await sb.rpc('delete_my_account');if(d.error)throw d.error;
+    await sb.auth.signOut().catch(function(){});
+    ls('clube-owner',null);ls('clube-feed',null);ls('clube-profile',null);ls('clube-last-sync',null);
+    await resetSyncFlags();
+    cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.authBusy=false;cloud.status='idle';render();
+    toast('Conta excluída. Seus dados saíram do clube; o diário continua neste celular.');
+  }catch(e){cloud.authBusy=false;render();toast(authErr(e));}
+}
+function createInvite(){
+  cloud.sb.rpc('create_invite',{p_max_uses:10}).then(function(r){if(r.error){toast(authErr(r.error));return;}
+    cloud.inviteLink=location.origin+location.pathname+'?convite='+encodeURIComponent(r.data);render();});
+}
+function saveName(){var el=document.getElementById('pf-name');var n=(el&&el.value||'').trim();if(!n||n.length>40){toast('Use um nome de 1 a 40 caracteres.');return;}
+  cloud.sb.from('profiles').update({display_name:n}).eq('id',cloud.user.id).then(function(r){if(r.error){toast(authErr(r.error));return;}
+    cloud.profile.display_name=n;ls('clube-profile',JSON.stringify(cloud.profile));toast('Nome atualizado');render();});}
+async function wipeLocalForAccount(){
+  state.confirm='';await Promise.all(['cigars','sessions','photos','tombstones'].map(clearStore));
+  Object.keys(photoURL).forEach(function(k){try{URL.revokeObjectURL(photoURL[k]);}catch(e){}});photoURL={};
+  ls('clube-owner',cloud.user.id);cloud.ownerMismatch=false;await loadAll();render();sync();toast('Registros deste aparelho apagados. Sincronizando sua conta…');
+}
+
+/* ---------- backup ---------- */
+function blobToDataURL(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=function(){rej(r.error);};r.readAsDataURL(b);});}
+function buildBackup(){return getAll('photos').then(function(ps){ps=ps.filter(function(p){return !p.foreign;});return Promise.all(ps.map(function(p){return blobToDataURL(p.blob).then(function(d){return {id:p.id,createdAt:p.createdAt,dataUrl:d};});}));}).then(function(photos){
+  function strip(r){var c=clone(r);delete c.syncedAt;return c;}
+  return {app:APP_ID,version:BACKUP_VERSION,exportedAt:new Date().toISOString(),cigars:state.cigars.map(strip),sessions:state.sessions.map(strip),photos:photos};});}
+function backupFile(){return buildBackup().then(function(b){var name='diario-degustacao-'+new Date().toISOString().slice(0,10)+'.json';var blob=new Blob([JSON.stringify(b)],{type:'application/json'});var file=null;try{file=new File([blob],name,{type:'application/json'});}catch(e){}return {blob:blob,file:file,name:name};});}
+function markBackup(){ls('diario-last-backup',String(Date.now()));}
+function exportDownload(){backupFile().then(function(f){var a=document.createElement('a');a.href=URL.createObjectURL(f.blob);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);markBackup();render();toast('Backup salvo em Downloads');}).catch(function(){toast('Não foi possível gerar o backup.');});}
+function exportShare(){backupFile().then(function(f){if(!(f.file&&navigator.canShare&&navigator.canShare({files:[f.file]}))){toast('Compartilhamento indisponível. Use "Salvar backup".');return;}
+  return navigator.share({files:[f.file],title:'Backup do Diário de Degustação'}).then(function(){markBackup();render();toast('Backup compartilhado');});}).catch(function(e){if(e&&e.name==='AbortError')return;toast('Não foi possível compartilhar o backup.');});}
+function dataURLToBlob(d){return fetch(d).then(function(r){return r.blob();});}
+function importFile(file){
+  if(!file)return;busy.importing=true;render();
+  file.text().then(function(txt){var b=JSON.parse(txt);if(!b||b.app!==APP_ID)throw new Error('formato');
+    var cs=Array.isArray(b.cigars)?b.cigars:[],ss=Array.isArray(b.sessions)?b.sessions:[],ps=Array.isArray(b.photos)?b.photos:[];
+    var chain=Promise.resolve(),nP=0,now=Date.now();
+    cs.forEach(function(c){if(c&&c.id){delete c.syncedAt;c.updatedAt=now;chain=chain.then(function(){return putRec('cigars',c);});}});
+    ss.forEach(function(s){if(s&&s.id){delete s.syncedAt;s.updatedAt=now;chain=chain.then(function(){return putRec('sessions',s);});}});
+    ps.forEach(function(p){if(p&&p.id&&typeof p.dataUrl==='string'&&p.dataUrl.indexOf('data:image/')===0)chain=chain.then(function(){return dataURLToBlob(p.dataUrl).then(function(bl){nP++;return putRec('photos',{id:p.id,blob:bl,type:bl.type,createdAt:p.createdAt||new Date().toISOString()});});});});
+    return chain.then(loadAll).then(function(){busy.importing=false;state.tab='acervo';render();scheduleSync();toast('Importados: '+cs.length+' charutos, '+ss.length+' sessões, '+nP+' fotos');});
+  }).catch(function(e){busy.importing=false;render();toast(e&&e.message==='formato'?'Este arquivo não é um backup do Diário de Degustação.':'Não foi possível ler o arquivo de backup.');});
+}
+function needsBackup(){var dirty=Number(ls('diario-dirty')||0),last=Number(ls('diario-last-backup')||0);return state.sessions.length>0&&dirty>last&&!isMember();}
+
+/* ---------- telas ---------- */
+function restoreAuthForm(){
+  var f=cloud.form;if(!f)return;
+  [['au-name','name'],['au-email','email'],['au-pass','pass'],['au-code','code']].forEach(function(x){var el=document.getElementById(x[0]);if(el&&f[x[1]])el.value=f[x[1]];});
+  [['au-adult','adult'],['au-terms','terms']].forEach(function(x){var el=document.getElementById(x[0]);if(el)el.checked=!!f[x[1]];});
+}
+function render(){
+  var app=document.getElementById('app');
+  if(state.view==='session'&&draft){app.innerHTML=viewSession();startTick();return;}
+  stopTick();
+  if(state.view==='detail'){app.innerHTML=viewDetail();return;}
+  if(state.view==='post'){app.innerHTML=viewPost();return;}
+  app.innerHTML=viewHome();
+  if(state.tab==='conta')restoreAuthForm();
+  if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
+}
+function statusLine(){
+  if(state.dbError)return '<span class="sdot bad"></span>Este navegador bloqueou o armazenamento. Abra pelo Chrome, fora da aba anônima.';
+  if(!state.loaded)return 'Carregando seus registros…';
+  if(!cloud.configured)return '<span class="sdot"></span>Registros salvos neste celular.';
+  if(!isMember())return '<span class="sdot"></span>Registros neste celular. Entre no clube na aba Conta para sincronizar.';
+  if(cloud.ownerMismatch)return '<span class="sdot bad"></span>Sincronização pausada: os registros deste aparelho são de outra conta.';
+  var s=cloud.status;
+  if(s==='syncing')return '<span class="sdot warn"></span>Sincronizando com o clube…';
+  if(s==='offline')return '<span class="sdot warn"></span>Sem internet. Tudo fica salvo no celular e sobe quando voltar o sinal.';
+  if(s==='error')return '<span class="sdot bad"></span>Falha ao sincronizar. '+esc(cloud.statusDetail);
+  return '<span class="sdot ok"></span>'+esc(cloud.profile.display_name)+' · sincronizado'+(cloud.lastSync?' '+esc(relTime(new Date(cloud.lastSync).toISOString())):'');
+}
+function viewHeader(){return '<header class="top"><div class="eyebrow">Charutos · paladar e sensações</div><h1>Diário de Degustação</h1><p class="mode">'+statusLine()+'</p></header>';}
+function viewHome(){
+  var h=viewHeader();
+  var live=openSession();
+  if(live){h+='<div class="card live"><div class="head"><div><div class="eyebrow">Sessão em andamento</div><h3>'+esc(live.cigarName)+'</h3><div class="meta num">'+fmtClock(elapsed(live))+' · '+esc(live.moment||'momento não marcado')+'</div></div><button class="btn primary" data-act="resume" data-id="'+esc(live.id)+'">Retomar</button></div></div>';}
+  if(needsBackup()&&state.tab!=='conta')h+='<div class="banner"><span>Há registros novos sem backup.</span><button class="btn small" data-act="tab" data-id="conta">Fazer backup</button></div>';
+  if(state.tab==='acervo'||state.tab==='historico'){var ds=done();
+    if(ds.length){var rated=ds.filter(function(s){return typeof s.rating==='number';});
+      var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
+      var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
+      h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
+  h+='<div class="tabs" role="tablist">'+[['acervo','Acervo'],['historico','Histórico'],['clube','Clube'],['comparar','Comparar'],['conta','Conta']].map(function(t){return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  if(state.tab==='acervo')h+=viewAcervo();
+  else if(state.tab==='historico')h+=viewHistorico();
+  else if(state.tab==='clube')h+=viewClube();
+  else if(state.tab==='comparar')h+=viewComparar();
+  else h+=viewConta();
+  return h;
+}
+function importButton(primary){return '<span class="btn filebtn'+(primary?' primary':'')+'">Importar backup<input type="file" id="import-file" accept=".json,application/json" aria-label="Importar arquivo de backup"></span>';}
+function viewAcervo(){
+  var h='<div class="list">';
+  if(!state.loaded){h+='<div class="empty">Carregando o acervo…</div>';}
+  else if(!state.cigars.length){h+='<div class="empty"><b>Seu acervo está vazio.</b><span>Importe um backup, entre no clube para trazer seus registros da nuvem, ou adicione o primeiro charuto manualmente.</span><div class="row">'+(busy.importing?'<span class="muted">Importando…</span>':importButton(true))+'</div></div>';}
+  state.cigars.forEach(function(c){
+    var ss=done().filter(function(s){return s.cigarId===c.id;});
+    var last=ss[0], st=STATUS[c.status]||STATUS.historico, bid=bandOfCigar(c.id);
+    h+='<div class="card"><div class="head"><div class="withthumb">'+(bid?bandImg(bid,'thumb','Anilha do '+c.name):'')+'<div style="min-width:0"><h3>'+esc(c.name)+'</h3><div class="meta">'+esc([c.origin,c.vitola].filter(Boolean).join(' · '))+'</div></div></div>'+(last&&typeof last.rating==='number'?'<div class="score num" aria-label="Última nota">'+numStr(last.rating)+'</div>':'')+'</div>';
+    h+='<div class="row"><span class="chip '+st[1]+'">'+st[0]+'</span>'+meter(c.strength)+'<span class="meta">'+esc(strengthLabel(c.strength))+'</span>'+(ss.length?'<span class="meta">· '+ss.length+(ss.length>1?' sessões':' sessão')+'</span>':'')+'</div>';
+    if(c.expected)h+='<p class="meta">Esperado: '+esc(c.expected)+'</p>';
+    if(c.pairing)h+='<p class="meta">Combina com: '+esc(c.pairing)+'</p>';
+    h+='<div class="row"><button class="btn primary small" data-act="start" data-id="'+esc(c.id)+'">Iniciar sessão</button></div></div>';
+  });
+  h+='</div>';
+  if(state.loaded&&!state.dbError){
+    if(!state.addOpen)h+='<button class="btn ghost" data-act="addopen">Adicionar charuto ao acervo</button>';
+    else h+='<form class="panel" id="addForm"><h3>Novo charuto</h3>'+
+      '<label class="f" for="nc-name">Nome<input type="text" id="nc-name" required placeholder="ex.: Cohiba Siglo I"></label>'+
+      '<label class="f" for="nc-origin">Origem<input type="text" id="nc-origin" placeholder="ex.: Cuba"></label>'+
+      '<label class="f" for="nc-vitola">Bitola<input type="text" id="nc-vitola" placeholder="ex.: 102 x 40 mm"></label>'+
+      '<label class="f" for="nc-strength">Força esperada<select id="nc-strength"><option value="1">Suave</option><option value="2" selected>Suave-médio</option><option value="3">Médio</option><option value="4">Médio-encorpado</option><option value="5">Encorpado</option></select></label>'+
+      '<label class="f" for="nc-status">Situação<select id="nc-status"><option value="estoque">Em estoque</option><option value="cesta">Na cesta</option><option value="historico">Histórico</option></select></label>'+
+      '<div class="row"><button class="btn primary" type="submit">Adicionar</button><button class="btn ghost" type="button" data-act="addclose">Cancelar</button></div></form>';
+  }
+  return h;
+}
+function sessionCard(s){
+  return '<button class="card" style="text-align:left; width:100%" data-act="detail" data-id="'+esc(s.id)+'"><div class="head"><div class="withthumb">'+(s.bandId?bandImg(s.bandId,'thumb','Anilha do '+s.cigarName):'')+'<div style="min-width:0"><span class="h3">'+esc(s.cigarName)+'</span><div class="meta">'+esc(fmtDate(s.createdAt))+' · '+esc([s.moment,s.drink].filter(Boolean).join(' · '))+'</div></div></div>'+(typeof s.rating==='number'?'<div class="score num">'+numStr(s.rating)+'</div>':'')+'</div><div class="row">'+(s.rebuy?'<span class="chip">Recompraria: '+esc(s.rebuy)+'</span>':'')+(s.durationMin?'<span class="meta num">'+s.durationMin+' min</span>':'')+(cloud.configured?'<span class="meta">'+(s.visibility==='private'?'Só eu':'Clube')+'</span>':'')+'</div></button>';
+}
+function viewHistorico(){
+  var ds=done();
+  if(!ds.length)return '<div class="empty"><b>Nenhuma sessão registrada ainda.</b><span>No Acervo, toque em “Iniciar sessão” quando acender o charuto. O cronômetro corre enquanto você anota cada terço.</span></div>';
+  return '<div class="list">'+ds.map(sessionCard).join('')+'</div>';
+}
+function postCard(it){
+  var name=(it.profiles&&it.profiles.display_name)||'Membro',likes=cloud.likes[it.uid]||[],cms=cloud.comments[it.uid]||[],mine=cloud.user&&likes.indexOf(cloud.user.id)>=0;
+  var key=feedPhotoKey(it),notes=topNotes(it.thirds,5);
+  var h='<article class="card"><div class="phead"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="who"><b>'+esc(name)+'</b><div class="meta">'+esc([relTime(it.ended_at||it.started_at),it.moment,it.drink].filter(Boolean).join(' · '))+'</div></div>'+(it.rating!=null?'<div class="score num" aria-label="Nota">'+numStr(Number(it.rating))+'</div>':'')+'</div>';
+  h+='<button class="plink" data-act="post" data-id="'+esc(it.uid)+'"><span class="h3">'+esc(it.cigar_name)+'</span>'+(it.duration_min?'<span class="meta num">'+it.duration_min+' min'+(it.strength?' · força '+it.strength+'/5':'')+'</span>':'')+'</button>';
+  if(key&&photoURL[key])h+=bandImg(key,'','Anilha do '+it.cigar_name);
+  if(notes.length)h+='<div class="tags">'+notes.map(noteChip).join('')+'</div>';
+  if(it.comment)h+='<p class="meta">“'+esc(it.comment.length>180?it.comment.slice(0,180)+'…':it.comment)+'”</p>';
+  h+='<div class="row"><button class="btn small like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'" aria-label="'+(mine?'Remover curtida':'Curtir')+'">'+HEART_ICON+'<span class="num">'+likes.length+'</span></button><button class="btn small ghost" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'<span class="num">'+cms.length+'</span> comentários</button></div></article>';
+  return h;
+}
+function viewClube(){
+  if(!cloud.configured)return '<div class="empty"><b>O clube ainda não foi configurado neste app.</b><span>O administrador precisa preencher o arquivo config.js com os dados do Supabase. Enquanto isso, o diário funciona normalmente neste celular.</span></div>';
+  if(!isMember())return '<div class="empty"><b>Entre no clube para ver as degustações dos amigos.</b><span>Você precisa de um convite. Se já tem conta, entre pela aba Conta.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
+  var h='<div class="row" style="justify-content:space-between"><h2>Clube</h2><button class="btn small" data-act="refreshfeed"'+(cloud.feedLoading?' disabled':'')+'>'+(cloud.feedLoading?'Atualizando…':'Atualizar')+'</button></div>';
+  if(cloud.feedError)h+='<div class="alert"><b>Atenção</b><span>'+esc(cloud.feedError)+'</span></div>';
+  if(!cloud.feed.length)return h+'<div class="empty"><b>Nenhuma degustação compartilhada ainda.</b><span>Ao encerrar uma sessão com "Compartilhar no clube" marcado, ela aparece aqui para os membros.</span></div>';
+  return h+'<div class="list">'+cloud.feed.map(postCard).join('')+'</div>';
+}
+function cmpRow(label,a,b){return '<tr><th scope="row">'+label+'</th><td>'+a+'</td><td>'+b+'</td></tr>';}
+function viewComparar(){
+  var ds=done();
+  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida.</span></div>';
+  if(!sessionById(state.cmpA))state.cmpA=ds[0].id;
+  if(!sessionById(state.cmpB)||state.cmpB===state.cmpA)state.cmpB=(ds[1]||ds[0]).id;
+  function opts(sel){return ds.map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.cigarName+' · '+fmtDate(s.createdAt))+'</option>';}).join('');}
+  var A=sessionById(state.cmpA),B=sessionById(state.cmpB);
+  function tags(s,i){var t=(s.thirds&&s.thirds[i])||{};return esc((t.notes||[]).join(', ')||'—')+(t.intensity?' <span class="faint num">('+t.intensity+'/5)</span>':'');}
+  function band(s){return s.bandId&&photoURL[s.bandId]?bandImg(s.bandId,'cmpimg','Anilha do '+s.cigarName):'<span class="faint">sem foto</span>';}
+  var h='<div class="panel"><label class="f" for="cmpA">Sessão A<select id="cmpA" data-cmp="A">'+opts(state.cmpA)+'</select></label><label class="f" for="cmpB">Sessão B<select id="cmpB" data-cmp="B">'+opts(state.cmpB)+'</select></label></div>';
+  h+='<div class="cmp"><table><thead><tr><th></th><th>'+esc(A.cigarName)+'</th><th>'+esc(B.cigarName)+'</th></tr></thead><tbody>'+
+    ((A.bandId||B.bandId)?cmpRow('Anilha',band(A),band(B)):'')+
+    cmpRow('Data',esc(fmtDate(A.createdAt)),esc(fmtDate(B.createdAt)))+
+    cmpRow('Momento',esc(A.moment||'—'),esc(B.moment||'—'))+
+    cmpRow('Bebida',esc(A.drink||'—'),esc(B.drink||'—'))+
+    cmpRow('1º terço',tags(A,0),tags(B,0))+cmpRow('2º terço',tags(A,1),tags(B,1))+cmpRow('3º terço',tags(A,2),tags(B,2))+
+    cmpRow('Força percebida',meter(A.strength),meter(B.strength))+
+    cmpRow('Queima',esc(A.burn||'—'),esc(B.burn||'—'))+cmpRow('Tiragem',esc(A.draw||'—'),esc(B.draw||'—'))+
+    cmpRow('Como ficou',esc(A.feel||'—'),esc(B.feel||'—'))+
+    cmpRow('Duração',A.durationMin?A.durationMin+' min':'—',B.durationMin?B.durationMin+' min':'—')+
+    cmpRow('Nota',typeof A.rating==='number'?'<b class="num">'+numStr(A.rating)+'</b>':'—',typeof B.rating==='number'?'<b class="num">'+numStr(B.rating)+'</b>':'—')+
+    cmpRow('Recompraria',esc(A.rebuy||'—'),esc(B.rebuy||'—'))+
+    '</tbody></table></div>';
+  return h;
+}
+function authPanel(){
+  var mode=cloud.authMode,h='<div class="panel"><h2>Clube</h2>';
+  h+='<div class="minitabs" role="tablist"><button role="tab" aria-selected="'+(mode==='entrar')+'" data-act="authmode" data-id="entrar">Entrar</button><button role="tab" aria-selected="'+(mode==='criar')+'" data-act="authmode" data-id="criar">Criar conta</button></div>';
+  h+='<form id="authForm" data-mode="'+mode+'" style="display:flex;flex-direction:column;gap:14px">';
+  if(mode==='criar')h+='<label class="f" for="au-name">Nome de exibição<input type="text" id="au-name" maxlength="40" autocomplete="nickname" placeholder="ex.: Felipe"></label>';
+  h+='<label class="f" for="au-email">E-mail<input type="email" id="au-email" autocomplete="email" inputmode="email" required></label>';
+  h+='<label class="f" for="au-pass">Senha'+(mode==='criar'?' (mínimo 6 caracteres)':'')+'<input type="password" id="au-pass" autocomplete="'+(mode==='criar'?'new-password':'current-password')+'" minlength="6" required></label>';
+  if(mode==='criar'){
+    h+='<label class="f" for="au-code">Código do convite<input type="text" id="au-code" value="'+esc(inviteCode)+'" autocapitalize="characters" placeholder="vem no link de convite"></label>';
+    h+='<label class="check" for="au-adult"><input type="checkbox" id="au-adult"> <span>Confirmo que tenho 18 anos ou mais.</span></label>';
+    h+='<label class="check" for="au-terms"><input type="checkbox" id="au-terms"> <span>Li e aceito as regras do clube.</span></label>';
+    h+='<details class="terms"><summary>Regras do clube e uso dos dados</summary><div>'+TERMS_HTML+'</div></details>';}
+  if(cloud.authMsg)h+='<div class="alert err" role="alert"><b>Não foi possível continuar</b><span>'+esc(cloud.authMsg)+'</span></div>';
+  h+='<button class="btn primary" type="submit"'+(cloud.authBusy?' disabled':'')+'>'+(cloud.authBusy?'Aguarde…':(mode==='criar'?'Criar conta e entrar no clube':'Entrar'))+'</button>';
+  if(mode==='entrar')h+='<p class="faint" style="font-size:13px">Esqueceu a senha? Peça ao administrador do clube para redefinir.</p>';
+  h+='</form></div>';
+  return h;
+}
+function joinPanel(){
+  var h='<div class="panel"><h2>Falta o convite</h2><p class="muted">Você entrou como '+esc(cloud.user.email||'')+', mas ainda não faz parte do clube.</p><form id="joinForm" style="display:flex;flex-direction:column;gap:14px">'+
+    '<label class="f" for="au-name">Nome de exibição<input type="text" id="au-name" maxlength="40"></label>'+
+    '<label class="f" for="au-code">Código do convite<input type="text" id="au-code" value="'+esc(inviteCode)+'" autocapitalize="characters"></label>'+
+    '<label class="check" for="au-adult"><input type="checkbox" id="au-adult"> <span>Confirmo que tenho 18 anos ou mais.</span></label>'+
+    '<label class="check" for="au-terms"><input type="checkbox" id="au-terms"> <span>Li e aceito as regras do clube.</span></label>'+
+    '<details class="terms"><summary>Regras do clube e uso dos dados</summary><div>'+TERMS_HTML+'</div></details>';
+  if(cloud.authMsg)h+='<div class="alert err" role="alert"><b>Não foi possível continuar</b><span>'+esc(cloud.authMsg)+'</span></div>';
+  h+='<div class="row"><button class="btn primary" type="submit"'+(cloud.authBusy?' disabled':'')+'>Entrar no clube</button><button class="btn ghost" type="button" data-act="signout">Sair</button></div></form></div>';
+  return h;
+}
+function memberPanel(){
+  var p=cloud.profile,h='<div class="panel"><div class="phead"><span class="avatar" aria-hidden="true">'+initials(p.display_name)+'</span><div class="who"><h2>'+esc(p.display_name)+'</h2><div class="meta">'+esc(cloud.user.email||'')+(p.is_admin?' · administrador':'')+'</div></div></div>';
+  if(cloud.ownerMismatch){
+    h+='<div class="alert err"><b>Sincronização pausada</b><span>Os registros deste celular pertencem a outra conta do clube. Para não misturar diários, nada foi enviado.</span>'+
+      (state.confirm==='wipe'?'<div class="row" style="margin-top:8px"><button class="btn danger" data-act="wipe">Apagar registros deste celular</button><button class="btn ghost" data-act="cancelconfirm">Cancelar</button></div>':'<div class="row" style="margin-top:8px"><button class="btn small" data-act="askconfirm" data-id="wipe">Usar esta conta neste celular</button></div>')+'</div>';}
+  h+='<dl class="kv"><dt>Sincronização</dt><dd>'+(cloud.status==='syncing'?'em andamento':cloud.status==='error'?'com falha':cloud.status==='offline'?'aguardando internet':(cloud.lastSync?esc(fmtDateTime(new Date(cloud.lastSync).toISOString())):'ainda não feita'))+'</dd><dt>Seu diário</dt><dd class="num">'+state.cigars.length+' charutos · '+done().length+' sessões</dd></dl>';
+  h+='<div class="row"><button class="btn" data-act="syncnow"'+(cloud.status==='syncing'?' disabled':'')+'>Sincronizar agora</button></div>';
+  h+='<label class="f" for="pf-name">Nome de exibição<input type="text" id="pf-name" maxlength="40" value="'+esc(p.display_name)+'"></label><div class="row"><button class="btn small" data-act="savename">Salvar nome</button></div></div>';
+  if(p.is_admin){h+='<div class="panel"><h3>Convidar amigos</h3><p class="muted">Cada link vale para até 10 pessoas. Mande só para quem você quer no clube.</p>';
+    if(cloud.inviteLink)h+='<label class="f" for="invite-link">Link de convite<input type="text" id="invite-link" readonly value="'+esc(cloud.inviteLink)+'"></label><div class="row"><button class="btn primary" data-act="copyinvite">Copiar link</button>'+(navigator.share?'<button class="btn" data-act="shareinvite">Enviar (WhatsApp…)</button>':'')+'</div>';
+    h+='<div class="row"><button class="btn'+(cloud.inviteLink?' ghost':' primary')+'" data-act="newinvite">'+(cloud.inviteLink?'Gerar outro link':'Gerar link de convite')+'</button></div></div>';}
+  h+='<div class="panel"><h3>Sair ou excluir</h3><p class="muted">Ao sair, o diário continua neste celular. Ao excluir a conta, suas sessões, curtidas, comentários e fotos são apagados do clube.</p>';
+  if(state.confirm==='delete')h+='<div class="alert err"><b>Excluir sua conta do clube?</b><span>Não dá para desfazer. O diário deste celular é mantido.</span><div class="row" style="margin-top:8px"><button class="btn danger" data-act="deleteaccount"'+(cloud.authBusy?' disabled':'')+'>Excluir definitivamente</button><button class="btn ghost" data-act="cancelconfirm">Cancelar</button></div></div>';
+  else h+='<div class="row"><button class="btn" data-act="signout">Sair</button><button class="btn danger" data-act="askconfirm" data-id="delete">Excluir minha conta</button></div>';
+  return h+'</div>';
+}
+function viewConta(){
+  var h='';
+  if(!cloud.configured)h+='<div class="panel"><h2>Clube</h2><p class="muted">O clube ainda não foi configurado neste app. O administrador precisa preencher o config.js com os dados do Supabase.</p></div>';
+  else if(cloud.user&&!cloud.profileChecked)h+='<div class="panel"><p class="muted">Conectando ao clube…</p></div>';
+  else if(!cloud.user)h+=authPanel();
+  else if(!isMember())h+=joinPanel();
+  else h+=memberPanel();
+  h+=viewBackup();
+  return h;
+}
+function viewBackup(){
+  var last=Number(ls('diario-last-backup')||0);
+  var canShare=false;try{canShare=!!(navigator.canShare&&navigator.canShare({files:[new File(['x'],'x.json',{type:'application/json'})]}));}catch(e){}
+  var h='<div class="panel"><h3>Backup do diário</h3><p class="muted">'+(isMember()?'Seu diário já é copiado para o clube. O backup em arquivo é uma segurança extra.':'Os registros e as fotos ficam só neste celular. Se você limpar os dados do navegador ou trocar de aparelho, só o backup recupera tudo.')+'</p>'+
+    '<dl class="kv"><dt>Charutos</dt><dd class="num">'+state.cigars.length+'</dd><dt>Sessões</dt><dd class="num">'+state.sessions.length+'</dd><dt>Último backup</dt><dd>'+(last?esc(fmtDateTime(new Date(last).toISOString())):'nunca')+'</dd><dt>Proteção contra limpeza</dt><dd>'+(busy.persisted===true?'ativa':busy.persisted===false?'não concedida pelo navegador':'verificando…')+'</dd></dl>'+
+    '<div class="row"><button class="btn primary" data-act="export">Salvar backup</button>'+(canShare?'<button class="btn" data-act="share">Enviar backup</button>':'')+'</div>'+
+    '<div class="row">'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';
+  if(installPrompt)h+='<div class="panel"><h3>Instalar na tela inicial</h3><p class="muted">Cria um ícone que abre o diário como app, em tela cheia e funcionando sem internet.</p><div class="row"><button class="btn primary" data-act="install">Instalar app</button></div></div>';
+  return h;
+}
+
+function optBtns(field,list,val){return '<div class="opts">'+list.map(function(o){return '<button type="button" class="opt" aria-pressed="'+(val===o)+'" data-act="set" data-field="'+field+'" data-val="'+esc(o)+'">'+esc(o)+'</button>';}).join('')+'</div>';}
+function segBtns(field,max,val,lo,hi){var h='<div class="seg">';for(var i=1;i<=max;i++)h+='<button type="button" aria-pressed="'+(val===i)+'" data-act="setnum" data-field="'+field+'" data-val="'+i+'">'+i+'</button>';return h+'</div><div class="scale"><span>'+lo+'</span><span>'+hi+'</span></div>';}
+function bandSlot(s){
+  var h='<fieldset class="bandslot"><legend>Anilha</legend>';
+  if(s.bandId&&photoURL[s.bandId])h+=bandImg(s.bandId,'','Anilha do '+s.cigarName);
+  if(busy.uploading)h+='<p class="muted">Salvando foto…</p>';
+  else{
+    var has=s.bandId&&photoURL[s.bandId];
+    h+='<div class="row"><span class="btn filebtn'+(has?'':' primary')+'">'+CAMERA_ICON+(has?'Nova foto':'Câmera')+'<input type="file" id="band-camera" accept="image/*" capture="environment" aria-label="Fotografar a anilha com a câmera"></span>'+
+       '<span class="btn filebtn">'+GALLERY_ICON+'Galeria<input type="file" id="band-gallery" accept="image/*" aria-label="Escolher foto da anilha na galeria"></span>'+
+       (has?'<button type="button" class="btn ghost" data-act="rmband">Remover</button>':'')+'</div>';
+    if(!has)h+='<p class="hint">Fotografe a anilha antes de acender, ou quando retirá-la depois do 1º terço: com o charuto aquecido, a cola solta e a capa não rasga.</p>';
+  }
+  return h+'</fieldset>';
+}
+function durMin(s){return Math.max(0,Math.round(elapsed(s)/60000));}
+function fmtDur(min){var h=Math.floor(min/60),m=min%60;return h?(h+' h'+(m?' '+m+' min':'')):(m+' min');}
+function setDuration(min){min=Math.max(1,Math.min(600,Math.round(min||0)));draft.timer={acc:min*60000,running:false,resumedAt:null};draft.durationMin=min;var c=document.getElementById('clock');if(c)c.textContent=fmtDur(min);return min;}
+function viewSession(){
+  var s=draft, run=s.timer&&s.timer.running, editing=s.status==='concluida';
+  var steps=['1º terço','2º terço','3º terço','Fechamento'];
+  var h='<div class="sbar"><button class="btn small ghost" data-act="home" aria-label="Voltar ao início">Início</button><div class="who"><h2>'+esc(s.cigarName)+'</h2></div>';
+  if(editing)h+='<div class="tline"><span class="eyebrow">Editando registro</span><span class="clock num" id="clock" style="margin-left:auto">'+fmtDur(durMin(s))+'</span></div></div>';
+  else h+='<div class="tline"><div class="timer"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="16"></circle><circle class="prog" id="ring" cx="20" cy="20" r="16" stroke-dasharray="100.53" stroke-dashoffset="100.53"></circle></svg><span class="clock" id="clock">'+fmtClock(elapsed(s))+'</span></div><span class="ritmo">1 baforada por minuto</span>'+
+    '<button class="btn small" data-act="toggle">'+(run?'Pausar':'Retomar')+'</button></div></div>';
+  if(editing){var dm=durMin(s),hh=Math.floor(dm/60),mm=dm%60;
+    h+='<div class="panel"><fieldset><legend>Duração da sessão</legend><div class="durrow">'+
+      '<button type="button" class="btn" data-act="dur" data-val="-5" aria-label="Diminuir 5 minutos">−5</button>'+
+      '<label class="f" for="dur-h">Horas<input type="number" id="dur-h" min="0" max="10" inputmode="numeric" value="'+hh+'" data-input="dur"></label>'+
+      '<label class="f" for="dur-m">Minutos<input type="number" id="dur-m" min="0" max="59" inputmode="numeric" value="'+mm+'" data-input="dur"></label>'+
+      '<button type="button" class="btn" data-act="dur" data-val="5" aria-label="Aumentar 5 minutos">+5</button></div>'+
+      '<p class="faint" style="font-size:13px">Corrija aqui se o cronômetro ficou ligado ou foi pausado sem querer. Mínimo de 1 minuto.</p></fieldset></div>';}
+  h+='<div class="panel"><fieldset><legend>Momento</legend>'+optBtns('moment',MOMENTS,s.moment)+'</fieldset><fieldset><legend>Bebida</legend>'+optBtns('drink',DRINKS,s.drink)+'</fieldset>'+bandSlot(s)+'</div>';
+  h+='<div class="tabs" role="tablist">'+steps.map(function(t,i){return '<button role="tab" aria-selected="'+(state.step===i)+'" data-act="step" data-id="'+i+'">'+t+'</button>';}).join('')+'</div>';
+  if(state.step<3){
+    var t=s.thirds[state.step];
+    h+='<div class="panel"><fieldset><legend>O que você sente no '+steps[state.step]+'?</legend>';
+    FAMILIES.forEach(function(f){h+='<div class="fam"><span class="lbl">'+f.label+'</span><div class="opts">'+f.notes.map(function(n){var on=t.notes.indexOf(n)>=0;return '<button type="button" class="opt" aria-pressed="'+on+'" data-act="note" data-val="'+esc(n)+'"><span class="dot" style="background:'+f.color+'"></span>'+esc(n)+'</button>';}).join('')+'</div></div>';});
+    h+='</fieldset><fieldset><legend>Intensidade do sabor</legend>'+segBtns('intensity',5,t.intensity,'delicado','intenso')+'</fieldset>';
+    h+='<label class="f" for="t-text">Anotações deste terço<textarea id="t-text" data-input="thirdText" placeholder="ex.: começou com feno e mel, retrogosto com pimenta branca">'+esc(t.text)+'</textarea></label>';
+    h+='<div class="row"><button class="btn primary" data-act="step" data-id="'+(state.step+1)+'">'+(state.step<2?'Ir para o '+steps[state.step+1]:'Ir para o fechamento')+'</button></div></div>';
+    if(state.step===2)h+='<p class="hint">No último terço o charuto esquenta e fica mais intenso. Vá devagar e pare quando ficar áspero.</p>';
+  }else{
+    var vis=s.visibility==='private'?'private':'club';
+    h+='<div class="panel"><fieldset><legend>Força percebida (nicotina)</legend>'+segBtns('strength',5,s.strength,'suave','encorpado')+'</fieldset>'+
+      '<fieldset><legend>Queima</legend>'+optBtns('burn',['Uniforme','Torta','Tunelou'],s.burn)+'</fieldset>'+
+      '<fieldset><legend>Tiragem</legend>'+optBtns('draw',['Solta','Ideal','Presa'],s.draw)+'</fieldset>'+
+      '<fieldset><legend>Como você está?</legend>'+optBtns('feel',['Bem','Leve tontura','Mal-estar'],s.feel)+'</fieldset>';
+    if(s.feel&&s.feel!=='Bem')h+='<div class="alert" role="alert"><b>Pause o charuto agora.</b><span>Coma ou beba algo doce, sente-se em local fresco e beba água. Se não melhorar, ou se houver dor no peito, falta de ar ou desmaio, procure atendimento médico.</span></div>';
+    h+='<fieldset><legend>Nota geral</legend><div class="rating"><b class="num" id="ratingOut">'+(typeof s.rating==='number'?numStr(s.rating):'—')+'</b><span class="muted">de 10</span></div><input type="range" id="rating" min="0" max="10" step="0.5" value="'+(typeof s.rating==='number'?s.rating:7)+'" data-input="rating" aria-label="Nota geral de 0 a 10"></fieldset>'+
+      '<fieldset><legend>Recompraria?</legend>'+optBtns('rebuy',['Sim','Talvez','Não'],s.rebuy)+'</fieldset>'+
+      '<label class="f" for="s-comment">Impressão final<textarea id="s-comment" data-input="comment" placeholder="ex.: cremoso do início ao fim; casou muito bem com o bourbon">'+esc(s.comment)+'</textarea></label>';
+    if(cloud.configured)h+='<fieldset><legend>Compartilhar no clube</legend><div class="opts"><button type="button" class="opt" aria-pressed="'+(vis==='club')+'" data-act="vis" data-val="club">Clube</button><button type="button" class="opt" aria-pressed="'+(vis==='private')+'" data-act="vis" data-val="private">Só eu</button></div><p class="faint" style="font-size:13px">'+(vis==='club'?'Ao encerrar, os membros do clube veem esta sessão, a foto da anilha e podem curtir e comentar.':'Fica só no seu diário. Ninguém do clube vê.')+'</p></fieldset>';
+    h+=(editing?'<div class="row"><button class="btn primary" data-act="finish">Salvar alterações</button></div></div>':'<div class="row"><button class="btn primary" data-act="finish">Encerrar e salvar sessão</button><button class="btn ghost" data-act="home">Salvar e continuar depois</button></div></div>');
+  }
+  return h;
+}
+function profileHtml(thirds){
+  var h='<div><h2 style="margin-bottom:12px">Evolução por terço</h2><div class="profile">';
+  for(var i=0;i<3;i++){var t=(thirds&&thirds[i])||{notes:[],intensity:0,text:''};
+    h+='<div class="third"><div class="bar" role="img" aria-label="Intensidade '+(t.intensity||0)+' de 5"><i style="height:'+((t.intensity||0)/5*100)+'%"></i></div><b>'+(i+1)+'º terço</b><div class="tags">'+((t.notes||[]).map(noteChip).join('')||'<span class="faint">sem notas</span>')+'</div>'+(t.text?'<p class="meta" style="font-size:14px">'+esc(t.text)+'</p>':'')+'</div>';}
+  return h+'</div></div>';
+}
+function factsHtml(o){return '<div class="facts"><div class="fact"><span>Força percebida</span>'+meter(o.strength)+' <b>'+esc(strengthLabel(o.strength))+'</b></div><div class="fact"><span>Como ficou</span><b>'+esc(o.feel||'—')+'</b></div><div class="fact"><span>Queima</span><b>'+esc(o.burn||'—')+'</b></div><div class="fact"><span>Tiragem</span><b>'+esc(o.draw||'—')+'</b></div></div>';}
+function viewDetail(){
+  var s=sessionById(state.detailId);
+  if(!s){state.view='home';return viewHome();}
+  var h='<header class="top"><button class="btn small ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">'+esc(fmtDate(s.createdAt))+'</div><h1 style="font-size:34px">'+esc(s.cigarName)+'</h1><p class="muted">'+esc([s.moment,s.drink,s.durationMin?s.durationMin+' min':''].filter(Boolean).join(' · '))+'</p></header>';
+  if(s.bandId&&photoURL[s.bandId])h+=bandImg(s.bandId,'','Anilha do '+s.cigarName);
+  h+='<div class="row" style="justify-content:space-between"><div class="rating"><b class="num">'+(typeof s.rating==='number'?numStr(s.rating):'—')+'</b><span class="muted">de 10</span></div>'+(s.rebuy?'<span class="chip">Recompraria: '+esc(s.rebuy)+'</span>':'')+'</div>';
+  if(cloud.configured){var post=null;if(isMember())for(var i=0;i<cloud.feed.length;i++){var it=cloud.feed[i];if(it.owner_id===cloud.user.id&&it.local_id===s.id){post=it;break;}}
+    h+='<div class="row"><span class="badge">'+(s.visibility==='private'?'Só no seu diário':'Compartilhada com o clube')+'</span>'+(post?'<button class="btn small" data-act="post" data-id="'+esc(post.uid)+'">'+HEART_ICON+(cloud.likes[post.uid]||[]).length+' · '+CHAT_ICON+(cloud.comments[post.uid]||[]).length+' · ver no clube</button>':'')+'</div>';}
+  h+=profileHtml(s.thirds)+factsHtml(s);
+  if(s.comment)h+='<div class="panel"><span class="eyebrow">Impressão final</span><p>'+esc(s.comment)+'</p></div>';
+  if(!state.confirmDelete)h+='<div class="row"><button class="btn" data-act="edit" data-id="'+esc(s.id)+'">Editar registro</button><button class="btn danger" data-act="askdel">Apagar</button></div>';
+  else h+='<div class="alert"><b>Apagar esta sessão?</b><span>O registro e a foto saem do diário'+(isMember()?' e do clube':'')+' e não podem ser recuperados, a menos que estejam num backup.</span><div class="row" style="margin-top:8px"><button class="btn danger" data-act="del" data-id="'+esc(s.id)+'">Apagar sessão</button><button class="btn ghost" data-act="canceldel">Manter</button></div></div>';
+  return h;
+}
+function viewPost(){
+  var it=feedItem(state.postUid);
+  if(!it){state.view='home';state.tab='clube';return viewHome();}
+  var name=(it.profiles&&it.profiles.display_name)||'Membro',likes=cloud.likes[it.uid]||[],cms=cloud.comments[it.uid]||[],me=cloud.user&&cloud.user.id,mine=likes.indexOf(me)>=0,key=feedPhotoKey(it),own=it.owner_id===me;
+  var h='<header class="top"><button class="btn small ghost" style="align-self:flex-start" data-act="backclube">Voltar ao clube</button><div class="phead"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="who"><b>'+esc(name)+'</b><div class="meta">'+esc(fmtDateTime(it.ended_at||it.started_at))+'</div></div></div><h1 style="font-size:34px">'+esc(it.cigar_name)+'</h1><p class="muted">'+esc([it.moment,it.drink,it.duration_min?it.duration_min+' min':''].filter(Boolean).join(' · '))+'</p></header>';
+  if(key&&photoURL[key])h+=bandImg(key,'','Anilha do '+it.cigar_name);
+  h+='<div class="row" style="justify-content:space-between"><div class="rating"><b class="num">'+(it.rating!=null?numStr(Number(it.rating)):'—')+'</b><span class="muted">de 10</span></div>'+(it.rebuy?'<span class="chip">Recompraria: '+esc(it.rebuy)+'</span>':'')+'</div>';
+  h+='<div class="row"><button class="btn like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'">'+HEART_ICON+(mine?'Curtido':'Curtir')+' · <span class="num">'+likes.length+'</span></button></div>';
+  h+=profileHtml(it.thirds)+factsHtml(it);
+  if(it.comment)h+='<div class="panel"><span class="eyebrow">Impressão final</span><p>'+esc(it.comment)+'</p></div>';
+  h+='<div><h2 style="margin-bottom:12px">Comentários</h2><div class="comments">';
+  if(!cms.length)h+='<p class="faint">Ninguém comentou ainda.</p>';
+  cms.forEach(function(c){var cn=(c.profiles&&c.profiles.display_name)||'Membro',canDel=c.user_id===me||own;
+    h+='<div class="cmt"><span class="avatar sm" aria-hidden="true">'+initials(cn)+'</span><div class="body"><div class="meta"><b style="color:var(--fg)">'+esc(cn)+'</b> · '+esc(relTime(c.created_at))+'</div><p>'+esc(c.body)+'</p>'+(canDel?'<button class="linkbtn" style="font-size:13px" data-act="delcomment" data-id="'+esc(c.id)+'">Apagar</button>':'')+'</div></div>';});
+  h+='</div></div>';
+  h+='<div class="panel"><label class="f" for="c-body">Seu comentário<textarea id="c-body" maxlength="500" placeholder="ex.: Também senti cedro no 2º terço!"></textarea></label><div class="row"><button class="btn primary" data-act="comment" data-id="'+esc(it.uid)+'"'+(cloud.commentBusy?' disabled':'')+'>'+(cloud.commentBusy?'Publicando…':'Comentar')+'</button></div></div>';
+  return h;
+}
+
+/* ---------- ciclo da sessão ---------- */
+function newSession(c){
+  return {id:uid(),cigarId:c.id,cigarName:c.name,status:'aberta',visibility:'club',createdAt:new Date().toISOString(),moment:'',drink:'',
+    thirds:[{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''}],
+    strength:0,burn:'',draw:'',feel:'',rating:null,rebuy:'',comment:'',timer:{acc:0,running:true,resumedAt:Date.now()},durationMin:0};
+}
+function enterSession(s){draft=clone(s);if(!draft.thirds)draft.thirds=newSession({}).thirds;if(!draft.visibility)draft.visibility='club';state.view='session';state.step=0;render();window.scrollTo(0,0);requestWake();}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,600);}
+function flush(){clearTimeout(saveTimer);if(!draft)return Promise.resolve();return put('sessions',draft);}
+function leaveSession(){flush();draft=null;releaseWake();state.view='home';state.tab='acervo';render();window.scrollTo(0,0);}
+function startTick(){stopTick();tick=setInterval(updateClock,1000);updateClock();}
+function stopTick(){if(tick){clearInterval(tick);tick=null;}}
+function updateClock(){if(!draft||draft.status==='concluida')return;var ms=elapsed(draft),c=document.getElementById('clock'),r=document.getElementById('ring');if(c)c.textContent=fmtClock(ms);if(r)r.setAttribute('stroke-dashoffset',String(100.53*(1-((ms/1000)%60)/60)));}
+function requestWake(){try{if(navigator.wakeLock&&navigator.wakeLock.request){navigator.wakeLock.request('screen').then(function(l){wakeLock=l;}).catch(function(){});}}catch(e){}}
+function releaseWake(){try{if(wakeLock)wakeLock.release();}catch(e){}wakeLock=null;}
+function compress(file){return new Promise(function(res){var url;try{url=URL.createObjectURL(file);}catch(e){res(file);return;}var img=new Image();
+  img.onload=function(){try{var max=1400,w=img.naturalWidth,h=img.naturalHeight,k=Math.min(1,max/Math.max(w,h));var c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(function(b){res(b||file);},'image/jpeg',0.85);}catch(e){URL.revokeObjectURL(url);res(file);}};
+  img.onerror=function(){URL.revokeObjectURL(url);res(null);};img.src=url;});}
+function handleBandFile(file){
+  if(!file||!draft)return;
+  busy.uploading=true;render();
+  var sid=draft.id, old=draft.bandId;
+  compress(file).then(function(b){if(!b)throw new Error('decode');return addPhoto(b);}).then(function(id){
+    busy.uploading=false;
+    if(draft&&draft.id===sid){draft.bandId=id;flush();render();}
+    if(old&&old!==id)removePhoto(old);
+    toast('Foto da anilha salva');
+  }).catch(function(e){busy.uploading=false;render();toast(e&&e.message==='decode'?'Não foi possível abrir essa imagem. Tente outra foto.':'Não foi possível salvar a foto. Verifique o espaço do celular.');});
+}
+function copyText(id,text){
+  try{navigator.clipboard.writeText(text).then(function(){toast('Link copiado');},function(){selectInput(id);});}catch(e){selectInput(id);}
+}
+function selectInput(id){var el=document.getElementById(id);if(el){el.focus();el.select();toast('Selecione e copie o link.');}}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('[data-act]');if(!b)return;
+  var act=b.getAttribute('data-act'),id=b.getAttribute('data-id'),val=b.getAttribute('data-val'),field=b.getAttribute('data-field');
+  switch(act){
+    case 'tab': state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); break;
+    case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
+    case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
+    case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
+    case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
+    case 'step': state.step=Number(id); render(); window.scrollTo(0,0); break;
+    case 'set': draft[field]=draft[field]===val?'':val; scheduleSave(); render(); break;
+    case 'vis': draft.visibility=val; scheduleSave(); render(); break;
+    case 'setnum': {var n=Number(val);if(field==='intensity'){var th=draft.thirds[state.step];th.intensity=th.intensity===n?0:n;}else draft[field]=draft[field]===n?0:n;scheduleSave();render();break;}
+    case 'note': {var tt=draft.thirds[state.step],i=tt.notes.indexOf(val);if(i>=0)tt.notes.splice(i,1);else tt.notes.push(val);scheduleSave();render();break;}
+    case 'dur': {var nm=setDuration(durMin(draft)+Number(val));var ih=document.getElementById('dur-h'),im=document.getElementById('dur-m');if(ih)ih.value=Math.floor(nm/60);if(im)im.value=nm%60;scheduleSave();break;}
+    case 'rmband': {var ob=draft.bandId;draft.bandId=null;flush();removePhoto(ob);render();toast('Foto removida');break;}
+    case 'finish': {var tm=draft.timer;if(tm.running){tm.acc=(tm.acc||0)+(Date.now()-tm.resumedAt);tm.running=false;tm.resumedAt=null;}
+      var wasDone=draft.status==='concluida';
+      draft.status='concluida';if(!wasDone||!draft.endedAt)draft.endedAt=new Date().toISOString();draft.durationMin=Math.max(1,Math.round((tm.acc||0)/60000));
+      if(typeof draft.rating!=='number'){var r=document.getElementById('rating');draft.rating=r?Number(r.value):null;}
+      var sid=draft.id;flush().then(function(){toast(wasDone?'Alterações salvas':'Sessão salva no diário');});draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);
+      if(isMember()){clearTimeout(syncTimer);setTimeout(sync,300);}break;}
+    case 'detail': state.view='detail'; state.detailId=id; state.confirmDelete=false; render(); window.scrollTo(0,0); break;
+    case 'askdel': state.confirmDelete=true; render(); break;
+    case 'canceldel': state.confirmDelete=false; render(); break;
+    case 'del': {var d0=sessionById(id);if(d0&&d0.bandId)removePhoto(d0.bandId);removeSession(id).then(function(){toast('Sessão apagada');});state.confirmDelete=false;state.view='home';state.tab='historico';render();break;}
+    case 'addopen': state.addOpen=true; render(); var f=document.getElementById('nc-name'); if(f)f.focus(); break;
+    case 'addclose': state.addOpen=false; render(); break;
+    case 'export': exportDownload(); break;
+    case 'share': exportShare(); break;
+    case 'install': if(installPrompt){installPrompt.prompt();installPrompt.userChoice.then(function(){installPrompt=null;render();}).catch(function(){});} break;
+    case 'authmode': cloud.authMode=id; cloud.authMsg=''; render(); break;
+    case 'signout': signOut(); break;
+    case 'askconfirm': state.confirm=id; render(); break;
+    case 'cancelconfirm': state.confirm=''; render(); break;
+    case 'deleteaccount': deleteAccount(); break;
+    case 'wipe': wipeLocalForAccount(); break;
+    case 'syncnow': sync(); break;
+    case 'savename': saveName(); break;
+    case 'newinvite': createInvite(); break;
+    case 'copyinvite': copyText('invite-link',cloud.inviteLink); break;
+    case 'shareinvite': navigator.share({title:'Convite para o Clube do Diário de Degustação',text:'Te convidei para o nosso clube de degustação de charutos. Abra no Chrome (Android) ou Safari (iPhone):',url:cloud.inviteLink}).catch(function(){}); break;
+    case 'refreshfeed': loadFeed(); break;
+    case 'post': state.view='post'; state.postUid=id; render(); window.scrollTo(0,0); fetchFeedPhotos(); break;
+    case 'backclube': state.view='home'; state.tab='clube'; render(); break;
+    case 'like': toggleLike(id); break;
+    case 'comment': addComment(id); break;
+    case 'delcomment': deleteComment(id,state.postUid); break;
+  }
+});
+document.addEventListener('input',function(ev){
+  var el=ev.target, k=el.getAttribute('data-input'); if(!k||!draft)return;
+  if(k==='thirdText')draft.thirds[state.step].text=el.value;
+  else if(k==='comment')draft.comment=el.value;
+  else if(k==='dur'){var hv=parseInt(document.getElementById('dur-h').value,10)||0,mv=parseInt(document.getElementById('dur-m').value,10)||0;if(hv*60+mv<1)return;setDuration(hv*60+mv);}
+  else if(k==='rating'){draft.rating=Number(el.value);var o=document.getElementById('ratingOut');if(o)o.textContent=numStr(draft.rating);}
+  scheduleSave();
+});
+document.addEventListener('change',function(ev){
+  var el=ev.target;
+  if(el.id==='band-camera'||el.id==='band-gallery'){var f=el.files&&el.files[0];el.value='';handleBandFile(f);return;}
+  if(el.id==='import-file'){var g=el.files&&el.files[0];el.value='';importFile(g);return;}
+  var w=el.getAttribute('data-cmp');if(!w)return;if(w==='A')state.cmpA=el.value;else state.cmpB=el.value;render();
+});
+document.addEventListener('submit',function(ev){
+  var fm=ev.target;
+  if(fm.id==='authForm'){ev.preventDefault();submitAuth(fm);return;}
+  if(fm.id==='joinForm'){ev.preventDefault();fm.setAttribute('data-mode','join');submitAuth(fm);return;}
+  if(fm.id!=='addForm')return; ev.preventDefault();
+  var name=document.getElementById('nc-name').value.trim(); if(!name){toast('Informe o nome do charuto.');return;}
+  var c={id:uid(),name:name,origin:document.getElementById('nc-origin').value.trim(),vitola:document.getElementById('nc-vitola').value.trim(),strength:Number(document.getElementById('nc-strength').value),status:document.getElementById('nc-status').value,order:100+state.cigars.length};
+  put('cigars',c); state.addOpen=false; render(); toast('Charuto adicionado ao acervo');
+});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if(state.view==='session'&&draft)requestWake();if(isMember())scheduleSync();}});
+window.addEventListener('online',function(){if(isMember()){sync();if(state.tab==='clube')loadFeed();}});
+window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});
+window.addEventListener('appinstalled',function(){installPrompt=null;toast('App instalado na tela inicial');});
+
+function init(){
+  render();
+  openDB().then(function(d){idb=d;return loadAll();}).catch(function(){state.dbError=true;state.loaded=true;}).then(function(){render();cloudInit();});
+  try{if(navigator.storage&&navigator.storage.persisted){navigator.storage.persisted().then(function(p){busy.persisted=p;if(!p&&navigator.storage.persist)return navigator.storage.persist().then(function(v){busy.persisted=v;});}).then(function(){if(state.tab==='conta'&&state.view==='home')render();}).catch(function(){});}}catch(e){}
+  if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){navigator.serviceWorker.register('sw.js').catch(function(){});}
+}
+window.__diario={state:state,cloud:cloud,sync:sync,loadFeed:loadFeed};
+init();
+})();
+</script>
+</body>
+</html>
