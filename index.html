@@ -187,6 +187,27 @@ details.terms div{display:flex; flex-direction:column; gap:8px; padding-top:10px
 .hbar.dim .trk i{background:var(--faint)}
 .insights{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:15px}
 .chip.up{border:1.5px solid var(--ok)} .chip.down{border:1.5px solid var(--bad)}
+.lvl{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+.lvl b{font-family:var(--f-display); color:var(--ember)}
+.xpbar{height:10px; border-radius:5px; background:var(--surface2); overflow:hidden}
+.xpbar i{display:block; height:100%; border-radius:5px; background:var(--ember)}
+.badges{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px}
+.badge2{padding:12px; border-radius:12px; border:1.5px solid var(--line); display:flex; gap:10px; align-items:flex-start; min-width:0}
+.badge2.on{border-color:var(--ember); background:var(--surface2)}
+.badge2 .ic{width:34px; height:34px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:var(--surface2); color:var(--faint)}
+.badge2.on .ic{background:var(--ember); color:var(--ember-ink)}
+.badge2 b{display:block; font-size:14px} .badge2 span{display:block; font-size:12px; color:var(--muted)}
+.badge2:not(.on) b{color:var(--muted)}
+.mission{padding:14px 16px; border-radius:12px; border:1.5px dashed var(--ember); display:flex; flex-direction:column; gap:4px; font-size:15px}
+.mission.done{border-style:solid; background:var(--surface2)}
+.suggest{border-color:var(--ember)}
+.ficha{display:flex; flex-direction:column; gap:10px}
+.ficha dl{display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:0; font-size:14px}
+.ficha dt{color:var(--faint)} .ficha dd{margin:0; color:var(--fg)}
+details.lesson{border-top:1px solid var(--line); padding-top:10px}
+details.lesson summary{display:flex; justify-content:space-between; gap:10px}
+@media (max-width:380px){ .badges{grid-template-columns:1fr} }
+.appfoot{margin-top:12px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--faint); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap}
 .kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px}
 .kv dt{color:var(--faint)} .kv dd{margin:0; font-weight:600; overflow-wrap:anywhere}
 .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(20px + env(safe-area-inset-bottom, 0px)); background:var(--fg); color:var(--bg); padding:10px 16px; border-radius:12px; font-weight:600; z-index:20; max-width:calc(100% - 32px)}
@@ -209,6 +230,8 @@ details.terms div{display:flex; flex-direction:column; gap:8px; padding-top:10px
 (function(){
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
+/* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
+var APP_VERSION='2.6.1', APP_BUILD='22/11/2026';
 var FAMILIES=[
   {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo','Coco']},
   {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
@@ -232,6 +255,141 @@ function terroirOf(c){var o=String((c&&c.origin)||'');for(var i=0;i<TERROIR.leng
 function cutTipOf(c){var t=String(((c&&c.name)||'')+' '+((c&&c.vitola)||''));
   if(/torpedo|pir[aâá]mide|piramide|belicoso|figurado|perfecto|salom/i.test(t))return 'Figurado: corte diagonal suave, só a ponta, para abrir a tiragem sem desmontar o formato.';
   return 'Parejo: corte reto com guilhotina de lâmina dupla, no máximo 2 a 3 mm da cabeça, sem passar da tampa.';}
+/* ===== Conhecimento: ficha técnica do charuto ===== */
+var WRAPPERS={
+  connecticut:['Connecticut Shade','Cultivada sob tecido que filtra o sol, o que deixa a folha clara, fina e elástica. Sabor suave e cremoso, com notas de creme, castanha e cedro.'],
+  habano:['Habano','Capa de semente cubana cultivada fora de Cuba, como na Nicarágua e no Equador. Mais especiada e encorpada.'],
+  corojo:['Corojo','Variedade de origem cubana, de capa avermelhada. Costuma ser picante, terrosa e intensa.'],
+  camaroes:['Camarões (Cameroon)','Folha africana fina, de veias aparentes. Adocicada e levemente especiada, com boa combustão.'],
+  sumatra:['Sumatra','Semente indonésia, hoje cultivada também no Equador. Especiada e terrosa, com fundo adocicado.'],
+  maduro:['Maduro','Folha escura, de fermentação mais longa. Doçura de cacau, café e melaço; tende a ser mais encorpada.'],
+  natural:['Natural / Colorado','Capa marrom-média. Equilíbrio entre doçura e especiaria.'],
+  cubana:['Capa cubana','Tabaco cubano, de Vuelta Abajo e outras zonas. Notas terrosas, de cedro, couro e tostado.'],
+  matafina:['Mata Fina (Brasil)','Tabaco escuro do Recôncavo Baiano. Terroso e adocicado, com notas de cacau e café.']
+};
+function wrapperOf(c){if(!c)return '';if(c.wrapper)return c.wrapper;var t=String((c.name||'')+' '+(c.expected||'')).toLowerCase(),o=String(c.origin||'').toLowerCase();
+  if(/shade|connecticut/.test(t))return 'connecticut';if(/corojo/.test(t))return 'corojo';if(/maduro|oscuro/.test(t))return 'maduro';if(/habano/.test(t))return 'habano';
+  if(/camar|cameroon/.test(t))return 'camaroes';if(/sumatra/.test(t))return 'sumatra';if(/mata fina/.test(t))return 'matafina';if(/cuba|havan/.test(o))return 'cubana';return '';}
+function parseVitola(v){v=String(v||'').toLowerCase().replace(',', '.');if(!v)return null;
+  var m=v.match(/(\d+(?:\.\d+)?)(?:\s+(\d+)\/(\d+))?\s*(?:"|''|pol)?\s*[x×]\s*(\d+(?:\.\d+)?)/);if(!m)return null;
+  var a=parseFloat(m[1])+(m[2]?parseInt(m[2],10)/parseInt(m[3],10):0),b=parseFloat(m[4]);
+  var len=a<12?a*25.4:a,ring=b<=26?b/0.397:b;return {len:Math.round(len),ring:Math.round(ring),mm:Math.round(ring*0.397*10)/10};}
+function vitolaClass(p){if(!p)return null;var L=p.len,G=p.ring;
+  if(G<=38)return L>=150?['Lancero / Panetela','35 a 60 min']:['Cigarrilha / Panetela curta','15 a 30 min'];
+  if(G>=56)return ['Gordo','75 a 120 min'];
+  if(G<=44){if(L<=129)return ['Petit Corona','30 a 45 min'];if(L<=155)return ['Corona','45 a 60 min'];return ['Lonsdale','60 a 75 min'];}
+  if(G<=47){if(L<=135)return ['Petit Robusto / Corona Extra','35 a 50 min'];if(L<=160)return ['Corona Gorda','50 a 70 min'];return ['Churchill','75 a 100 min'];}
+  if(L<=135)return ['Robusto','45 a 60 min'];if(L<=160)return ['Toro','60 a 80 min'];if(L<=185)return ['Churchill','75 a 100 min'];return ['Double Corona','90 a 120 min'];}
+function ringEffect(p){if(!p)return '';if(p.ring<=44)return 'Bitola fina: a capa responde por boa parte do sabor, e a brasa esquenta rápido. Pede baforadas mais espaçadas.';
+  if(p.ring>=52)return 'Bitola grossa: mais tripa no blend, fumaça mais fresca e volumosa. O sabor vem mais do miolo do que da capa.';
+  return 'Bitola média: equilíbrio entre o sabor da capa e o do blend da tripa.';}
+function fichaHtml(c,name){
+  var cc=c||{name:name},p=parseVitola(cc.vitola),vc=vitolaClass(p),w=wrapperOf(cc),tr=terroirOf(cc),own=done().filter(function(s){return c&&s.cigarId===c.id&&s.durationMin;});
+  var h='<div class="ficha"><dl>';
+  if(vc)h+='<dt>Formato</dt><dd>'+esc(vc[0])+' · '+p.len+' mm, ring '+p.ring+' ('+numStr(p.mm)+' mm)</dd><dt>Duração típica</dt><dd>'+esc(vc[1])+(own.length?' · a sua: '+Math.round(avg(own.map(function(s){return s.durationMin;})))+' min':'')+'</dd>';
+  if(w&&WRAPPERS[w])h+='<dt>Capa</dt><dd>'+esc(WRAPPERS[w][0])+(cc.wrapper?'':' <span class="faint">(estimada pelo nome/origem)</span>')+'</dd>';
+  if(cc.origin)h+='<dt>Origem</dt><dd>'+esc(cc.origin)+'</dd>';
+  h+='</dl>';
+  if(w&&WRAPPERS[w])h+='<p>'+esc(WRAPPERS[w][1])+'</p>';
+  if(p)h+='<p>'+esc(ringEffect(p))+'</p>';
+  if(tr)h+='<p>'+esc(tr)+'</p>';
+  h+='<p>'+esc(cutTipOf(cc))+'</p>';
+  if(!p||!w)h+='<p class="faint" style="font-size:13px">'+(!p?'Informe a bitola como comprimento x ring (ex.: 129 x 42 mm ou 5 x 50) para ver o formato. ':'')+(!w?'Escolha a capa em Editar para ver o perfil da folha.':'')+'</p>';
+  return h+'</div>';
+}
+/* ===== Escola do charuto (lições curtas) ===== */
+var LESSONS=[
+  ['anatomia','Anatomia: capa, capote e tripa','<p>Todo charuto premium tem três camadas. A <b>tripa</b> é o miolo, um blend de folhas que define força e sabor. O <b>capote</b> envolve a tripa e dá forma. A <b>capa</b> é a folha externa: a mais bonita e elástica, responde por boa parte do aroma e da primeira impressão.</p><p>Na tripa, as folhas mudam conforme a altura na planta: <b>ligero</b> (topo, mais sol) traz força; <b>seco</b> (meio) traz aroma; <b>volado</b> (base) ajuda a combustão.</p>'],
+  ['campo','Do campo ao charuto','<p>As folhas são colhidas aos poucos, de baixo para cima, conforme amadurecem. Depois vem a <b>cura</b>: secagem lenta em casas de tabaco ventiladas, quando a folha perde o verde e ganha cor.</p><p>Na <b>fermentação</b>, as folhas são empilhadas e aquecem naturalmente, liberando amônia e aspereza. Folhas para capa Maduro fermentam por mais tempo. Por fim, o tabaco <b>envelhece</b> e é enrolado à mão pelo torcedor.</p>'],
+  ['vitolas','Vitolas e bitola','<p>Vitola é o formato do charuto: comprimento e diâmetro. O diâmetro é medido em <b>ring gauge</b>, em 64 avos de polegada: ring 64 tem 1 polegada (25,4 mm). Um ring 42 tem cerca de 16,7 mm; um 50, cerca de 19,8 mm.</p><p>Formatos clássicos: Petit Corona e Corona (finos), Robusto (curto e grosso), Toro, Churchill (longo). Figurados, como Torpedo e Pirâmide, afinam na cabeça e concentram a fumaça.</p>'],
+  ['capas','Capas e cores','<p>A cor da capa vai do claro ao escuro: <b>Claro</b> (Connecticut Shade, suave), <b>Colorado</b> (marrom-avermelhado), <b>Maduro</b> e <b>Oscuro</b> (escuras, adocicadas). Cor escura não significa necessariamente mais força: a força vem principalmente da tripa.</p><p>Capas cultivadas sob tecido (shade grown) recebem menos sol e ficam mais finas e suaves.</p>'],
+  ['tripa','Tripa longa e tripa curta','<p>Charutos premium usam <b>tripa longa</b>: folhas inteiras, que correm de ponta a ponta. A queima é mais lenta e uniforme, e o sabor evolui ao longo dos terços.</p><p>Na <b>tripa curta</b> (picada), o tabaco é cortado em pedaços. Queima mais rápido e quente, e costuma ter sabor mais linear.</p>'],
+  ['construcao','Como avaliar a construção','<p><b>Antes de acender:</b> a capa deve ser íntegra, com brilho natural de óleo e sem rachaduras. Aperte de leve ao longo do corpo: a firmeza deve ser uniforme, sem pontos moles ou duros. Puxe o ar com o charuto apagado (tiragem a frio): deve passar com leve resistência.</p><p><b>Durante:</b> queima reta, cinza firme e compacta, tiragem constante. Por isso o app pede queima e tiragem no fechamento: são o retrato da construção.</p>'],
+  ['descanso','Descanso e envelhecimento','<p>Charuto recém-chegado, de viagem ou da loja, melhora depois de alguns dias de descanso no umidor, entre 65% e 70% de umidade. A umidade se equilibra e a queima fica mais uniforme.</p><p>Com meses e anos de guarda bem feita, os sabores tendem a se integrar e ficar mais redondos. Ninguém sabe ao certo o ponto ideal de cada charuto, e por isso vale anotar no diário.</p>'],
+  ['paladar','Treinando o paladar','<p>Na boca sentimos só cinco gostos: doce, salgado, ácido, amargo e umami. Todo o resto (cedro, cacau, castanha) é <b>aroma</b>, percebido pelo nariz. Por isso o retrohale, soltar um pouco de fumaça pelo nariz, revela tanto.</p><p>Para treinar, foque em uma família de cada vez. É o que as missões de aroma do app propõem a cada sessão.</p>']
+];
+function lessonsRead(){try{return JSON.parse(ls('diario-licoes')||'[]');}catch(e){return [];}}
+function markLesson(id){var r=lessonsRead();if(r.indexOf(id)>=0)return;var before=journey();r.push(id);ls('diario-licoes',JSON.stringify(r));var after=journey();announce(before,after);
+  var hc=document.querySelector('header.top .lvl');if(hc)hc.innerHTML='<b>'+esc(after.name)+'</b><span class="num faint">'+after.xp+' pts · '+after.on.length+' conquistas</span>';}
+/* ===== Missões de aroma ===== */
+var MISSION_FAMS=['doce','castanha','madeira','terra','cacau','especiaria','fruta'];
+function pickMission(){var c={};MISSION_FAMS.forEach(function(f){c[f]=0;});done().forEach(function(s){sessNotes(s).forEach(function(n){var f=famOf(n);if(f&&c[f.id]!=null)c[f.id]++;});});
+  var arr=MISSION_FAMS.slice().sort(function(a,b){return c[a]-c[b];});var low=arr.slice(0,3);return low[Math.floor(Math.random()*low.length)];}
+function famById(id){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].id===id)return FAMILIES[i];return null;}
+function missionDone(s){var f=s&&s.mission&&famById(s.mission);if(!f)return false;return sessNotes(s).some(function(n){return f.notes.indexOf(n)>=0;});}
+/* ===== Jornada: pontos, níveis e conquistas (calculados a partir do diário) ===== */
+var LEVELS=[[0,'Iniciante'],[40,'Apreciador'],[120,'Conhecedor'],[250,'Aficionado'],[450,'Mestre']];
+function weekKey(iso){var d=new Date(iso);if(isNaN(d))return '';var t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));var day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);var y=t.getUTCFullYear();return y+'-'+Math.ceil(((t-Date.UTC(y,0,1))/86400000+1)/7);}
+function journey(){
+  var D=done(),xp=0,photos=0,texts=0,missions=0,notes={},origins={},moments={},drinks={},vit={},cig={},weeks={},full3=false;
+  D.forEach(function(s){xp+=10;var nThirds=0;(s.thirds||[]).forEach(function(t){if(t&&t.notes&&t.notes.length){nThirds++;t.notes.forEach(function(n){notes[n]=1;});}if(t&&t.text&&t.text.trim())texts++;});
+    xp+=2*nThirds;if(nThirds>=3)full3=true;if(s.bandId){photos++;xp+=3;}if(s.comment&&s.comment.trim()){texts++;}
+    if(missionDone(s)){missions++;xp+=5;}
+    var c=s.cigarId&&cigarById(s.cigarId);if(c&&c.origin)origins[String(c.origin).toLowerCase().replace(/havana/,'cuba').trim()]=1;
+    if(s.moment)moments[s.moment]=1;if(s.drink&&s.drink!=='Outra')drinks[s.drink]=1;
+    if(c&&c.vitola){var pv=parseVitola(c.vitola);var k=pv?pv.len+'x'+pv.ring:String(c.vitola).toLowerCase();(vit[k]=vit[k]||{})[c.id]=1;}
+    var ck=s.cigarId||s.cigarName;cig[ck]=(cig[ck]||0)+1;var wk=weekKey(s.createdAt);if(wk)weeks[wk]=1;});
+  var comments=D.filter(function(s){return s.comment&&s.comment.trim();}).length;
+  xp+=Math.min(texts,30)*3;var lr=lessonsRead().length;xp+=lr*5;
+  var lv=0;for(var i=0;i<LEVELS.length;i++)if(xp>=LEVELS[i][0])lv=i;
+  var nN=Object.keys(notes).length,five=['Doce','Salgado','Ácido','Amargo','Umami'].filter(function(n){return notes[n];}).length;
+  var duel=Object.keys(vit).some(function(k){return Object.keys(vit[k]).length>=2;}),rep=Object.keys(cig).some(function(k){return cig[k]>=2;});
+  function B(id,name,desc,cur,goal){return {id:id,name:name,desc:desc,cur:Math.min(cur,goal),goal:goal,on:cur>=goal};}
+  var badges=[
+    B('primeira','Primeira fumaça','Concluir a primeira sessão',D.length,1),
+    B('tercos','Terço a terço','Marcar sabores nos três terços',full3?1:0,1),
+    B('dezena','Dezena','Concluir 10 sessões',D.length,10),
+    B('anilhas','Colecionador de anilhas','Fotografar 5 anilhas',photos,5),
+    B('sabores','Paladar afiado','Marcar 20 sabores diferentes',nN,20),
+    B('gostos','Os cinco gostos','Registrar doce, salgado, ácido, amargo e umami',five,5),
+    B('origens','Volta ao mundo','Fumar charutos de 3 origens',Object.keys(origins).length,3),
+    B('duelo','Duelo de vitolas','Dois charutos diferentes no mesmo formato',duel?1:0,1),
+    B('fiel','Fiel ao favorito','Repetir um charuto',rep?1:0,1),
+    B('momentos','Hora certa','Fumar em 3 momentos do dia',Object.keys(moments).length,3),
+    B('harmonizador','Harmonizador','Testar 4 bebidas diferentes',Object.keys(drinks).length,4),
+    B('missoes','Caçador de aromas','Cumprir 3 missões de aroma',missions,3),
+    B('cronista','Cronista','Escrever a impressão final em 3 sessões',comments,3),
+    B('estudioso','Estudioso','Ler 5 lições da Escola do charuto',lr,5),
+    B('constancia','Constância','Fumar em 4 semanas diferentes',Object.keys(weeks).length,4)];
+  return {xp:xp,lv:lv,name:LEVELS[lv][1],next:LEVELS[lv+1]||null,floor:LEVELS[lv][0],badges:badges,on:badges.filter(function(b){return b.on;}).map(function(b){return b.id;})};
+}
+function announce(before,after){
+  var news=after.badges.filter(function(b){return b.on&&before.on.indexOf(b.id)<0;});
+  var msg=[];if(after.lv>before.lv)msg.push('Novo nível: '+after.name+'!');news.forEach(function(b){msg.push('Conquista: '+b.name);});
+  if(msg.length)setTimeout(function(){toast(msg.join(' · '));},900);
+}
+var BADGE_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"></circle><path d="M8.5 13 7 21l5-3 5 3-1.5-8"></path></svg>';
+var LOCK_ICON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>';
+function journeyHtml(){
+  var j=journey(),pct=j.next?Math.round((j.xp-j.floor)/(j.next[0]-j.floor)*100):100;
+  var h='<div class="panel"><h2>Sua jornada</h2><div class="lvl"><b>'+esc(j.name)+'</b><span class="num">'+j.xp+' pontos</span>'+(j.next?'<span class="faint">· faltam '+(j.next[0]-j.xp)+' para '+esc(j.next[1])+'</span>':'<span class="faint">· nível máximo</span>')+'</div>'+
+    '<div class="xpbar" role="img" aria-label="'+pct+'% do nível"><i style="width:'+pct+'%"></i></div>'+
+    '<details class="terms"><summary>Como ganhar pontos</summary><div><p>Sessão concluída: 10. Cada terço com sabores marcados: 2. Foto da anilha: 3. Anotação escrita: 3. Missão de aroma cumprida: 5. Lição lida: 5.</p><p>Os pontos são calculados a partir do seu diário, então valem em qualquer aparelho em que o diário estiver.</p></div></details>'+
+    '<h3>Conquistas <span class="num faint">'+j.on.length+'/'+j.badges.length+'</span></h3><div class="badges">'+j.badges.map(function(b){
+      return '<div class="badge2'+(b.on?' on':'')+'"><span class="ic">'+(b.on?BADGE_ICON:LOCK_ICON)+'</span><div style="min-width:0"><b>'+esc(b.name)+'</b><span>'+esc(b.desc)+(b.on?'':' · '+b.cur+'/'+b.goal)+'</span></div></div>';}).join('')+'</div></div>';
+  return h;
+}
+function lessonsHtml(){var r=lessonsRead();
+  return '<div class="panel"><h2>Escola do charuto</h2><p class="muted" style="font-size:14px">Lições curtas sobre a natureza e a construção do charuto. Cada lição lida vale 5 pontos. <span class="num">'+r.length+'/'+LESSONS.length+'</span> lidas.</p>'+
+    LESSONS.map(function(l){var rd=r.indexOf(l[0])>=0;return '<details class="terms lesson" data-lesson="'+l[0]+'"><summary><span>'+esc(l[1])+'</span><span class="faint" style="font-weight:400">'+(rd?'lida':'5 pts')+'</span></summary><div>'+l[2]+'</div></details>';}).join('')+'</div>';}
+/* ===== Sugestão da próxima degustação ===== */
+function sweetSpot(){var R0=rated();if(R0.length<3)return [1,3];var mean=avg(R0.map(function(s){return s.rating;}));var good=[1,2,3,4,5].filter(function(v){var ss=R0.filter(function(s){return s.strength===v;});return ss.length&&avg(ss.map(function(s){return s.rating;}))>=mean;});
+  return good.length?[Math.min.apply(null,good),Math.max.apply(null,good)]:[1,3];}
+function pairingFor(c){if(c.pairing)return c.pairing;var st=c.strength||2;if(st<=2)return 'café ou água de coco, de preferência depois de comer';if(st===3)return 'whisky sem turfa, rum ou cachaça envelhecida';return 'rum envelhecido, depois de uma refeição e com água por perto';}
+function suggestion(){
+  var cands=state.cigars.filter(function(c){var f=cflags(c);return f.cesta||f.estoque;});if(!cands.length)return null;
+  var sp=sweetSpot(),now=Date.now();
+  var scored=cands.map(function(c){var ss=done().filter(function(s){return s.cigarId===c.id;}),why=[],sc=0;
+    if(c.strength>=sp[0]&&c.strength<=sp[1]){sc+=3;why.push('força esperada '+c.strength+'/5, dentro da sua faixa ideal ('+sp[0]+' a '+sp[1]+')');}
+    else if(c.strength>sp[1]){sc-=2;why.push('força esperada '+c.strength+'/5, acima da sua faixa ideal: coma antes');}
+    if(!ss.length){sc+=2;why.push('você ainda não registrou este charuto');}
+    else{var last=Date.parse(ss[0].createdAt)||0,days=Math.round((now-last)/86400000),ra=avg(ss.filter(function(s){return typeof s.rating==='number';}).map(function(s){return s.rating;}));
+      if(days>14){sc+=1;why.push('última sessão há '+days+' dias');}if(ra!=null){sc+=(ra-7)/2;why.push('sua nota média nele: '+fmt1(ra));}}
+    return {c:c,sc:sc,why:why};}).sort(function(a,b){return b.sc-a.sc;});
+  return scored[0];
+}
+function suggestionHtml(){var sg=suggestion();if(!sg)return '';var c=sg.c;
+  return '<div class="card suggest"><div class="eyebrow">Sugestão para a próxima degustação</div><h3>'+esc(c.name)+'</h3><p class="meta">'+esc(sg.why.join(' · '))+'</p><p class="meta">Para acompanhar: '+esc(pairingFor(c))+'.</p><div class="row"><button class="btn primary small" data-act="start" data-id="'+esc(c.id)+'">Iniciar sessão</button></div></div>';}
 var THIRD_TIPS=[
   function(s){var c=cigarById(s.cigarId);return '<b>Antes de acender.</b> '+esc(cutTipOf(c))+' Toste o pé com chama limpa (butano, cedro ou fósforo longo), sem encostar o fogo, girando até a borda acender por igual. Na primeira baforada, sopre para fora para tirar o gosto do acendimento. Charuto suave é o melhor momento para treinar o retrohale: pouca fumaça, solta devagar pelo nariz.';},
   function(){return '<b>2º terço.</b> É aqui que o blend costuma se abrir. Deixe uns dois dedos de cinza: ela protege a brasa e esfria a fumaça. Se a queima entortar, aponte a chama só para o lado atrasado. Em pausas, não deixe apagar; se apagar, sopre pelo charuto antes de reacender.';},
@@ -390,9 +548,9 @@ function rowToSession(r){var t=r.client_updated_at||Date.now();return {id:r.loca
   strength:r.strength||0,burn:r.burn||'',draw:r.draw||'',feel:r.feel||'',rating:r.rating==null?null:Number(r.rating),rebuy:r.rebuy||'',comment:r.comment||'',
   timer:r.timer||{acc:(r.duration_min||0)*60000,running:false,resumedAt:null},durationMin:r.duration_min||0,bandId:r.band_photo||null,updatedAt:t,syncedAt:t};}
 function cigarRow(c,u){return {owner_id:u,local_id:c.id,name:c.name||'Charuto',origin:nz(c.origin),vitola:nz(c.vitola),strength:c.strength||null,status:nz(c.status),
-  expected:nz(c.expected),pairing:nz(c.pairing),sort_order:c.order||null,band_photo:nz(c.bandId),client_updated_at:stamp(c),updated_at:new Date().toISOString()};}
+  expected:nz(c.expected),pairing:nz(c.pairing),sort_order:c.order||null,band_photo:nz(c.bandId),wrapper:nz(c.wrapper),client_updated_at:stamp(c),updated_at:new Date().toISOString()};}
 function rowToCigar(r){var t=r.client_updated_at||Date.now();return {id:r.local_id,name:r.name,origin:r.origin||'',vitola:r.vitola||'',strength:r.strength||0,status:r.status||'historico',
-  expected:r.expected||'',pairing:r.pairing||'',order:r.sort_order||999,bandId:r.band_photo||null,updatedAt:t,syncedAt:t};}
+  expected:r.expected||'',pairing:r.pairing||'',order:r.sort_order||999,bandId:r.band_photo||null,wrapper:r.wrapper||'',updatedAt:t,syncedAt:t};}
 
 /* ---- sincronização (o celular é a fonte; a nuvem é cópia e vitrine do clube) ---- */
 function sync(){
@@ -579,7 +737,7 @@ function render(){
   stopTick();
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
-  app.innerHTML=viewHome();
+  app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
 }
@@ -595,7 +753,7 @@ function statusLine(){
   if(s==='error')return '<span class="sdot bad"></span>Falha ao sincronizar. '+esc(cloud.statusDetail);
   return '<span class="sdot ok"></span>'+esc(cloud.profile.display_name)+' · sincronizado'+(cloud.lastSync?' '+esc(relTime(new Date(cloud.lastSync).toISOString())):'');
 }
-function viewHeader(){return '<header class="top"><div class="eyebrow">Charutos · paladar e sensações</div><h1>Diário de Degustação</h1><p class="mode">'+statusLine()+'</p></header>';}
+function viewHeader(){var j=state.loaded&&done().length?journey():null;return '<header class="top"><div class="eyebrow">Charutos · paladar e sensações</div><h1>Diário de Degustação</h1>'+(j?'<button class="linkbtn lvl" style="text-decoration:none" data-act="tab" data-id="paladar"><b>'+esc(j.name)+'</b><span class="num faint">'+j.xp+' pts · '+j.on.length+' conquistas</span></button>':'')+'<p class="mode">'+statusLine()+'</p></header>';}
 function viewHome(){
   var h=viewHeader();
   var live=openSession();
@@ -628,6 +786,7 @@ function cigarForm(c,pre){
     '<label class="f" for="'+sid+'-origin">Origem<input type="text" id="'+sid+'-origin" value="'+esc(c.origin||'')+'" placeholder="ex.: Cuba"></label>'+
     '<label class="f" for="'+sid+'-vitola">Bitola<input type="text" id="'+sid+'-vitola" value="'+esc(c.vitola||'')+'" placeholder="ex.: 102 x 40 mm"></label>'+
     '<label class="f" for="'+sid+'-strength">Força esperada<select id="'+sid+'-strength">'+STRENGTH_OPTS.map(function(o){return '<option value="'+o[0]+'"'+((c.strength||2)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>'+
+    '<label class="f" for="'+sid+'-wrapper">Capa<select id="'+sid+'-wrapper"><option value="">Não sei / estimar pelo nome</option>'+Object.keys(WRAPPERS).map(function(k){return '<option value="'+k+'"'+(c.wrapper===k?' selected':'')+'>'+esc(WRAPPERS[k][0])+'</option>';}).join('')+'</select></label>'+
     '<label class="f" for="'+sid+'-expected">Perfil esperado<input type="text" id="'+sid+'-expected" value="'+esc(c.expected||'')+'" placeholder="ex.: cacau, madeira e creme"></label>'+
     '<label class="f" for="'+sid+'-pairing">Combina com<input type="text" id="'+sid+'-pairing" value="'+esc(c.pairing||'')+'" placeholder="ex.: whisky sem turfa"></label>'+
     '<label class="check" for="'+sid+'-cesta"><input type="checkbox" id="'+sid+'-cesta"'+(fl.cesta?' checked':'')+'> <span>Na cesta</span></label>'+
@@ -635,7 +794,7 @@ function cigarForm(c,pre){
 }
 function readCigarForm(sid){var g=function(x){var el=document.getElementById(sid+'-'+x);return el?el:{};};
   return {name:(g('name').value||'').trim(),origin:(g('origin').value||'').trim(),vitola:(g('vitola').value||'').trim(),strength:Number(g('strength').value)||2,
-    expected:(g('expected').value||'').trim(),pairing:(g('pairing').value||'').trim(),status:statusFrom(!!g('cesta').checked,!!g('estoque').checked)};}
+    expected:(g('expected').value||'').trim(),pairing:(g('pairing').value||'').trim(),wrapper:g('wrapper').value||'',status:statusFrom(!!g('cesta').checked,!!g('estoque').checked)};}
 function toggleFlag(id,which){var c=cigarById(id);if(!c)return;var fl=cflags(c);fl[which]=!fl[which];var x=clone(c);x.status=statusFrom(fl.cesta,fl.estoque);put('cigars',x);
   toast((which==='cesta'?(fl.cesta?'Adicionado à cesta':'Retirado da cesta'):(fl.estoque?'Marcado em estoque':'Retirado do estoque'))+': '+c.name);render();}
 function saveCigarEdit(id){var c=cigarById(id);if(!c)return;var f=readCigarForm('ec');if(!f.name){toast('Informe o nome do charuto.');return;}
@@ -650,6 +809,7 @@ function viewAcervo(){
   if(state.cigars.length){
     h+='<div class="minitabs" role="tablist" aria-label="Filtrar acervo">'+ACV_FILTERS.map(function(t){var n=state.cigars.filter(function(c){return acvMatch(c,t[0]);}).length;
       return '<button role="tab" aria-selected="'+(f===t[0])+'" data-act="acvfilter" data-id="'+t[0]+'">'+t[1]+' <span class="num faint">'+n+'</span></button>';}).join('')+'</div>';}
+  if(f==='todos'&&!state.editCigar)h+=suggestionHtml();
   h+='<div class="list">';
   if(!state.loaded){h+='<div class="empty">Carregando o acervo…</div>';}
   else if(!state.cigars.length){h+='<div class="empty"><b>Seu acervo está vazio.</b><span>Importe um backup, entre no clube para trazer seus registros da nuvem, ou adicione o primeiro charuto manualmente.</span><div class="row">'+(busy.importing?'<span class="muted">Importando…</span>':importButton(true))+'</div></div>';}
@@ -667,7 +827,7 @@ function viewAcervo(){
     if(c.expected)h+='<p class="meta">Esperado: '+esc(c.expected)+'</p>';
     if(c.pairing)h+='<p class="meta">Combina com: '+esc(c.pairing)+'</p>';
     var tr=terroirOf(c);
-    h+='<details class="terms"><summary>Origem e preparo</summary><div>'+(tr?'<p>'+esc(tr)+'</p>':'')+'<p>'+esc(cutTipOf(c))+'</p></div></details>';
+    h+='<details class="terms"><summary>Ficha do charuto</summary><div>'+fichaHtml(c)+'</div></details>';
     h+='<div class="row"><button class="opt" aria-pressed="'+fl.cesta+'" data-act="flag" data-field="cesta" data-id="'+esc(c.id)+'">Cesta</button><button class="opt" aria-pressed="'+fl.estoque+'" data-act="flag" data-field="estoque" data-id="'+esc(c.id)+'">Estoque</button></div>';
     h+='<div class="row"><button class="btn primary small" data-act="start" data-id="'+esc(c.id)+'">Iniciar sessão</button><button class="btn small ghost" data-act="editcigar" data-id="'+esc(c.id)+'">Editar</button></div></div>';
   });
@@ -747,7 +907,8 @@ function paladarInsights(a){
   if(a.incoherent.length)out.push('Confira '+(a.incoherent.length>1?'as sessões':'a sessão')+' de '+a.incoherent.map(function(s){return esc(s.cigarName)+' (nota '+numStr(s.rating)+', recompraria: '+esc(s.rebuy)+')';}).join('; ')+': nota e "recompraria" parecem não combinar.');
   return out;
 }
-function viewPaladar(){
+function viewPaladar(){return journeyHtml()+paladarAnalysis()+lessonsHtml();}
+function paladarAnalysis(){
   var a=analyze();
   if(a.R.length<3)return '<div class="empty"><b>Seu perfil de paladar aparece a partir de 3 sessões com nota.</b><span>Você tem '+a.R.length+'. Continue registrando: o app cruza notas, força e sabores para mostrar o que combina com você.</span></div>';
   var h='<div class="stats"><div class="stat"><b class="num">'+a.R.length+'</b><span>sessões com nota</span></div><div class="stat"><b class="num">'+fmt1(a.mean)+'</b><span>nota média</span></div><div class="stat"><b class="num">'+(a.dur?Math.round(a.dur)+' min':'—')+'</b><span>duração média</span></div></div>';
@@ -908,7 +1069,9 @@ function viewSession(){
   h+='<div class="tabs" role="tablist">'+steps.map(function(t,i){return '<button role="tab" aria-selected="'+(state.step===i)+'" data-act="step" data-id="'+i+'">'+t+'</button>';}).join('')+'</div>';
   if(state.step<3){
     var t=s.thirds[state.step];
+    if(s.mission&&famById(s.mission)){var mf=famById(s.mission),md=missionDone(s);h+='<div class="mission'+(md?' done':'')+'"><b>'+(md?'Missão cumprida: ':'Missão de aroma: ')+esc(mf.label)+'</b><span class="muted">'+(md?'Você marcou '+esc(sessNotes(s).filter(function(n){return mf.notes.indexOf(n)>=0;}).join(', '))+'. +5 pontos.':'Uma das famílias que você menos marca. Procure '+esc(mf.notes.join(', '))+' ao longo da sessão e marque se encontrar.')+'</span></div>';}
     if(!editing&&THIRD_TIPS[state.step])h+='<p class="hint">'+THIRD_TIPS[state.step](s)+'</p>';
+    if(state.step===0&&!editing)h+='<details class="terms panel"><summary>Ficha deste charuto</summary><div>'+fichaHtml(cigarById(s.cigarId),s.cigarName)+'</div></details>';
     h+='<div class="panel"><fieldset><legend>O que você sente no '+steps[state.step]+'?</legend>';
     FAMILIES.forEach(function(f){h+='<div class="fam"><span class="lbl">'+f.label+'</span>'+(f.hint?'<span class="faint" style="font-size:13px">'+esc(f.hint)+'</span>':'')+'<div class="opts">'+f.notes.map(function(n){var on=t.notes.indexOf(n)>=0;return '<button type="button" class="opt" aria-pressed="'+on+'" data-act="note" data-val="'+esc(n)+'"><span class="dot" style="background:'+f.color+'"></span>'+esc(n)+'</button>';}).join('')+'</div></div>';});
     h+='</fieldset><fieldset><legend>Intensidade do sabor</legend>'+segBtns('intensity',5,t.intensity,'delicado','intenso')+'</fieldset>';
@@ -945,6 +1108,8 @@ function viewDetail(){
   if(cloud.configured){var post=null;if(isMember())for(var i=0;i<cloud.feed.length;i++){var it=cloud.feed[i];if(it.owner_id===cloud.user.id&&it.local_id===s.id){post=it;break;}}
     h+='<div class="row"><span class="badge">'+(s.visibility==='private'?'Só no seu diário':'Compartilhada com o clube')+'</span>'+(post?'<button class="btn small" data-act="post" data-id="'+esc(post.uid)+'">'+HEART_ICON+(cloud.likes[post.uid]||[]).length+' · '+CHAT_ICON+(cloud.comments[post.uid]||[]).length+' · ver no clube</button>':'')+'</div>';}
   var lc=s.cigarId&&cigarById(s.cigarId);
+  if(s.mission&&famById(s.mission))h+='<div class="mission'+(missionDone(s)?' done':'')+'"><b>'+(missionDone(s)?'Missão cumprida: ':'Missão não cumprida: ')+esc(famById(s.mission).label)+'</b></div>';
+  h+='<details class="terms panel"><summary>Ficha do charuto</summary><div>'+fichaHtml(lc,s.cigarName)+'</div></details>';
   if(lc&&lc.strength&&s.strength&&lc.strength!==s.strength)h+='<p class="hint">Força sentida '+s.strength+'/5, '+(s.strength>lc.strength?'mais forte':'mais suave')+' do que a esperada no Acervo ('+lc.strength+'/5). <button class="linkbtn" data-act="fixstrength" data-id="'+esc(s.id)+'">Atualizar o Acervo para '+s.strength+'/5</button></p>';
   if(!lc)h+='<div class="hint">Este charuto não está no seu Acervo, então a sessão não aparece no cartão de nenhum charuto. <button class="linkbtn" data-act="looseadd" data-id="'+esc(s.id)+'">Adicionar '+esc(s.cigarName)+' ao Acervo</button></div>';
   h+=profileHtml(s.thirds)+factsHtml(s);
@@ -975,7 +1140,7 @@ function viewPost(){
 /* ---------- ciclo da sessão ---------- */
 function lastMoment(){var d=done();return d.length?(d[0].moment||''):'';}
 function newSession(c){
-  return {id:uid(),cigarId:c.id,cigarName:c.name,status:'aberta',visibility:'club',createdAt:new Date().toISOString(),moment:c.id?lastMoment():'',drink:'',
+  return {id:uid(),cigarId:c.id,cigarName:c.name,status:'aberta',visibility:'club',createdAt:new Date().toISOString(),moment:c.id?lastMoment():'',drink:'',mission:c.id?pickMission():'',
     thirds:[{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''}],
     strength:0,burn:'',draw:'',feel:'',rating:null,rebuy:'',comment:'',timer:{acc:0,running:true,resumedAt:Date.now()},durationMin:0};
 }
@@ -1025,11 +1190,12 @@ document.addEventListener('click',function(ev){
     case 'dur': {var nm=setDuration(durMin(draft)+Number(val));var ih=document.getElementById('dur-h'),im=document.getElementById('dur-m');if(ih)ih.value=Math.floor(nm/60);if(im)im.value=nm%60;scheduleSave();break;}
     case 'rmband': {var ob=draft.bandId;draft.bandId=null;flush();removePhoto(ob);render();toast('Foto removida');break;}
     case 'finish': {var tm=draft.timer;if(tm.running){tm.acc=(tm.acc||0)+(Date.now()-tm.resumedAt);tm.running=false;tm.resumedAt=null;}
-      var wasDone=draft.status==='concluida';
+      var wasDone=draft.status==='concluida',jBefore=journey();
       draft.status='concluida';if(!wasDone||!draft.endedAt)draft.endedAt=new Date().toISOString();draft.durationMin=Math.max(1,Math.round((tm.acc||0)/60000));
       if(typeof draft.rating!=='number'){var r=document.getElementById('rating');draft.rating=r?Number(r.value):null;}
       var sid=draft.id;flush().then(function(){toast(wasDone?'Alterações salvas':'Sessão salva no diário');});draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);
-      if(isMember()){clearTimeout(syncTimer);setTimeout(sync,300);}break;}
+      if(isMember()){clearTimeout(syncTimer);setTimeout(sync,300);}
+      if(!wasDone)announce(jBefore,journey());break;}
     case 'fixstrength': {var fs=sessionById(id),fc=fs&&cigarById(fs.cigarId);if(fc){var x=clone(fc);x.strength=fs.strength;put('cigars',x);toast('Força de '+fc.name+' atualizada para '+fs.strength+'/5');render();}break;}
     case 'looseadd': {var ls0=sessionById(id);if(!ls0)break;var nc={id:uid(),name:ls0.cigarName,origin:'',vitola:'',strength:ls0.strength||2,status:'historico',order:100+state.cigars.length};put('cigars',nc);
       var y=clone(ls0);y.cigarId=nc.id;put('sessions',y);toast(nc.name+' entrou no Acervo (Arquivo). Complete origem e bitola em Editar.');render();break;}
@@ -1095,6 +1261,7 @@ document.addEventListener('submit',function(ev){
   var c=Object.assign({id:uid(),order:100+state.cigars.length},nf);
   put('cigars',c); state.addOpen=false; render(); toast('Charuto adicionado ao acervo');
 });
+document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if(state.view==='session'&&draft)requestWake();if(isMember())scheduleSync();}});
 window.addEventListener('online',function(){if(isMember()){sync();if(state.tab==='clube')loadFeed();}});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
