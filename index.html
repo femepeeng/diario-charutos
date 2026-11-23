@@ -78,6 +78,25 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:1 0 auto; min-height:42px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
 .tabs button[aria-selected="true"]{background:var(--surface2); color:var(--fg)}
+.ginicio{display:flex; flex-direction:column; gap:12px; min-width:0}
+.ghead{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.gcount{font-size:12px; font-family:var(--f-mono)}
+.gcar{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin:0 -16px; padding:2px 16px 6px; scroll-padding-left:16px; overscroll-behavior-x:contain}
+.gcar::-webkit-scrollbar{display:none}
+.gcard{flex:0 0 85%; scroll-snap-align:start; min-height:212px; text-align:left; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:18px; border-radius:18px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg); font:inherit}
+.gcard.today{border-color:var(--ember); background:linear-gradient(160deg, var(--surface2), var(--surface) 70%)}
+.gtags{display:flex; gap:6px; min-height:22px; flex-wrap:wrap}
+.gtag{font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+.gtag.hot{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
+.gico{width:48px; height:48px; border-radius:14px; background:var(--surface2); color:var(--ember); display:inline-flex; align-items:center; justify-content:center}
+.gico svg{width:26px; height:26px}
+.gtitle{font-family:var(--f-display); font-size:24px; font-weight:800; line-height:1.1}
+.grule{font-size:16px; line-height:1.35}
+.gmore{margin-top:auto; font-weight:600; color:var(--ember); font-size:14px}
+.gdots{display:flex; justify-content:center; gap:6px}
+.gdots i{width:6px; height:6px; border-radius:3px; background:var(--line); transition:width .2s}
+.gdots i.on{width:18px; background:var(--ember)}
+.gsrc{font-size:12px}
 .minitabs{display:flex; gap:6px}
 .minitabs button{flex:1; min-height:40px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
 .minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
@@ -405,15 +424,30 @@ var BURN_TIPS={'Torta':'Queima torta: costuma vir de acendimento desigual, vento
   'Tunelou':'Tunelou: o miolo queimou antes da capa, sinal comum de charuto úmido demais ou de construção irregular. Reacenda a borda inteira e deixe o próximo descansar mais no umidor.'};
 var DRAW_TIPS={'Presa':'Tiragem presa: aperto demais na confecção ou excesso de umidade. Um furador fino pela cabeça ajuda; charuto travado de fábrica pode ser devolvido à loja.',
   'Solta':'Tiragem solta: a fumaça sai quente e o charuto queima rápido. Espace mais as baforadas.'};
+/* @pure:guia */
 var GUIDE=[
-  ['Conservação','<p>Umidade entre 65% e 70% e temperatura entre 16 °C e 18 °C são o ideal. Evite passar de 24 °C: é a faixa em que ovos do besouro do tabaco eclodem.</p><p>Charuto é higroscópico: absorve umidade e cheiros do ambiente. Cozinha e banheiro são os piores lugares da casa. Cedro é a madeira clássica de caixa e umidor porque distribui a umidade e não interfere no aroma.</p><p>Fora das condições ideais, fume em 3 a 6 meses. Um charuto que secou não volta a ser o que era, mesmo no umidor.</p>'],
-  ['Viagem e praia','<p>Leve os charutos em umidor de viagem, tubo ou saco hermético com Boveda, longe de protetor solar, perfume e repelente: o tabaco absorve esses cheiros.</p><p>Nunca deixe ao sol nem no carro. O vento acelera e entorta a queima: fume protegido e baforeje com mais calma.</p>'],
-  ['Corte','<p>Guilhotina de lâmina dupla corta mais limpo que a de lâmina única. Furador (punch) concentra a fumaça e deve ser compatível com a bitola.</p><p>Parejos (Corona, Robusto, Toro) pedem corte reto de 2 a 3 mm. Figurados (Torpedo, Pirâmide) pedem corte diagonal suave, só na ponta. Nunca corte com os dentes ou as unhas.</p>'],
-  ['Acendimento','<p>Prefira chama limpa: isqueiro a butano de chama azul, lasca de cedro ou fósforo longo. Fósforo de papel e chama amarela deixam gosto.</p><p>Toste o pé sem encostar a chama, girando devagar, até a borda acender por igual. Pressa carboniza o tabaco; pontinhos alaranjados na borda são sinal de carbonização.</p>'],
-  ['Ritmo e cinza','<p>Uma baforada a cada 30 a 60 segundos mantém a brasa viva sem esquentar. Fumar rápido traz amargor.</p><p>Mantenha uns dois dedos de cinza; bater a cinza o tempo todo expõe a brasa e desequilibra a queima.</p>'],
-  ['Paladar','<p>Os cinco gostos (doce, salgado, ácido, amargo e umami) são sentidos na boca; o restante é aroma, percebido pelo nariz. O retrohale, soltar um pouco de fumaça pelo nariz, revela essas notas. Comece com charutos suaves e pouca fumaça.</p><p>Charuto não se traga. Inalar a fumaça pode causar náusea, queda de pressão e até desmaio.</p><p>Língua limpa percebe mais: escove a língua antes da sessão e tenha água por perto entre as baforadas.</p>'],
-  ['Quando parar','<p>A anilha marca um bom ponto de parada. Depois dela o tabaco já filtrou muita fumaça e o sabor tende a ficar áspero. O momento certo é quando o prazer acaba.</p>']
+  ['Conservação','<p>Umidade entre 65% e 70% e temperatura entre 16 °C e 18 °C são o ideal. Evite passar de 24 °C: é a faixa em que ovos do besouro do tabaco eclodem.</p><p>Charuto é higroscópico: absorve umidade e cheiros do ambiente. Cozinha e banheiro são os piores lugares da casa. Cedro é a madeira clássica de caixa e umidor porque distribui a umidade e não interfere no aroma.</p><p>Fora das condições ideais, fume em 3 a 6 meses. Um charuto que secou não volta a ser o que era, mesmo no umidor.</p>','65–70% de umidade · 16–18 °C'],
+  ['Viagem e praia','<p>Leve os charutos em umidor de viagem, tubo ou saco hermético com Boveda, longe de protetor solar, perfume e repelente: o tabaco absorve esses cheiros.</p><p>Nunca deixe ao sol nem no carro. O vento acelera e entorta a queima: fume protegido e baforeje com mais calma.</p>','Hermético, longe do sol e de perfumes'],
+  ['Corte','<p>Guilhotina de lâmina dupla corta mais limpo que a de lâmina única. Furador (punch) concentra a fumaça e deve ser compatível com a bitola.</p><p>Parejos (Corona, Robusto, Toro) pedem corte reto de 2 a 3 mm. Figurados (Torpedo, Pirâmide) pedem corte diagonal suave, só na ponta. Nunca corte com os dentes ou as unhas.</p>','Reto de 2 a 3 mm nos parejos, diagonal nos figurados'],
+  ['Acendimento','<p>Prefira chama limpa: isqueiro a butano de chama azul, lasca de cedro ou fósforo longo. Fósforo de papel e chama amarela deixam gosto.</p><p>Toste o pé sem encostar a chama, girando devagar, até a borda acender por igual. Pressa carboniza o tabaco; pontinhos alaranjados na borda são sinal de carbonização.</p>','Chama limpa, toste sem encostar'],
+  ['Ritmo e cinza','<p>Uma baforada a cada 30 a 60 segundos mantém a brasa viva sem esquentar. Fumar rápido traz amargor.</p><p>Mantenha uns dois dedos de cinza; bater a cinza o tempo todo expõe a brasa e desequilibra a queima.</p>','Uma baforada a cada 30 a 60 segundos'],
+  ['Paladar','<p>Os cinco gostos (doce, salgado, ácido, amargo e umami) são sentidos na boca; o restante é aroma, percebido pelo nariz. O retrohale, soltar um pouco de fumaça pelo nariz, revela essas notas. Comece com charutos suaves e pouca fumaça.</p><p>Charuto não se traga. Inalar a fumaça pode causar náusea, queda de pressão e até desmaio.</p><p>Língua limpa percebe mais: escove a língua antes da sessão e tenha água por perto entre as baforadas.</p>','O retrohale revela as notas; charuto não se traga'],
+  ['Quando parar','<p>A anilha marca um bom ponto de parada. Depois dela o tabaco já filtrou muita fumaça e o sabor tende a ficar áspero. O momento certo é quando o prazer acaba.</p>','Quando o prazer acaba']
 ];
+var GUIDE_ICONS=[
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5s-6 6.6-6 10.5a6 6 0 0 0 12 0c0-3.9-6-10.5-6-10.5z"></path><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"></path></svg>',
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7.5" width="16" height="12" rx="2"></rect><path d="M9 7.5v-2A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5v2"></path><path d="M4 12.5h16"></path></svg>',
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="7" r="2.5"></circle><circle cx="6" cy="17" r="2.5"></circle><path d="M8.2 8.4 20 17M8.2 15.6 20 7"></path></svg>',
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a6 6 0 0 0 6-6c0-4-3-5.5-4-9-2 1.5-3 3.5-3 5.5-1-.5-1.6-1.5-1.8-2.5C7.5 10.5 6 12.5 6 15a6 6 0 0 0 6 6z"></path></svg>',
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"></circle><path d="M12 9v4l2.5 2M9.5 2.5h5"></path></svg>',
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9c2-2 4 2 6 0s4 2 6 0 2-1 4 0M4 13c2-2 4 2 6 0s4 2 6 0 2-1 4 0M4 17c2-2 4 2 6 0s4 2 6 0 2-1 4 0"></path></svg>',
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="1.5"></rect><path d="M9 9v6M15 9v6"></path></svg>'
+];
+var GUIDE_TOOL={0:'umidor',2:'corte',4:'ritmo'};
+/* Tópico do dia: dia do ano (1º de janeiro = 1) mod 7. */
+function guideOfDay(d){var y=d.getFullYear(),n=Math.round((new Date(y,d.getMonth(),d.getDate())-new Date(y,0,0))/86400000);return n%GUIDE.length;}
+/* @end:guia */
+window.__t={guideOfDay:guideOfDay};
 var NOTE_COLOR={}; FAMILIES.forEach(function(f){f.notes.forEach(function(n){NOTE_COLOR[n]=f.color;});});
 var MOMENTS=['Pós-almoço','Entardecer','Fim de noite'];
 var DRINKS=['Café','Água de coco','Caipirinha','Whisky','Rum','Cachaça envelhecida','Água','Outra'];
@@ -428,7 +462,7 @@ var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 
   '<p>Você pode excluir sua conta e todos os seus dados do clube a qualquer momento em Conta › Excluir minha conta. O diário guardado no seu celular continua com você.</p>'+
   '<p>Dúvidas ou pedidos sobre seus dados: fale com o administrador do clube.</p>';
 
-var state={cigars:[],sessions:[],view:'home',tab:'acervo',detailId:null,postUid:null,step:0,cmpA:'',cmpB:'',confirmDelete:false,addOpen:false,loaded:false,dbError:false,confirm:''};
+var state={cigars:[],sessions:[],view:'home',tab:'inicio',detailId:null,postUid:null,step:0,cmpA:'',cmpB:'',confirmDelete:false,addOpen:false,loaded:false,dbError:false,confirm:''};
 var draft=null, saveTimer=null, tick=null, wakeLock=null, installPrompt=null;
 var photoURL={}, busy={uploading:false,importing:false,persisted:null};
 
@@ -773,8 +807,9 @@ function viewHome(){
       var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
       var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
       h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
-  h+='<div class="tabs" role="tablist">'+[['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['comparar','Comparar'],['conta','Conta']].map(function(t){return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
-  if(state.tab==='acervo')h+=viewAcervo();
+  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['comparar','Comparar'],['conta','Conta']].map(function(t){return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  if(state.tab==='inicio')h+=viewInicio();
+  else if(state.tab==='acervo')h+=viewAcervo();
   else if(state.tab==='historico')h+=viewHistorico();
   else if(state.tab==='clube')h+=viewClube();
   else if(state.tab==='comparar')h+=viewComparar();
@@ -813,6 +848,12 @@ function saveCigarEdit(id){var c=cigarById(id);if(!c)return;var f=readCigarForm(
 function removeCigar(id){var c=cigarById(id);if(!c)return;state.cigars=state.cigars.filter(function(x){return x.id!==id;});ls('diario-dirty',String(Date.now()));
   Promise.all([delRec('cigars',id),putRec('tombstones',{id:'cigars:'+id,col:'cigars',localId:id,photo:null})]).then(scheduleSync).catch(saveErr);
   state.editCigar=null;state.confirm='';render();toast(c.name+' removido do acervo. As sessões continuam no Histórico.');}
+function viewInicio(){
+  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h='<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
+  for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
+    h+='<button class="gcard'+(k===0?' today':'')+'" data-act="guia" data-id="'+i+'"><span class="gtags">'+(k===0?'<span class="gtag hot">Dica do dia</span>':'')+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span><span class="gico">'+GUIDE_ICONS[i]+'</span><span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></button>';
+    dots+='<i'+(k===0?' class="on"':'')+'></i>';}
+  return h+'</div><div class="gdots" aria-hidden="true">'+dots+'</div><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p></section>';}
 function viewAcervo(){
   var f=state.acvFilter||'todos',h='';
   if(state.cigars.length){
@@ -1023,7 +1064,7 @@ function viewBackup(){
     '<dl class="kv"><dt>Charutos</dt><dd class="num">'+state.cigars.length+'</dd><dt>Sessões</dt><dd class="num">'+state.sessions.length+'</dd><dt>Último backup</dt><dd>'+(last?esc(fmtDateTime(new Date(last).toISOString())):'nunca')+'</dd><dt>Proteção contra limpeza</dt><dd>'+(busy.persisted===true?'ativa':busy.persisted===false?'não concedida pelo navegador':'verificando…')+'</dd></dl>'+
     '<div class="row"><button class="btn primary" data-act="export">Salvar backup</button>'+(canShare?'<button class="btn" data-act="share">Enviar backup</button>':'')+'</div>'+
     '<div class="row">'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';
-  h+='<div class="panel"><h3>Guia de bolso</h3><p class="muted">Conservação, corte, acendimento e degustação, adaptados de O Guia Definitivo do Charuto, de Johny Oliveira.</p>'+GUIDE.map(function(g){return '<details class="terms"><summary>'+g[0]+'</summary><div>'+g[1]+'</div></details>';}).join('')+'</div>';
+  h+='<div class="panel"><h3>Guia de bolso</h3><p class="muted">Conservação, corte, acendimento e degustação, com ferramentas para o umidor, o corte e o ritmo. Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p><div class="row"><button class="btn" data-act="tab" data-id="inicio">Abrir o Guia de bolso</button></div></div>';
   if(installPrompt)h+='<div class="panel"><h3>Instalar na tela inicial</h3><p class="muted">Cria um ícone que abre o diário como app, em tela cheia e funcionando sem internet.</p><div class="row"><button class="btn primary" data-act="install">Instalar app</button></div></div>';
   return h;
 }
@@ -1272,6 +1313,8 @@ document.addEventListener('submit',function(ev){
 });
 document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if(state.view==='session'&&draft)requestWake();if(isMember())scheduleSync();}});
+document.addEventListener('scroll',function(e){var t=e.target;if(!t||!t.classList||!t.classList.contains('gcar'))return;var c=t.querySelectorAll('.gcard');if(c.length<2)return;
+  var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';},true);
 window.addEventListener('online',function(){if(isMember()){sync();if(state.tab==='clube')loadFeed();}});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});
