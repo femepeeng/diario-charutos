@@ -773,7 +773,7 @@ function viewHome(){
       var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
       var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
       h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
-  h+='<div class="tabs" role="tablist">'+[['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['clube','Clube'],['comparar','Comparar'],['conta','Conta']].map(function(t){return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  h+='<div class="tabs" role="tablist">'+[['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['comparar','Comparar'],['conta','Conta']].map(function(t){return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.tab==='acervo')h+=viewAcervo();
   else if(state.tab==='historico')h+=viewHistorico();
   else if(state.tab==='clube')h+=viewClube();
