@@ -22,6 +22,42 @@
   check('página sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
   check('cartões com alvo de toque >= 44px', qa('.gcard').every(function (c) { return c.getBoundingClientRect().height >= 44; }));
 
+  // ---- Tarefa 2 ----
+  function titulo() { var h = q('h1'); return h ? h.textContent.trim() : ''; }
+  function act(a, id) { return q('[data-act="' + a + '"]' + (id != null ? '[data-id="' + id + '"]' : '')); }
+  click(q('.gcard[data-id="2"]')); await wait(120);
+  check('cartão Corte abre o tópico Corte', titulo() === 'Corte');
+  check('tópico Corte tem 10 botões de vitola', qa('[data-act="corte"]').length === 10);
+  click(qa('[data-act="corte"]').filter(function (b) { return b.textContent.trim() === 'Torpedo'; })[0]); await wait(120);
+  check('Torpedo mostra corte diagonal', /diagonal/.test((q('#corte-out') || {}).textContent || ''));
+  click(qa('[data-act="corte"]').filter(function (b) { return b.textContent.trim() === 'Robusto'; })[0]); await wait(120);
+  check('Robusto mostra corte reto', /corte reto/.test((q('#corte-out') || {}).textContent || ''));
+  check('vitola escolhida fica marcada', (qa('[data-act="corte"][aria-pressed="true"]')[0] || {}).textContent === 'Robusto');
+  click(act('guia-nav', '1')); await wait(120);
+  check('Próximo vai de Corte para Acendimento', titulo() === 'Acendimento');
+  click(act('guia-nav', '-1')); await wait(120); click(act('guia-nav', '-1')); await wait(120);
+  check('Anterior volta até Viagem e praia', titulo() === 'Viagem e praia');
+  click(act('guia-nav', '-1')); await wait(120); click(act('guia-nav', '-1')); await wait(120);
+  check('Anterior em Conservação dá a volta para Quando parar', titulo() === 'Quando parar');
+  click(act('guia-nav', '1')); await wait(120);
+  check('Próximo em Quando parar dá a volta para Conservação', titulo() === 'Conservação');
+  var u = q('[data-gin="umid"]'), t = q('[data-gin="temp"]');
+  check('Conservação tem campos de umidade e temperatura decimais', !!u && !!t && u.getAttribute('inputmode') === 'decimal' && t.getAttribute('inputmode') === 'decimal');
+  check('sem valores, o resultado pede os dois números', /umidade e a temperatura/i.test((q('#umid-out') || {}).textContent || ''));
+  if (u && t) {
+    u.focus(); u.value = '67'; u.dispatchEvent(new Event('input', { bubbles: true }));
+    t.value = '17'; t.dispatchEvent(new Event('input', { bubbles: true })); await wait(60);
+    check('67% e 17 °C dá Ideal', /Ideal/.test((q('#umid-out') || {}).textContent || ''));
+    check('campo continua o mesmo elemento após digitar (sem re-render)', q('[data-gin="temp"]') === t);
+    t.value = '25'; t.dispatchEvent(new Event('input', { bubbles: true })); await wait(60);
+    check('25 °C dá Risco com besouro', /Risco/.test(q('#umid-out').textContent) && /besouro/.test(q('#umid-out').textContent));
+    check('resultado tem aria-live', q('#umid-out').getAttribute('aria-live') === 'polite');
+  }
+  check('botões de navegação com 44px', qa('[data-act="guia-nav"],[data-act="home"]').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+  check('página do tópico sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
+  click(act('home')); await wait(150);
+  check('Voltar retorna à aba Início', (q('[role=tab][aria-selected=true]') || {}).innerText === 'Início' && qa('.gcard').length === 7);
+
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };
 })();

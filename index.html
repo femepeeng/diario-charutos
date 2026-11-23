@@ -97,6 +97,17 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .gdots i{width:6px; height:6px; border-radius:3px; background:var(--line); transition:width .2s}
 .gdots i.on{width:18px; background:var(--ember)}
 .gsrc{font-size:12px}
+.gdhead{display:flex; align-items:center; gap:12px; min-width:0}
+.gdhead h1{min-width:0; overflow-wrap:anywhere}
+.gdrule{font-size:17px; line-height:1.35}
+.gtool{border:1.5px solid var(--ember); gap:14px}
+.gfields{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px}
+.gvit{display:flex; flex-wrap:wrap; gap:8px}
+.gvit .btn{min-height:44px; padding:8px 14px; font-size:15px}
+.gvit .btn[aria-pressed="true"]{border-color:var(--ember); color:var(--ember)}
+.gout{padding:12px 14px; border-radius:12px; background:var(--surface2); line-height:1.4; border-left:4px solid var(--line)}
+.gout.ideal{border-left-color:var(--ok)} .gout.atencao{border-left-color:var(--warn)} .gout.risco{border-left-color:var(--bad)} .gout.invalido{border-left-color:var(--warn)}
+.gdnav .btn{flex:1}
 .minitabs{display:flex; gap:6px}
 .minitabs button{flex:1; min-height:40px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
 .minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
@@ -277,9 +288,24 @@ var TERROIR=[
   {k:/eua|estados unidos|usa|connecticut/i,t:'Estados Unidos: Connecticut, origem da capa Connecticut Shade, clara e suave.'}
 ];
 function terroirOf(c){var o=String((c&&c.origin)||'');for(var i=0;i<TERROIR.length;i++)if(TERROIR[i].k.test(o))return TERROIR[i].t;return '';}
+/* @pure:guia */
 function cutTipOf(c){var t=String(((c&&c.name)||'')+' '+((c&&c.vitola)||''));
   if(/torpedo|pir[aâá]mide|piramide|belicoso|figurado|perfecto|salom/i.test(t))return 'Figurado: corte diagonal suave, só a ponta, para abrir a tiragem sem desmontar o formato.';
   return 'Parejo: corte reto com guilhotina de lâmina dupla, no máximo 2 a 3 mm da cabeça, sem passar da tampa.';}
+var VITOLAS_CORTE=['Petit Corona','Corona','Robusto','Toro','Churchill','Lancero','Torpedo','Pirâmide','Belicoso','Perfecto'];
+/* Ferramenta do umidor. Faixas do Guia de bolso: 65–70% e 16–18 °C; a partir de 24 °C, risco do besouro do tabaco. */
+function humidorStatus(u,t){
+  function num(v){v=String(v==null?'':v).trim().replace(',','.');if(v==='')return null;return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):NaN;}
+  var h=num(u),c=num(t);
+  if(h===null||c===null)return {nivel:'vazio',texto:'Informe a umidade e a temperatura do seu umidor.'};
+  if(isNaN(h)||isNaN(c)||h<0||h>100||c<-10||c>50)return {nivel:'invalido',texto:'Confira o valor: umidade de 0 a 100% e temperatura em °C.'};
+  if(c>=24)return {nivel:'risco',texto:'Risco: a partir de 24 °C os ovos do besouro do tabaco podem eclodir. Leve o umidor para um lugar mais fresco.'};
+  if(h>=65&&h<=70&&c>=16&&c<=18)return {nivel:'ideal',texto:'Ideal: umidade e temperatura dentro da faixa recomendada.'};
+  var p=[];
+  if(h>70)p.push('umidade acima de 70% favorece mofo e queima irregular');else if(h<65)p.push('umidade abaixo de 65% resseca; o charuto queima rápido e quente');
+  if(c<16||c>18)p.push('a temperatura ideal fica entre 16 e 18 °C');
+  return {nivel:'atencao',texto:'Atenção: '+p.join('; ')+'.'};}
+/* @end:guia */
 /* ===== Conhecimento: ficha técnica do charuto ===== */
 var WRAPPERS={
   connecticut:['Connecticut Shade','Cultivada sob tecido que filtra o sol, o que deixa a folha clara, fina e elástica. Sabor suave e cremoso, com notas de creme, castanha e cedro.'],
@@ -447,7 +473,7 @@ var GUIDE_TOOL={0:'umidor',2:'corte',4:'ritmo'};
 /* Tópico do dia: dia do ano (1º de janeiro = 1) mod 7. */
 function guideOfDay(d){var y=d.getFullYear(),n=Math.round((new Date(y,d.getMonth(),d.getDate())-new Date(y,0,0))/86400000);return n%GUIDE.length;}
 /* @end:guia */
-window.__t={guideOfDay:guideOfDay};
+window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus};
 var NOTE_COLOR={}; FAMILIES.forEach(function(f){f.notes.forEach(function(n){NOTE_COLOR[n]=f.color;});});
 var MOMENTS=['Pós-almoço','Entardecer','Fim de noite'];
 var DRINKS=['Café','Água de coco','Caipirinha','Whisky','Rum','Cachaça envelhecida','Água','Outra'];
@@ -778,6 +804,7 @@ function render(){
   stopTick();
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
+  if(state.view==='guia'){app.innerHTML=viewGuia();return;}
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
@@ -848,6 +875,16 @@ function saveCigarEdit(id){var c=cigarById(id);if(!c)return;var f=readCigarForm(
 function removeCigar(id){var c=cigarById(id);if(!c)return;state.cigars=state.cigars.filter(function(x){return x.id!==id;});ls('diario-dirty',String(Date.now()));
   Promise.all([delRec('cigars',id),putRec('tombstones',{id:'cigars:'+id,col:'cigars',localId:id,photo:null})]).then(scheduleSync).catch(saveErr);
   state.editCigar=null;state.confirm='';render();toast(c.name+' removido do acervo. As sessões continuam no Histórico.');}
+function guiaTool(tool){
+  if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
+    return '<div class="panel gtool"><h3>Confira seu umidor</h3><div class="gfields"><label class="f">Umidade (%)<input type="text" inputmode="decimal" data-gin="umid" value="'+esc(state.umid||'')+'" placeholder="ex.: 68"></label><label class="f">Temperatura (°C)<input type="text" inputmode="decimal" data-gin="temp" value="'+esc(state.temp||'')+'" placeholder="ex.: 17"></label></div><div id="umid-out" class="gout '+r.nivel+'" aria-live="polite">'+esc(r.texto)+'</div></div>';}
+  if(tool==='corte')return '<div class="panel gtool"><h3>Qual o corte da sua vitola?</h3><div class="gvit">'+VITOLAS_CORTE.map(function(v){return '<button class="btn" data-act="corte" data-id="'+esc(v)+'" aria-pressed="'+(state.corteVit===v)+'">'+esc(v)+'</button>';}).join('')+'</div><div id="corte-out" class="gout" aria-live="polite">'+(state.corteVit?esc(cutTipOf({vitola:state.corteVit})):'Toque na vitola do seu charuto.')+'</div></div>';
+  return '';}
+function viewGuia(){
+  var n=GUIDE.length,i=(((state.guiaIdx||0)%n)+n)%n,g=GUIDE[i];
+  return '<header class="top"><button class="btn ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">Guia de bolso · '+(i+1)+' de '+n+'</div><div class="gdhead"><span class="gico">'+GUIDE_ICONS[i]+'</span><h1 style="font-size:34px">'+esc(g[0])+'</h1></div><p class="gdrule">'+esc(g[2])+'</p></header>'+
+    guiaTool(GUIDE_TOOL[i])+'<div class="panel gdtext">'+g[1]+'</div>'+
+    '<nav class="row gdnav" aria-label="Tópicos do guia"><button class="btn" data-act="guia-nav" data-id="-1">Anterior</button><button class="btn" data-act="guia-nav" data-id="1">Próximo</button></nav><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p>';}
 function viewInicio(){
   var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h='<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
   for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
@@ -1227,6 +1264,9 @@ document.addEventListener('click',function(ev){
   var b=ev.target.closest('[data-act]');if(!b)return;
   var act=b.getAttribute('data-act'),id=b.getAttribute('data-id'),val=b.getAttribute('data-val'),field=b.getAttribute('data-field');
   switch(act){
+    case 'guia': state.view='guia'; state.guiaIdx=parseInt(id,10)||0; render(); window.scrollTo(0,0); break;
+    case 'guia-nav': state.guiaIdx=((state.guiaIdx||0)+(parseInt(id,10)||0)+GUIDE.length)%GUIDE.length; render(); window.scrollTo(0,0); break;
+    case 'corte': state.corteVit=id; render(); break;
     case 'tab': state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); break;
     case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
@@ -1282,6 +1322,9 @@ document.addEventListener('click',function(ev){
     case 'delcomment': deleteComment(id,state.postUid); break;
   }
 });
+document.addEventListener('input',function(ev){var el=ev.target,k=el.getAttribute&&el.getAttribute('data-gin');if(!k)return;
+  if(k==='umid')state.umid=el.value;else if(k==='temp')state.temp=el.value;
+  var o=document.getElementById('umid-out');if(o){var r=humidorStatus(state.umid,state.temp);o.textContent=r.texto;o.className='gout '+r.nivel;}});
 document.addEventListener('input',function(ev){
   var el=ev.target, k=el.getAttribute('data-input'); if(!k||!draft)return;
   if(k==='thirdText')draft.thirds[state.step].text=el.value;

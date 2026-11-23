@@ -52,5 +52,51 @@ test('guideOfDay usa o dia do ano mod 7', () => {
   assert.strictEqual(X.guideOfDay(new Date(2026, 11, 31)), 365 % 7);
 });
 
+// ---- Tarefa 2 ----
+test('humidorStatus: faixa ideal (65–70% e 16–18 °C)', () => {
+  assert.strictEqual(typeof X.humidorStatus, 'function', 'humidorStatus não encontrado');
+  assert.strictEqual(X.humidorStatus('67', '17').nivel, 'ideal');
+  assert.strictEqual(X.humidorStatus(65, 16).nivel, 'ideal');
+  assert.strictEqual(X.humidorStatus('70', '18').nivel, 'ideal');
+});
+test('humidorStatus aceita vírgula decimal', () => {
+  assert.strictEqual(X.humidorStatus('67,5', '16,5').nivel, 'ideal');
+});
+test('humidorStatus: umidade alta é atenção e cita mofo', () => {
+  const r = X.humidorStatus('80', '17');
+  assert.strictEqual(r.nivel, 'atencao'); assert.ok(/mofo/.test(r.texto), r.texto);
+});
+test('humidorStatus: umidade baixa é atenção e cita ressecamento', () => {
+  const r = X.humidorStatus('60', '17');
+  assert.strictEqual(r.nivel, 'atencao'); assert.ok(/resseca/.test(r.texto), r.texto);
+});
+test('humidorStatus: temperatura fora de 16–18 °C (abaixo de 24) é atenção e lembra a faixa', () => {
+  const r = X.humidorStatus('67', '21');
+  assert.strictEqual(r.nivel, 'atencao'); assert.ok(/16.*18/.test(r.texto), r.texto);
+});
+test('humidorStatus: 24 °C ou mais é risco e cita o besouro', () => {
+  assert.strictEqual(X.humidorStatus('67', '24').nivel, 'risco');
+  const r = X.humidorStatus('67', '25');
+  assert.strictEqual(r.nivel, 'risco'); assert.ok(/besouro/.test(r.texto), r.texto);
+});
+test('humidorStatus: campo vazio pede os dois valores', () => {
+  assert.strictEqual(X.humidorStatus('', '17').nivel, 'vazio');
+  assert.strictEqual(X.humidorStatus('67', '  ').nivel, 'vazio');
+});
+test('humidorStatus: valor absurdo ou não numérico é inválido', () => {
+  assert.strictEqual(X.humidorStatus('150', '17').nivel, 'invalido');
+  assert.strictEqual(X.humidorStatus('67', '-15').nivel, 'invalido');
+  assert.strictEqual(X.humidorStatus('abc', '17').nivel, 'invalido');
+  assert.ok(X.humidorStatus('150', '17').texto.length > 0);
+});
+test('VITOLAS_CORTE lista as 10 vitolas da especificação', () => {
+  assert.deepStrictEqual(Array.from(X.VITOLAS_CORTE || []), ['Petit Corona', 'Corona', 'Robusto', 'Toro', 'Churchill', 'Lancero', 'Torpedo', 'Pirâmide', 'Belicoso', 'Perfecto']);
+});
+test('cutTipOf: figurados diagonal, parejos reto', () => {
+  assert.strictEqual(typeof X.cutTipOf, 'function', 'cutTipOf fora do bloco @pure:guia');
+  ['Torpedo', 'Pirâmide', 'Belicoso', 'Perfecto'].forEach(v => assert.ok(/diagonal/.test(X.cutTipOf({ vitola: v })), v));
+  ['Petit Corona', 'Corona', 'Robusto', 'Toro', 'Churchill', 'Lancero'].forEach(v => assert.ok(/corte reto/.test(X.cutTipOf({ vitola: v })), v));
+});
+
 console.log(`\n${pass} ok, ${fail} falha(s)`);
 process.exit(fail ? 1 : 0);
