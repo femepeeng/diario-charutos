@@ -36,7 +36,7 @@ As ferramentas são funções puras, testáveis no console. O marcador de Ritmo 
 
 ---
 
-### Tarefa 1: aba Início, carrossel e regras de ouro
+### Task 1: aba Início, carrossel e regras de ouro
 
 **Arquivos:** modificar `index.html`:
 - `GUIDE` (por volta da linha 408);
@@ -84,7 +84,7 @@ As ferramentas são funções puras, testáveis no console. O marcador de Ritmo 
   git add index.html && git commit -m "feat: aba Início com carrossel do Guia de bolso"
   ```
 
-### Tarefa 2: detalhe do tópico e ferramentas Conservação e Corte
+### Task 2: detalhe do tópico e ferramentas Conservação e Corte
 
 **Arquivos:** modificar `index.html`:
 - roteamento de `state.view` em `render()`;
@@ -141,7 +141,7 @@ No nível `atencao`, o texto explica cada desvio:
   git commit -am "feat: detalhe do guia com ferramentas de umidor e corte"
   ```
 
-### Tarefa 3: marcador de Ritmo
+### Task 3: marcador de Ritmo
 
 **Arquivos:** modificar `index.html` (`viewGuia`, handlers e `render()`).
 
@@ -174,7 +174,7 @@ Comportamento:
   git commit -am "feat: marcador de ritmo de baforada no guia"
   ```
 
-### Tarefa 4: acabamento, versão e publicação
+### Task 4: acabamento, versão e publicação
 
 **Arquivos:** modificar `index.html` (`APP_VERSION`) e `CLAUDE.md`.
 
