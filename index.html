@@ -56,7 +56,13 @@ button:disabled{opacity:.55; cursor:default}
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{outline:2px solid var(--ember); outline-offset:2px}
 
 header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
-.mode{font-size:13px; color:var(--faint); display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.mode{font-size:13px; color:var(--faint); display:flex; gap:8px; align-items:center}
+.mode .sdot{flex:none}
+.toprow{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
+.toptitle{display:flex; flex-direction:column; gap:8px; min-width:0}
+.crown{flex:none; width:48px; height:48px; border-radius:14px; border:1.5px solid var(--line); background:var(--surface2); color:var(--ember); display:inline-flex; align-items:center; justify-content:center; position:relative}
+.crown[aria-current="page"]{border-color:var(--ember)}
+.crown .cdot{position:absolute; top:7px; right:7px; width:8px; height:8px; border-radius:50%; background:var(--ember); border:2px solid var(--surface2)}
 .sdot{width:8px; height:8px; border-radius:50%; background:var(--faint); flex-shrink:0}
 .sdot.ok{background:var(--ok)} .sdot.warn{background:var(--warn)} .sdot.bad{background:var(--bad)}
 
@@ -231,7 +237,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
-var APP_VERSION='2.6.1', APP_BUILD='22/11/2026';
+var APP_VERSION='2.6.2', APP_BUILD='22/11/2026';
 var FAMILIES=[
   {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo','Coco']},
   {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
@@ -414,6 +420,7 @@ var DRINKS=['Café','Água de coco','Caipirinha','Whisky','Rum','Cachaça envelh
 var CAMERA_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>';
 var GALLERY_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M20.5 16l-5-5-8 8.5"></path></svg>';
 var HEART_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>';
+var CROWN_ICON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17.5 3 8l5 4 4-7 4 7 5-4-1 9.5z"></path><path d="M5 20.5h14"></path></svg>';
 var CHAT_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>';
 var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 anos registrarem e compartilharem degustações de charutos.</p>'+
   '<p>Para o app funcionar guardamos no Supabase: seu nome de exibição, e-mail, senha (criptografada pelo Supabase), sessões, curtidas, comentários e fotos de anilhas. Sessões marcadas como "Só eu" não aparecem para outros membros.</p>'+
@@ -604,7 +611,7 @@ function resetSyncFlags(){return Promise.all([getAll('cigars'),getAll('sessions'
   r[2].forEach(function(p){if(!p.foreign){delete p.remote;ops.push(putRec('photos',p));}});return Promise.all(ops).then(function(){return clearStore('tombstones');});}).then(loadAll);}
 
 /* ---- feed ---- */
-var FEED_COLS='uid,owner_id,local_id,cigar_name,started_at,ended_at,moment,drink,thirds,strength,rating,rebuy,comment,duration_min,band_photo,burn,draw,feel,profiles(display_name)';
+var FEED_COLS='uid,owner_id,local_id,cigar_name,started_at,ended_at,moment,drink,thirds,strength,rating,rebuy,comment,duration_min,band_photo,burn,draw,feel,profiles!sessions_owner_id_fkey(display_name)';
 function loadFeed(){
   if(!isMember()||cloud.feedLoading)return Promise.resolve();
   cloud.feedLoading=true;rerender();var sb=cloud.sb;
@@ -753,7 +760,9 @@ function statusLine(){
   if(s==='error')return '<span class="sdot bad"></span>Falha ao sincronizar. '+esc(cloud.statusDetail);
   return '<span class="sdot ok"></span>'+esc(cloud.profile.display_name)+' · sincronizado'+(cloud.lastSync?' '+esc(relTime(new Date(cloud.lastSync).toISOString())):'');
 }
-function viewHeader(){var j=state.loaded&&done().length?journey():null;return '<header class="top"><div class="eyebrow">Charutos · paladar e sensações</div><h1>Diário de Degustação</h1>'+(j?'<button class="linkbtn lvl" style="text-decoration:none" data-act="tab" data-id="paladar"><b>'+esc(j.name)+'</b><span class="num faint">'+j.xp+' pts · '+j.on.length+' conquistas</span></button>':'')+'<p class="mode">'+statusLine()+'</p></header>';}
+function clubButton(){if(!cloud.configured)return '';var on=state.tab==='clube',lbl=isMember()?'Abrir o clube':'Entrar no clube';
+  return '<button class="crown" data-act="tab" data-id="'+(isMember()?'clube':'conta')+'" aria-label="'+lbl+'" title="'+lbl+'"'+(on?' aria-current="page"':'')+'>'+CROWN_ICON+(isMember()?'':'<span class="cdot" aria-hidden="true"></span>')+'</button>';}
+function viewHeader(){var j=state.loaded&&done().length?journey():null;return '<header class="top"><div class="toprow"><div class="toptitle"><div class="eyebrow">Charutos · paladar e sensações</div><h1>Diário de Degustação</h1></div>'+clubButton()+'</div>'+(j?'<button class="linkbtn lvl" style="text-decoration:none" data-act="tab" data-id="paladar"><b>'+esc(j.name)+'</b><span class="num faint">'+j.xp+' pts · '+j.on.length+' conquistas</span></button>':'')+'<p class="mode">'+statusLine()+'</p></header>';}
 function viewHome(){
   var h=viewHeader();
   var live=openSession();
