@@ -58,6 +58,34 @@
   click(act('home')); await wait(150);
   check('Voltar retorna à aba Início', (q('[role=tab][aria-selected=true]') || {}).innerText === 'Início' && qa('.gcard').length === 7);
 
+  // ---- Tarefa 3 ----
+  var rit = window.__t && __t.ritmo;
+  check('ritmo exposto para teste', !!rit);
+  click(q('.gcard[data-id="4"]')); await wait(150);
+  check('cartão Ritmo abre Ritmo e cinza', titulo() === 'Ritmo e cinza');
+  check('3 botões de intervalo (30, 45, 60 s)', qa('[data-act="ritmo-per"]').map(function (b) { return b.getAttribute('data-id'); }).join(',') === '30,45,60');
+  check('anel e número presentes', !!q('#ritmo-ring') && !!q('#ritmo-num'));
+  click(act('ritmo-per', '30')); await wait(80);
+  check('30 s fica marcado e o número mostra 30', (q('[data-act="ritmo-per"][aria-pressed="true"]') || {}).getAttribute && q('[data-act="ritmo-per"][aria-pressed="true"]').getAttribute('data-id') === '30' && q('#ritmo-num').textContent === '30');
+  click(act('ritmo-toggle')); await wait(1250);
+  var n1 = parseInt((q('#ritmo-num') || {}).textContent, 10);
+  check('após ~1,2 s o número mostra 29 ou 28', n1 === 29 || n1 === 28);
+  check('botão vira Parar', /Parar/.test((act('ritmo-toggle') || {}).textContent || ''));
+  var timerAntes = rit && rit.timer;
+  if (window.__t && __t.render) __t.render();
+  await wait(1100);
+  var n2 = parseInt((q('#ritmo-num') || {}).textContent, 10);
+  check('depois de um render o número continua descendo', n2 < n1);
+  check('render não cria um segundo intervalo', !!rit && rit.timer === timerAntes && rit.timer != null);
+  check('anel avançou (dashoffset > 0)', parseFloat((q('#ritmo-ring') || { getAttribute: function () { return '0'; } }).getAttribute('stroke-dashoffset')) > 0);
+  check('controles do marcador com 44px', qa('[data-act="ritmo-per"],[data-act="ritmo-toggle"]').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+  click(act('guia-nav', '1')); await wait(150);
+  check('trocar de tópico para o marcador', !!rit && rit.on === false && rit.timer === null);
+  click(act('guia-nav', '-1')); await wait(150);
+  click(act('ritmo-toggle')); await wait(300);
+  click(act('home')); await wait(150);
+  check('Voltar para o marcador', !!rit && rit.on === false && rit.timer === null);
+
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };
 })();

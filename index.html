@@ -108,6 +108,16 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .gout{padding:12px 14px; border-radius:12px; background:var(--surface2); line-height:1.4; border-left:4px solid var(--line)}
 .gout.ideal{border-left-color:var(--ok)} .gout.atencao{border-left-color:var(--warn)} .gout.risco{border-left-color:var(--bad)} .gout.invalido{border-left-color:var(--warn)}
 .gdnav .btn{flex:1}
+.gseg{display:flex; gap:8px}
+.gseg .btn{flex:1; min-height:44px}
+.gseg .btn[aria-pressed="true"]{border-color:var(--ember); color:var(--ember)}
+.gring{position:relative; width:168px; height:168px; align-self:center}
+.gring svg{display:block}
+.rbg{fill:none; stroke:var(--surface2); stroke-width:10}
+.rfg{fill:none; stroke:var(--ember); stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .25s linear}
+.rnum{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+.rnum b{font-family:var(--f-display); font-size:44px; line-height:1}
+.rnum span{font-size:12px; color:var(--muted)}
 .minitabs{display:flex; gap:6px}
 .minitabs button{flex:1; min-height:40px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
 .minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
@@ -473,7 +483,6 @@ var GUIDE_TOOL={0:'umidor',2:'corte',4:'ritmo'};
 /* Tópico do dia: dia do ano (1º de janeiro = 1) mod 7. */
 function guideOfDay(d){var y=d.getFullYear(),n=Math.round((new Date(y,d.getMonth(),d.getDate())-new Date(y,0,0))/86400000);return n%GUIDE.length;}
 /* @end:guia */
-window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus};
 var NOTE_COLOR={}; FAMILIES.forEach(function(f){f.notes.forEach(function(n){NOTE_COLOR[n]=f.color;});});
 var MOMENTS=['Pós-almoço','Entardecer','Fim de noite'];
 var DRINKS=['Café','Água de coco','Caipirinha','Whisky','Rum','Cachaça envelhecida','Água','Outra'];
@@ -800,11 +809,12 @@ function restoreAuthForm(){
 }
 function render(){
   var app=document.getElementById('app');
+  if(ritmo.on&&!(state.view==='guia'&&GUIDE_TOOL[guiaIndex()]==='ritmo'))ritmoStop();
   if(state.view==='session'&&draft){app.innerHTML=viewSession();startTick();return;}
   stopTick();
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
-  if(state.view==='guia'){app.innerHTML=viewGuia();return;}
+  if(state.view==='guia'){app.innerHTML=viewGuia();ritmoPaint();return;}
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
@@ -875,13 +885,27 @@ function saveCigarEdit(id){var c=cigarById(id);if(!c)return;var f=readCigarForm(
 function removeCigar(id){var c=cigarById(id);if(!c)return;state.cigars=state.cigars.filter(function(x){return x.id!==id;});ls('diario-dirty',String(Date.now()));
   Promise.all([delRec('cigars',id),putRec('tombstones',{id:'cigars:'+id,col:'cigars',localId:id,photo:null})]).then(scheduleSync).catch(saveErr);
   state.editCigar=null;state.confirm='';render();toast(c.name+' removido do acervo. As sessões continuam no Histórico.');}
+/* Marcador de baforada: atualiza o anel direto no DOM a cada 250 ms, sem render(). */
+var RITMO_C=326.73, ritmo={on:false,periodo:45,inicio:0,ciclo:0,timer:null};
+function ritmoPaint(){var ring=document.getElementById('ritmo-ring'),num=document.getElementById('ritmo-num');if(!ring||!num)return;
+  var P=ritmo.periodo*1000,e=ritmo.on?(Date.now()-ritmo.inicio)%P:0;
+  ring.setAttribute('stroke-dashoffset',String((RITMO_C*e/P).toFixed(2)));num.textContent=String(Math.ceil((P-e)/1000));}
+function ritmoTick(){var c=Math.floor((Date.now()-ritmo.inicio)/(ritmo.periodo*1000));if(c!==ritmo.ciclo){ritmo.ciclo=c;try{if(navigator.vibrate)navigator.vibrate(120);}catch(e){}}ritmoPaint();}
+function ritmoStart(){ritmo.on=true;ritmo.inicio=Date.now();ritmo.ciclo=0;if(!ritmo.timer)ritmo.timer=setInterval(ritmoTick,250);}
+function ritmoStop(){ritmo.on=false;if(ritmo.timer)clearInterval(ritmo.timer);ritmo.timer=null;}
+/* Ganchos de teste (tests/ui-guia.js). */
+window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,render:function(){render();}};
+function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
   if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
     return '<div class="panel gtool"><h3>Confira seu umidor</h3><div class="gfields"><label class="f">Umidade (%)<input type="text" inputmode="decimal" data-gin="umid" value="'+esc(state.umid||'')+'" placeholder="ex.: 68"></label><label class="f">Temperatura (°C)<input type="text" inputmode="decimal" data-gin="temp" value="'+esc(state.temp||'')+'" placeholder="ex.: 17"></label></div><div id="umid-out" class="gout '+r.nivel+'" aria-live="polite">'+esc(r.texto)+'</div></div>';}
   if(tool==='corte')return '<div class="panel gtool"><h3>Qual o corte da sua vitola?</h3><div class="gvit">'+VITOLAS_CORTE.map(function(v){return '<button class="btn" data-act="corte" data-id="'+esc(v)+'" aria-pressed="'+(state.corteVit===v)+'">'+esc(v)+'</button>';}).join('')+'</div><div id="corte-out" class="gout" aria-live="polite">'+(state.corteVit?esc(cutTipOf({vitola:state.corteVit})):'Toque na vitola do seu charuto.')+'</div></div>';
+  if(tool==='ritmo')return '<div class="panel gtool"><h3>Marcador de baforada</h3><p class="muted">Uma baforada a cada ciclo mantém a brasa viva sem esquentar. O celular vibra no fim de cada ciclo, se tiver vibração.</p><div class="gseg" role="group" aria-label="Intervalo entre baforadas">'+[30,45,60].map(function(p){return '<button class="btn" data-act="ritmo-per" data-id="'+p+'" aria-pressed="'+(ritmo.periodo===p)+'">'+p+' s</button>';}).join('')+'</div>'+
+    '<div class="gring"><svg viewBox="0 0 120 120" width="168" height="168" aria-hidden="true"><circle cx="60" cy="60" r="52" class="rbg"></circle><circle id="ritmo-ring" cx="60" cy="60" r="52" class="rfg" stroke-dasharray="'+RITMO_C+'" stroke-dashoffset="0" transform="rotate(-90 60 60)"></circle></svg><div class="rnum"><b id="ritmo-num" class="num">'+ritmo.periodo+'</b><span>segundos</span></div></div>'+
+    '<button class="btn primary" data-act="ritmo-toggle">'+(ritmo.on?'Parar':'Iniciar')+'</button></div>';
   return '';}
 function viewGuia(){
-  var n=GUIDE.length,i=(((state.guiaIdx||0)%n)+n)%n,g=GUIDE[i];
+  var n=GUIDE.length,i=guiaIndex(),g=GUIDE[i];
   return '<header class="top"><button class="btn ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">Guia de bolso · '+(i+1)+' de '+n+'</div><div class="gdhead"><span class="gico">'+GUIDE_ICONS[i]+'</span><h1 style="font-size:34px">'+esc(g[0])+'</h1></div><p class="gdrule">'+esc(g[2])+'</p></header>'+
     guiaTool(GUIDE_TOOL[i])+'<div class="panel gdtext">'+g[1]+'</div>'+
     '<nav class="row gdnav" aria-label="Tópicos do guia"><button class="btn" data-act="guia-nav" data-id="-1">Anterior</button><button class="btn" data-act="guia-nav" data-id="1">Próximo</button></nav><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p>';}
@@ -1267,6 +1291,8 @@ document.addEventListener('click',function(ev){
     case 'guia': state.view='guia'; state.guiaIdx=parseInt(id,10)||0; render(); window.scrollTo(0,0); break;
     case 'guia-nav': state.guiaIdx=((state.guiaIdx||0)+(parseInt(id,10)||0)+GUIDE.length)%GUIDE.length; render(); window.scrollTo(0,0); break;
     case 'corte': state.corteVit=id; render(); break;
+    case 'ritmo-per': ritmo.periodo=parseInt(id,10)||45; if(ritmo.on){ritmo.inicio=Date.now();ritmo.ciclo=0;} render(); break;
+    case 'ritmo-toggle': if(ritmo.on)ritmoStop();else ritmoStart(); render(); break;
     case 'tab': state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); break;
     case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
