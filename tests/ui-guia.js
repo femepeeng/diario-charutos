@@ -86,6 +86,37 @@
   click(act('home')); await wait(150);
   check('Voltar para o marcador', !!rit && rit.on === false && rit.timer === null);
 
+  // ---- Revisão final ----
+  await irInicio();
+  var car = q('.gcar'), cs = qa('.gcard');
+  if (car && cs.length > 3) {
+    car.scrollLeft = cs[3].offsetLeft - cs[0].offsetLeft; await wait(250);
+    var antes = car.scrollLeft;
+    if (window.__t && __t.render) __t.render(); await wait(250);
+    var car2 = q('.gcar'), dot = qa('.gdots i').findIndex(function (i) { return i.className === 'on'; });
+    check('render mantém a posição do carrossel', !!car2 && Math.abs(car2.scrollLeft - antes) <= 2 && antes > 0);
+    check('render mantém o ponto ativo', dot === 3);
+    car2.scrollLeft = 0; await wait(250);
+  }
+  click(q('.gcard[data-id="0"]')); await wait(150);
+  var ui = q('[data-gin="umid"]');
+  if (ui) {
+    ui.focus(); ui.value = '6'; ui.dispatchEvent(new Event('input', { bubbles: true }));
+    if (window.__t && __t.rerender) __t.rerender(); await wait(150);
+    check('rerender da nuvem não tira o foco do umidor', document.activeElement === ui && q('[data-gin="umid"]') === ui);
+    ui.value = ''; ui.dispatchEvent(new Event('input', { bubbles: true })); ui.blur();
+  }
+  click(act('home')); await wait(120);
+  click(q('.gcard[data-id="4"]')); await wait(150);
+  var origWL = Object.getOwnPropertyDescriptor(navigator, 'wakeLock'), pedidos = 0, soltos = 0;
+  Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request: function () { pedidos++; return Promise.resolve({ release: function () { soltos++; return Promise.resolve(); } }); } } });
+  click(act('ritmo-toggle')); await wait(80);
+  check('Iniciar o marcador pede para manter a tela acesa', pedidos === 1);
+  click(act('ritmo-toggle')); await wait(80);
+  check('Parar o marcador libera a tela', soltos === 1);
+  if (origWL) Object.defineProperty(navigator, 'wakeLock', origWL); else delete navigator.wakeLock;
+  click(act('home')); await wait(120);
+
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };
 })();

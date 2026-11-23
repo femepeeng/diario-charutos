@@ -571,7 +571,7 @@ var syncing=false, syncAgain=false, syncTimer=null, renderTimer=null;
 
 function isMember(){return !!(cloud.sb&&cloud.user&&cloud.profile&&cloud.profile.id===cloud.user.id);}
 function isDirty(r){return !r.syncedAt||(r.updatedAt||0)>r.syncedAt;}
-function rerender(){if(state.view==='session')return;clearTimeout(renderTimer);renderTimer=setTimeout(render,30);}
+function rerender(){if(state.view==='session'||state.view==='guia')return;clearTimeout(renderTimer);renderTimer=setTimeout(render,30);}
 function setStatus(s,detail){cloud.status=s;cloud.statusDetail=detail||'';rerender();}
 function scheduleSync(){if(!cloud.configured)return;clearTimeout(syncTimer);syncTimer=setTimeout(sync,2500);}
 function canSync(){return isMember()&&!cloud.ownerMismatch&&!!idb&&navigator.onLine!==false;}
@@ -816,6 +816,7 @@ function render(){
   if(state.view==='post'){app.innerHTML=viewPost();return;}
   if(state.view==='guia'){app.innerHTML=viewGuia();ritmoPaint();return;}
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
+  var gc=state.gcarX?app.querySelector('.gcar'):null;if(gc)gc.scrollLeft=state.gcarX;
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
 }
@@ -891,10 +892,10 @@ function ritmoPaint(){var ring=document.getElementById('ritmo-ring'),num=documen
   var P=ritmo.periodo*1000,e=ritmo.on?(Date.now()-ritmo.inicio)%P:0;
   ring.setAttribute('stroke-dashoffset',String((RITMO_C*e/P).toFixed(2)));num.textContent=String(Math.ceil((P-e)/1000));}
 function ritmoTick(){var c=Math.floor((Date.now()-ritmo.inicio)/(ritmo.periodo*1000));if(c!==ritmo.ciclo){ritmo.ciclo=c;try{if(navigator.vibrate)navigator.vibrate(120);}catch(e){}}ritmoPaint();}
-function ritmoStart(){ritmo.on=true;ritmo.inicio=Date.now();ritmo.ciclo=0;if(!ritmo.timer)ritmo.timer=setInterval(ritmoTick,250);}
-function ritmoStop(){ritmo.on=false;if(ritmo.timer)clearInterval(ritmo.timer);ritmo.timer=null;}
+function ritmoStart(){ritmo.on=true;ritmo.inicio=Date.now();ritmo.ciclo=0;if(!ritmo.timer)ritmo.timer=setInterval(ritmoTick,250);requestWake();}
+function ritmoStop(){var era=ritmo.on||ritmo.timer;ritmo.on=false;if(ritmo.timer)clearInterval(ritmo.timer);ritmo.timer=null;if(era)releaseWake();}
 /* Ganchos de teste (tests/ui-guia.js). */
-window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,render:function(){render();}};
+window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,render:function(){render();},rerender:function(){rerender();}};
 function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
   if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
@@ -1381,9 +1382,9 @@ document.addEventListener('submit',function(ev){
   put('cigars',c); state.addOpen=false; render(); toast('Charuto adicionado ao acervo');
 });
 document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if(state.view==='session'&&draft)requestWake();if(isMember())scheduleSync();}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember())scheduleSync();}});
 document.addEventListener('scroll',function(e){var t=e.target;if(!t||!t.classList||!t.classList.contains('gcar'))return;var c=t.querySelectorAll('.gcard');if(c.length<2)return;
-  var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';},true);
+  state.gcarX=t.scrollLeft;var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';},true);
 window.addEventListener('online',function(){if(isMember()){sync();if(state.tab==='clube')loadFeed();}});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});
