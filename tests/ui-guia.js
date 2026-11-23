@@ -117,6 +117,32 @@
   if (origWL) Object.defineProperty(navigator, 'wakeLock', origWL); else delete navigator.wakeLock;
   click(act('home')); await wait(120);
 
+  // ---- Boas-vindas com o diário vazio (2.7.1) ----
+  // Troca state.cigars/state.sessions só na memória para simular os dois casos; nada é gravado.
+  // Os registros falsos levam syncedAt = updatedAt: para isDirty() eles já estão sincronizados,
+  // então uma sincronização que rode no meio do teste não os envia ao clube.
+  var S = window.__t && __t.state;
+  check('estado exposto para teste', !!S);
+  if (S && __t.render) {
+    var bk = { c: S.cigars, s: S.sessions, tab: S.tab, add: S.addOpen };
+    S.cigars = []; S.sessions = []; S.tab = 'inicio'; S.addOpen = false; __t.render(); await wait(120);
+    var bw = q('.gwelcome');
+    check('diário vazio: Início mostra as boas-vindas', !!bw);
+    check('boas-vindas vêm antes do guia', !!bw && !!q('.ginicio') && !!(bw.compareDocumentPosition(q('.ginicio')) & Node.DOCUMENT_POSITION_FOLLOWING));
+    check('boas-vindas têm Importar backup', !!q('.gwelcome #import-file'));
+    check('boas-vindas têm Adicionar primeiro charuto', !!q('.gwelcome [data-act="novo-charuto"]'));
+    check('botões das boas-vindas com 44px', qa('.gwelcome .btn').length >= 2 && qa('.gwelcome .btn').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+    check('Início com boas-vindas sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
+    click(q('.gwelcome [data-act="novo-charuto"]')); await wait(150);
+    check('Adicionar primeiro charuto abre o Acervo com o formulário', (q('[role=tab][aria-selected=true]') || {}).innerText === 'Acervo' && !!q('#addForm'));
+    check('foco vai para o nome do charuto', document.activeElement === q('#nc-name'));
+    S.cigars = [{ id: 'teste-ui', name: 'Teste', status: 'estoque', strength: 2, updatedAt: 1, syncedAt: 1 }]; S.tab = 'inicio'; S.addOpen = false; __t.render(); await wait(120);
+    check('diário com charuto: sem boas-vindas', !q('.gwelcome') && qa('.gcard').length === 7);
+    S.cigars = []; S.sessions = [{ id: 'teste-ui', cigarName: 'Teste', status: 'concluida', visibility: 'private', thirds: [], updatedAt: 1, syncedAt: 1 }]; __t.render(); await wait(120);
+    check('só com sessões no Histórico: sem boas-vindas', !q('.gwelcome'));
+    S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.addOpen = bk.add; __t.render(); await wait(120);
+  }
+
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };
 })();

@@ -79,6 +79,9 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .tabs button{flex:1 0 auto; min-height:42px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
 .tabs button[aria-selected="true"]{background:var(--surface2); color:var(--fg)}
 .ginicio{display:flex; flex-direction:column; gap:12px; min-width:0}
+.gwelcome{gap:10px; border:1.5px solid var(--line)}
+.gwelcome h3,.gwelcome p{margin:0}
+.gwelcome .row>*{flex:1 1 auto}
 .ghead{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
 .gcount{font-size:12px; font-family:var(--f-mono)}
 .gcar{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin:0 -16px; padding:2px 16px 6px; scroll-padding-left:16px; overscroll-behavior-x:contain}
@@ -277,7 +280,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
-var APP_VERSION='2.7.0', APP_BUILD='22/11/2026';
+var APP_VERSION='2.7.1', APP_BUILD='23/11/2026';
 var FAMILIES=[
   {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo','Coco']},
   {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
@@ -895,7 +898,7 @@ function ritmoTick(){var c=Math.floor((Date.now()-ritmo.inicio)/(ritmo.periodo*1
 function ritmoStart(){ritmo.on=true;ritmo.inicio=Date.now();ritmo.ciclo=0;if(!ritmo.timer)ritmo.timer=setInterval(ritmoTick,250);requestWake();}
 function ritmoStop(){var era=ritmo.on||ritmo.timer;ritmo.on=false;if(ritmo.timer)clearInterval(ritmo.timer);ritmo.timer=null;if(era)releaseWake();}
 /* Ganchos de teste (tests/ui-guia.js). */
-window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,render:function(){render();},rerender:function(){rerender();}};
+window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,state:state,render:function(){render();},rerender:function(){rerender();}};
 function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
   if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
@@ -910,8 +913,14 @@ function viewGuia(){
   return '<header class="top"><button class="btn ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">Guia de bolso · '+(i+1)+' de '+n+'</div><div class="gdhead"><span class="gico">'+GUIDE_ICONS[i]+'</span><h1 style="font-size:34px">'+esc(g[0])+'</h1></div><p class="gdrule">'+esc(g[2])+'</p></header>'+
     guiaTool(GUIDE_TOOL[i])+'<div class="panel gdtext">'+g[1]+'</div>'+
     '<nav class="row gdnav" aria-label="Tópicos do guia"><button class="btn" data-act="guia-nav" data-id="-1">Anterior</button><button class="btn" data-act="guia-nav" data-id="1">Próximo</button></nav><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p>';}
+/* Boas-vindas só para diário novo (sem charutos e sem sessões): o caminho para começar fica na tela de abertura. */
+function welcomeHtml(){
+  if(!state.loaded||state.cigars.length||state.sessions.length)return '';
+  if(isMember()&&cloud.status==='syncing')return '<div class="panel gwelcome" aria-live="polite"><h3>Trazendo seus registros do clube…</h3><p class="muted">Seu acervo aparece aqui assim que a sincronização terminar.</p></div>';
+  return '<div class="panel gwelcome"><h3>Comece seu diário</h3><p class="muted">Cadastre o primeiro charuto do seu acervo ou importe um backup de outro aparelho.'+(cloud.configured&&!isMember()?' Já é do clube? Toque na coroa no alto para entrar e trazer seus registros.':'')+'</p>'+
+    '<div class="row"><button class="btn primary" data-act="novo-charuto">Adicionar primeiro charuto</button>'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';}
 function viewInicio(){
-  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h='<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
+  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=welcomeHtml()+'<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
   for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
     h+='<button class="gcard'+(k===0?' today':'')+'" data-act="guia" data-id="'+i+'"><span class="gtags">'+(k===0?'<span class="gtag hot">Dica do dia</span>':'')+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span><span class="gico">'+GUIDE_ICONS[i]+'</span><span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></button>';
     dots+='<i'+(k===0?' class="on"':'')+'></i>';}
@@ -1327,6 +1336,7 @@ document.addEventListener('click',function(ev){
     case 'rmcigar': removeCigar(id); break;
     case 'addopen': state.addOpen=true; state.editCigar=null; render(); var f=document.getElementById('nc-name'); if(f)f.focus(); break;
     case 'addclose': state.addOpen=false; render(); break;
+    case 'novo-charuto': state.tab='acervo'; state.view='home'; state.acvFilter='todos'; state.addOpen=true; state.editCigar=null; state.confirm=''; render(); var nf=document.getElementById('nc-name'); if(nf)nf.focus(); break;
     case 'export': exportDownload(); break;
     case 'share': exportShare(); break;
     case 'install': if(installPrompt){installPrompt.prompt();installPrompt.userChoice.then(function(){installPrompt=null;render();}).catch(function(){});} break;

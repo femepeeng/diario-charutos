@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.7.0 (22/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.7.1 (23/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -40,7 +40,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Sessão:** cronômetro, momento (pré-preenchido com o da última sessão), bebida, foto da anilha (câmera ou galeria), notas por terço em 8 famílias (incluindo "Gostos na boca"), missão de aroma, dicas do guia por terço e fechamento com força, queima, tiragem, bem-estar (alerta de mal-estar), nota, recompraria, impressão e visibilidade.
 - **Histórico:** detalhe, edição com troca de charuto e de duração, ajustar a força no Acervo e adicionar charuto avulso ao Acervo.
 - **Paladar:** jornada (níveis Iniciante → Mestre, 15 conquistas calculadas do diário), análise (força × nota, sabores acima e abaixo da média, ranking, força esperada × sentida, hábitos) e Escola do charuto (8 lições).
-- **Início** (aba de abertura): Guia de bolso em carrossel, com a Dica do dia (dia do ano mod 7) e três ferramentas no detalhe do tópico: Conservação (`humidorStatus`), Corte (`cutTipOf` por vitola) e Ritmo (marcador de baforada de 30, 45 ou 60 s).
+- **Início** (aba de abertura): com o diário vazio (sem charutos e sem sessões), um bloco "Comece seu diário" no topo leva a "Adicionar primeiro charuto" (abre o formulário no Acervo) e a "Importar backup". Abaixo, o Guia de bolso em carrossel, com a Dica do dia (dia do ano mod 7) e três ferramentas no detalhe do tópico: Conservação (`humidorStatus`), Corte (`cutTipOf` por vitola) e Ritmo (marcador de baforada de 30, 45 ou 60 s).
 - **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho. **Comparar:** duas sessões lado a lado. **Conta:** login, convites (admin), backup e atalho para o guia.
 
 ## Regras e restrições
