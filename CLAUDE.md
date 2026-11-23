@@ -4,8 +4,8 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual neste pacote:** 2.6.1 (22/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
-- **Estado do GitHub em 22/11/2026:** o `index.html` publicado ainda é anterior à 2.5.0 (sem número de versão). Este pacote é o estado mais recente.
+- **Versão atual:** 2.7.0 (22/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Repositório local:** `C:UsersemepDocumentsClaudeDesingepo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
 
@@ -40,22 +40,23 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Sessão:** cronômetro, momento (pré-preenchido com o da última sessão), bebida, foto da anilha (câmera ou galeria), notas por terço em 8 famílias (incluindo "Gostos na boca"), missão de aroma, dicas do guia por terço e fechamento com força, queima, tiragem, bem-estar (alerta de mal-estar), nota, recompraria, impressão e visibilidade.
 - **Histórico:** detalhe, edição com troca de charuto e de duração, ajustar a força no Acervo e adicionar charuto avulso ao Acervo.
 - **Paladar:** jornada (níveis Iniciante → Mestre, 15 conquistas calculadas do diário), análise (força × nota, sabores acima e abaixo da média, ranking, força esperada × sentida, hábitos) e Escola do charuto (8 lições).
-- **Clube:** feed, curtidas e comentários. **Comparar:** duas sessões lado a lado. **Conta:** login, convites, backup e guia de bolso.
+- **Início** (aba de abertura): Guia de bolso em carrossel, com a Dica do dia (dia do ano mod 7) e três ferramentas no detalhe do tópico: Conservação (`humidorStatus`), Corte (`cutTipOf` por vitola) e Ritmo (marcador de baforada de 30, 45 ou 60 s).
+- **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho. **Comparar:** duas sessões lado a lado. **Conta:** login, convites (admin), backup e atalho para o guia.
 
 ## Regras e restrições
 
-- **Deploy só pelo celular:** o Felipe envia arquivos pela interface web do GitHub (Add file › Upload files). Entregue os arquivos alterados prontos e diga exatamente quais subir.
+- **Deploy:** por `git push` a partir do repositório local (acima). Se o Felipe estiver só no celular, ele também pode subir arquivos pela interface web do GitHub.
 - **Toda entrega atualiza `APP_VERSION`/`APP_BUILD`** (MAIOR.MENOR.CORREÇÃO: correção = último número, recurso = do meio, estrutura = primeiro).
 - **Mudanças de dados sempre compatíveis com registros existentes.** Os dados ficam no IndexedDB dos usuários; nunca quebre a leitura de backups antigos. Campo novo de cigar ou session que deva sincronizar exige coluna no SQL (`alter table ... add column if not exists`) e mapeamento em `cigarRow`/`rowToCigar` ou `sessionRow`/`rowToSession`.
 - **Nunca** coloque a chave `secret`/`service_role` no app ou no repositório. A publishable/anon é pública por natureza.
 - **Conteúdo:** sem preços, lojas ou links de compra no app (Lei 9.294/1996, art. 3-A, restringe propaganda de fumígenos por meio eletrônico). Nada que ensine a tragar. Informação técnica deve ser conservadora; onde não há consenso, o texto diz isso.
 - **UI:** mobile-first (testar em 360 a 390 px, sem rolagem horizontal), tema escuro por padrão com tema claro via tokens CSS, fontes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono, alvos de toque de pelo menos 44 px, sem emoji como ícone.
-- **Testes:** valide com Playwright (Chromium) servindo a pasta com `python3 -m http.server`, contexto 390x844 e `service_workers='block'`. Para o clube, simule o supabase-js interceptando `config.js` e `supabase.js` com `page.route`.
-- **Privacidade:** backups JSON contêm dados pessoais e fotos; não versionar (`*.json` está no `.gitignore`). O `migracao-diario.json` ainda está publicado no repo e deveria ser apagado.
+- **Testes:** `node tests/guia.test.js` testa as funções puras entre os marcadores `/* @pure:guia */` e `/* @end:guia */`. `tests/ui-guia.js` roda no navegador com o app aberto (`eval(await (await fetch('/tests/ui-guia.js')).text())`) e só navega, sem alterar dados. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
+- **Privacidade:** backups JSON contêm dados pessoais e fotos; não versionar (`*.json` está no `.gitignore`). O `migracao-diario.json` foi removido na 2.6.1 (ainda existe no histórico do Git).
 
 ## Pendências conhecidas
 
-1. Publicar a 2.6.1 no GitHub (`index.html` e `config.js`).
-2. Clube ativado em 22/11/2026: projeto Supabase `csqxarkaqcfyitmbfmzm` (região us-west-2, Oregon), SQL aplicado, Confirm email desligado, `config.js` preenchido com a chave publishable. O convite de fundador agora é aleatório (gerado pelo SQL) e o `create_invite` usa `gen_random_uuid()`. Falta publicar a 2.6.1 e o fundador criar a conta.
-3. Recuperação de senha depende de SMTP próprio (por exemplo Brevo ou Resend); hoje o administrador apaga o usuário e reconvida.
-4. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, conquistas visíveis no perfil do clube e no feed, canal beta com IndexedDB separado.
+1. Recuperação de senha depende de SMTP próprio (por exemplo Brevo ou Resend); hoje o administrador apaga o usuário e reconvida.
+2. Erros HTTP 400 no console com o clube logado, provavelmente downloads de fotos de anilha ausentes no Storage: investigar.
+3. Home em formato de blog: artigos e a lista de "charutos para provar" (sem preços, lojas ou links). A lista de compras original ainda não foi localizada.
+4. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, perfil do membro no clube com conquistas, quiz do guia valendo pontos, canal beta com IndexedDB separado.
