@@ -145,6 +145,104 @@
     tab('inicio'); await wait(80);
     check('sem o SQL: sem faixa de aviso', !q('.aviso'));
     apiM.opt.meErr = null;
+
+    // ================= Administrador =================
+    var dia = 60 * 24;
+    var apiA = fakeApi({
+      me: { is_admin: true, suspended: false, unread_msgs: 2, aviso: null },
+      members: [
+        { id: 'A', display_name: 'Admin Teste', is_admin: true, created_at: iso(30 * dia), invite_code: 'F-ABCDEF', suspended_at: null, last_seen_at: iso(1), shared_sessions: 3, last_msg_at: null, unread: 0 },
+        { id: 'M', display_name: 'Membro M', is_admin: false, created_at: iso(10 * dia), invite_code: 'INV1XXXXXX', suspended_at: null, last_seen_at: iso(120), shared_sessions: 2, last_msg_at: iso(60), unread: 2 },
+        { id: 'N', display_name: 'Membro N', is_admin: false, created_at: iso(9 * dia), invite_code: 'INV1XXXXXX', suspended_at: iso(dia), last_seen_at: iso(2 * dia), shared_sessions: 1, last_msg_at: null, unread: 0 },
+        { id: 'P', display_name: 'Membro P', is_admin: false, created_at: iso(2 * dia), invite_code: 'INV1XXXXXX', suspended_at: null, last_seen_at: null, shared_sessions: 0, last_msg_at: null, unread: 0 }
+      ],
+      invites: [
+        { code: 'F-X', grants_admin: true, max_uses: 1, uses: 1, active: false, created_at: iso(30 * dia) },
+        { code: 'INV1', grants_admin: false, max_uses: 10, uses: 3, active: true, created_at: iso(20 * dia) },
+        { code: 'INV2', grants_admin: false, max_uses: 10, uses: 0, active: false, created_at: iso(5 * dia) }
+      ],
+      thread: [
+        { id: 'x2', member_id: 'M', author_id: 'M', from_admin: false, body: 'Pergunta 2', created_at: iso(60) },
+        { id: 'x1', member_id: 'M', author_id: 'M', from_admin: false, body: 'Pergunta 1', created_at: iso(70) }
+      ],
+      avisos: [{ id: 'av1', body: 'Aviso antigo', created_at: iso(600), author_id: 'A' }]
+    });
+    login('A', 'Admin Teste', true);
+    T.setClubApi(apiA);
+    C.me = null; C.clubMissing = false; C.inviteLink = '';
+    C.club = { thread: [], avisos: [], members: [], invites: [], sec: 'inscritos', open: null, at: 0, sending: false, drafts: {} };
+    S.view = 'home'; S.tab = 'conta'; S.confirm = '';
+    await T.refreshClub(true); T.render(); await wait(120);
+    function sec(id) { return q('[data-act="admsec"][data-id="' + id + '"]'); }
+    function card(id) { return q('.mcard[data-member="' + id + '"]'); }
+
+    check('Conta do administrador mostra o painel Administração', /Administração/.test((q('#admin h2') || {}).textContent || ''));
+    check('quatro seções com 44px', qa('[data-act="admsec"]').length === 4 && qa('[data-act="admsec"]').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+    check('seção Inscritos mostra 4 e Mensagens mostra 2 não lidas', /4/.test((sec('inscritos') || {}).textContent || '') && /2/.test((sec('mensagens') || {}).textContent || ''));
+    check('administrador não vê o painel de mensagens do inscrito', !q('#msgs'));
+    check('4 cartões de inscritos', qa('.mcard').length === 4);
+    check('o próprio cartão tem "você" e nenhuma ação', !!card('A') && /você/.test(card('A').textContent) && !card('A').querySelector('button'));
+    check('suspenso aparece marcado, com Reativar e sem Tornar administrador', !!card('N') && /suspenso/.test(card('N').textContent) && /Reativar/.test(card('N').textContent) && !card('N').querySelector('[data-act="admadm"]'));
+    check('quem nunca abriu o app aparece como "nunca"', !!card('P') && /nunca/.test(card('P').textContent));
+    check('Inscritos sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
+
+    var nMembers = count(apiA, 'members');
+    click(act('admsusp', 'M')); await wait(60);
+    check('Suspender pede confirmação antes', !!card('M') && !!card('M').querySelector('[data-act="admconfirm"]') && count(apiA, 'setSuspended') === 0);
+    click(card('M').querySelector('[data-act="admconfirm"]')); await wait(150);
+    var ss = last(apiA, 'setSuspended');
+    check('confirmar suspende uma vez e recarrega a lista', count(apiA, 'setSuspended') === 1 && ss[1] === 'M' && ss[2] === true && count(apiA, 'members') > nMembers);
+
+    click(act('admadm', 'P')); await wait(60);
+    check('Tornar administrador avisa que ele lê todas as conversas', !!card('P') && /lê todas as conversas/.test(card('P').textContent));
+    click(card('P').querySelector('[data-act="admconfirm"]')); await wait(150);
+    var sa = last(apiA, 'setAdmin');
+    check('confirmar torna administrador', !!sa && sa[1] === 'P' && sa[2] === true);
+
+    hideToast(); apiA.opt.actErr = { code: 'P0001', message: 'not_self' };
+    click(act('admsusp', 'M')); await wait(60); click(card('M').querySelector('[data-act="admconfirm"]')); await wait(150);
+    check('erro do banco vira aviso em português', /própria conta/.test(toastText()));
+    apiA.opt.actErr = null;
+
+    click(sec('mensagens')); await wait(150);
+    check('caixa de entrada tem quem escreveu e não tem quem não escreveu', !!q('.inbox-row[data-member="M"]') && !q('.inbox-row[data-member="P"]'));
+    click(q('.inbox-row[data-member="M"]')); await wait(200);
+    check('abrir a conversa mostra as mensagens do inscrito', /Conversa com Membro M/.test((q('#admin') || {}).textContent || '') && qa('#admin .msg').length === 2);
+    check('abrir a conversa marca como lida', !!last(apiA, 'markRead') && last(apiA, 'markRead')[1] === 'M');
+    type(q('#msg-body'), 'Resposta do admin');
+    click(act('msgsend', 'M')); await wait(150);
+    var sm = last(apiA, 'send');
+    check('responder envia para a conversa do inscrito', !!sm && sm[1] === 'M' && sm[2] === 'Resposta do admin');
+    click(act('admclose')); await wait(80);
+    check('Voltar fecha a conversa', !q('#msg-body') && !!q('.inbox-row[data-member="M"]'));
+
+    click(sec('avisos')); await wait(150);
+    type(q('#aviso-body'), 'Aviso novo');
+    click(act('avisopub')); await wait(150);
+    var pa = last(apiA, 'postAviso');
+    check('publicar aviso envia o texto', !!pa && pa[1] === 'Aviso novo');
+    click(act('avisodel', 'av1')); await wait(60);
+    check('apagar aviso pede confirmação', count(apiA, 'deleteAviso') === 0 && !!q('#admin [data-act="admconfirm"]'));
+    click(q('#admin [data-act="admconfirm"]')); await wait(150);
+    var da = last(apiA, 'deleteAviso');
+    check('confirmar apaga o aviso', !!da && da[1] === 'av1');
+
+    click(sec('convites')); await wait(150);
+    var conv = (q('#admin') || {}).textContent || '';
+    check('convites mostram fundador esgotado, ativo com usos e desativado', /fundador · esgotado/.test(conv) && /ativo · 3\/10 usos/.test(conv) && /desativado/.test(conv));
+    check('só o convite ativo com vaga tem Desativar', qa('[data-act="invoff"]').length === 1 && !!act('invoff', 'INV1'));
+    click(act('invoff', 'INV1')); await wait(150);
+    var si = last(apiA, 'setInvite');
+    check('Desativar desativa o convite', !!si && si[1] === 'INV1' && si[2] === false);
+    check('Gerar link de convite continua na seção Convites', !!q('#admin [data-act="newinvite"]'));
+    check('Administração sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
+
+    apiA.opt.meErr = { code: 'PGRST202', message: 'Could not find the function public.club_me without parameters in the schema cache' };
+    await T.refreshClub(true); T.render(); await wait(120);
+    var app = document.getElementById('app').textContent;
+    check('sem o SQL: administrador vê o aviso de atualização do banco', /Falta aplicar a atualização do banco/.test(app));
+    check('sem o SQL: Convidar amigos continua e Administração some', /Convidar amigos/.test(app) && !q('#admin'));
+    apiA.opt.meErr = null;
   } catch (e) {
     check('sem exceção no teste: ' + e.message, false);
   } finally {

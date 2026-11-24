@@ -89,6 +89,12 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .aviso .abody{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 200px}
 .aviso .abody span{overflow-wrap:anywhere}
 .tdot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ember); margin-left:6px; vertical-align:middle}
+.admsecs .opt{min-height:44px}
+.inbox-row{display:flex; align-items:center; gap:10px; width:100%; min-height:52px; padding:10px 14px; border-radius:14px; border:1px solid var(--line); background:var(--surface); color:var(--fg); text-align:left; font:inherit}
+.inbox-row .ib-name{flex:1; font-weight:600; min-width:0; overflow-wrap:anywhere}
+.chip.unread{background:var(--ember); color:var(--ember-ink); font-weight:700}
+.inv-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--line)}
+.inv-row b{overflow-wrap:anywhere}
 .catwhy{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--muted)}
 .catwhy li.warn{color:var(--warn)}
 .catseg .opt{min-height:44px}
@@ -957,7 +963,71 @@ function loadMemberClub(){var me=cloud.me,uid=cloud.user.id,c=cloud.club;
   var ps=[clubApi.thread(uid).then(function(r){if(!r.error)c.thread=(r.data||[]).slice().reverse();})];
   if(!me.suspended)ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
   return Promise.all(ps).then(function(){if(me.unread_msgs>0)return clubApi.markRead(uid).then(function(r){if(!r.error)me.unread_msgs=0;});});}
-function loadAdminClub(){return Promise.resolve();}
+/* Administrador com a Conta aberta: inscritos sempre; convites, avisos e conversa conforme a seção. */
+function loadAdminClub(){var c=cloud.club,ps=[clubApi.members().then(function(r){if(!r.error)c.members=r.data||[];})];
+  if(c.sec==='convites')ps.push(clubApi.invites().then(function(r){if(!r.error)c.invites=r.data||[];}));
+  if(c.sec==='avisos')ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
+  if(c.open)ps.push(clubApi.thread(c.open).then(function(r){if(!r.error)c.thread=(r.data||[]).slice().reverse();}));
+  return Promise.all(ps).then(function(){var o=c.open&&c.members.filter(function(m){return m.id===c.open;})[0];
+    if(o&&o.unread>0)return clubApi.markRead(o.id).then(function(r){if(!r.error){cloud.me.unread_msgs=Math.max(0,(cloud.me.unread_msgs||0)-o.unread);o.unread=0;}});});}
+/* Ação de administrador: erro do banco vira aviso em português; sucesso recarrega o painel. */
+function admDo(fn,okMsg){Promise.resolve().then(fn).then(function(r){if(r&&r.error){toast(clubErrMsg(r.error));return;}if(okMsg)toast(okMsg);return refreshClub(true);})
+  .catch(function(e){toast(clubErrMsg(e));});}
+function admConfirm(){var cf=String(state.confirm||''),i=cf.indexOf(':'),kind=cf.slice(0,i),id=cf.slice(i+1);state.confirm='';render();
+  if(kind==='susp')admDo(function(){return clubApi.setSuspended(id,true);},'Participação suspensa.');
+  else if(kind==='adm')admDo(function(){return clubApi.setAdmin(id,true);},'Agora é administrador.');
+  else if(kind==='aviso')admDo(function(){return clubApi.deleteAviso(id);},'Aviso apagado.');}
+function memberById(id){return cloud.club.members.filter(function(m){return m.id===id;})[0]||null;}
+function publishAviso(){var c=cloud.club;if(c.sending)return;var el=document.getElementById('aviso-body'),v=cleanMsg(el?el.value:c.drafts.aviso);if(el)c.drafts.aviso=el.value;
+  if(!v.ok){toast(v.err);return;}c.sending=true;render();
+  Promise.resolve().then(function(){return clubApi.postAviso(v.text);}).then(function(r){c.sending=false;if(r.error){toast(clubErrMsg(r.error));render();return;}
+    c.drafts.aviso='';toast('Aviso publicado.');return refreshClub(true);}).catch(function(e){c.sending=false;toast(clubErrMsg(e));render();});}
+function confirmBox(title,text,label,danger){return '<div class="alert err"><b>'+esc(title)+'</b><span>'+esc(text)+'</span><div class="row" style="margin-top:8px"><button class="btn '+(danger?'danger':'primary')+'" data-act="admconfirm">'+esc(label)+'</button><button class="btn ghost" data-act="cancelconfirm">Cancelar</button></div></div>';}
+function admInscritos(){var c=cloud.club,uid=cloud.user.id,now=Date.now();
+  if(!c.members.length)return '<p class="faint">Carregando inscritos…</p>';
+  return '<div class="list">'+c.members.map(function(m){var self=m.id===uid,susp=!!m.suspended_at,tags=[],cf=state.confirm;
+    if(self)tags.push('você');if(m.is_admin)tags.push('administrador');if(susp)tags.push('suspenso');
+    var h='<div class="card mcard" data-member="'+esc(m.id)+'"><div class="head"><div style="min-width:0"><h3>'+esc(m.display_name)+'</h3>'+
+      (tags.length?'<div class="tags">'+tags.map(function(t){return '<span class="chip'+(t==='suspenso'?' st-hist':'')+'">'+t+'</span>';}).join('')+'</div>':'')+'</div>'+
+      (m.unread?'<span class="chip unread">'+m.unread+(m.unread>1?' novas':' nova')+'</span>':'')+'</div><p class="meta">'+esc(memberMeta(m,now))+'</p>';
+    if(self)return h+'</div>';
+    if(cf==='susp:'+m.id)h+=confirmBox('Suspender '+m.display_name+'?','A pessoa perde o feed e a sincronização, e as sessões dela somem do clube. Nada é apagado, e dá para reativar depois.','Suspender',true);
+    else if(cf==='adm:'+m.id)h+=confirmBox('Tornar '+m.display_name+' administrador?','Administrador lê todas as conversas, publica avisos, cuida dos convites e pode suspender membros.','Tornar administrador',false);
+    else{var b=[];
+      if(!m.is_admin)b.push('<button class="btn" data-act="admopen" data-id="'+esc(m.id)+'">Conversar</button>');
+      if(!m.is_admin)b.push('<button class="btn ghost" data-act="admsusp" data-id="'+esc(m.id)+'">'+(susp?'Reativar':'Suspender')+'</button>');
+      if(m.is_admin)b.push('<button class="btn ghost" data-act="admadm" data-id="'+esc(m.id)+'">Tirar administrador</button>');
+      else if(!susp)b.push('<button class="btn ghost" data-act="admadm" data-id="'+esc(m.id)+'">Tornar administrador</button>');
+      h+='<div class="row">'+b.join('')+'</div>';}
+    return h+'</div>';}).join('')+'</div>';}
+function admMsgs(){var c=cloud.club;
+  if(c.open){var m=memberById(c.open)||{display_name:'Inscrito'};
+    return '<div class="row" style="justify-content:space-between"><h3>Conversa com '+esc(m.display_name)+'</h3><button class="btn ghost" data-act="admclose">Voltar</button></div>'+threadHtml(c.thread,true,m.display_name)+composerHtml(c.open);}
+  var box=inboxOrder(c.members);
+  if(!box.length)return '<p class="faint">Nenhuma conversa ainda. Quando um inscrito escrever, ela aparece aqui.</p>';
+  return '<div class="list">'+box.map(function(m){return '<button class="inbox-row" data-act="admopen" data-id="'+esc(m.id)+'" data-member="'+esc(m.id)+'"><span class="ib-name">'+esc(m.display_name)+'</span><span class="meta">'+esc(relAgo(m.last_msg_at))+'</span>'+(m.unread?'<span class="chip unread">'+m.unread+'</span>':'')+'</button>';}).join('')+'</div>';}
+function admAvisos(){var c=cloud.club;
+  var h='<label class="f" for="aviso-body">Novo aviso para todos os membros<textarea id="aviso-body" data-cin="aviso" maxlength="1000" rows="3" placeholder="ex.: Nova versão no ar">'+esc(c.drafts.aviso||'')+'</textarea></label>'+
+    '<div class="row"><button class="btn primary" data-act="avisopub"'+(c.sending?' disabled':'')+'>Publicar</button></div><h3>Publicados</h3>';
+  if(!c.avisos.length)return h+'<p class="faint">Nenhum aviso publicado.</p>';
+  return h+c.avisos.map(function(a){return '<div class="aviso-item"><div class="mhead">'+esc(relAgo(a.created_at))+'</div><p>'+esc(a.body)+'</p>'+
+    (state.confirm==='aviso:'+a.id?confirmBox('Apagar este aviso?','Ele some para todos os membros.','Apagar',true):'<div class="row"><button class="btn ghost" data-act="avisodel" data-id="'+esc(a.id)+'">Apagar</button></div>')+'</div>';}).join('');}
+function inviteLinkHtml(){var h='';
+  if(cloud.inviteLink)h+='<label class="f" for="invite-link">Link de convite<input type="text" id="invite-link" readonly value="'+esc(cloud.inviteLink)+'"></label><div class="row"><button class="btn primary" data-act="copyinvite">Copiar link</button>'+(navigator.share?'<button class="btn" data-act="shareinvite">Enviar (WhatsApp…)</button>':'')+'</div>';
+  return h+'<div class="row"><button class="btn'+(cloud.inviteLink?' ghost':' primary')+'" data-act="newinvite">'+(cloud.inviteLink?'Gerar outro link':'Gerar link de convite')+'</button></div>';}
+function admConvites(){var c=cloud.club;
+  var h='<p class="muted">Cada link vale para até 10 pessoas. Mande só para quem você quer no clube.</p>'+inviteLinkHtml()+'<h3>Links criados</h3>';
+  if(!c.invites.length)return h+'<p class="faint">Nenhum link criado ainda.</p>';
+  return h+c.invites.map(function(v){var s=inviteStatus(v),d=Date.parse(v.created_at);
+    return '<div class="inv-row" data-code="'+esc(v.code)+'"><div style="min-width:0"><b class="num">'+esc(v.code)+'</b><div class="meta">'+esc(s.label)+(isNaN(d)?'':' · criado em '+dmy(new Date(d)))+'</div></div>'+
+      (s.canOff?'<button class="btn ghost" data-act="invoff" data-id="'+esc(v.code)+'">Desativar</button>':'')+'</div>';}).join('');}
+/* Painel do administrador na Conta. */
+function adminPanel(){var c=cloud.club,unread=cloud.me.unread_msgs||0;
+  var h='<div class="panel" id="admin"><div class="row" style="justify-content:space-between"><h2>Administração</h2><button class="btn ghost" data-act="clubrefresh">Atualizar</button></div>';
+  h+='<div class="row admsecs" role="group" aria-label="Seções da administração">'+[['inscritos','Inscritos '+c.members.length],['mensagens','Mensagens'+(unread?' '+unread:'')],['avisos','Avisos'],['convites','Convites']].map(function(t){
+    return '<button class="opt" aria-pressed="'+(c.sec===t[0])+'" data-act="admsec" data-id="'+t[0]+'">'+esc(t[1])+'</button>';}).join('')+'</div>';
+  h+=c.sec==='mensagens'?admMsgs():c.sec==='avisos'?admAvisos():c.sec==='convites'?admConvites():admInscritos();
+  return h+'</div>';}
 function isSuspended(){return !!(cloud.me&&cloud.me.suspended);}
 /* Envia na conversa de memberId (a própria, para o inscrito). Um envio por vez; se falhar, o texto fica no campo. */
 function sendMsg(memberId){var c=cloud.club;if(c.sending||!memberId)return;
@@ -1146,7 +1216,7 @@ async function deleteAccount(){
 }
 function createInvite(){
   cloud.sb.rpc('create_invite',{p_max_uses:10}).then(function(r){if(r.error){toast(authErr(r.error));return;}
-    cloud.inviteLink=location.origin+location.pathname+'?convite='+encodeURIComponent(r.data);render();});
+    cloud.inviteLink=location.origin+location.pathname+'?convite='+encodeURIComponent(r.data);render();if(cloud.club.sec==='convites')refreshClub(true);});
 }
 function saveName(){var el=document.getElementById('pf-name');var n=(el&&el.value||'').trim();if(!n||n.length>40){toast('Use um nome de 1 a 40 caracteres.');return;}
   cloud.sb.from('profiles').update({display_name:n}).eq('id',cloud.user.id).then(function(r){if(r.error){toast(authErr(r.error));return;}
@@ -1537,9 +1607,10 @@ function memberPanel(){
   h+='<div class="row"><button class="btn" data-act="syncnow"'+(cloud.status==='syncing'?' disabled':'')+'>Sincronizar agora</button></div>';
   h+='<label class="f" for="pf-name">Nome de exibição<input type="text" id="pf-name" maxlength="40" value="'+esc(p.display_name)+'"></label><div class="row"><button class="btn small" data-act="savename">Salvar nome</button></div></div>';
   h+=memberMsgsPanel();
-  if(p.is_admin){h+='<div class="panel"><h3>Convidar amigos</h3><p class="muted">Cada link vale para até 10 pessoas. Mande só para quem você quer no clube.</p>';
-    if(cloud.inviteLink)h+='<label class="f" for="invite-link">Link de convite<input type="text" id="invite-link" readonly value="'+esc(cloud.inviteLink)+'"></label><div class="row"><button class="btn primary" data-act="copyinvite">Copiar link</button>'+(navigator.share?'<button class="btn" data-act="shareinvite">Enviar (WhatsApp…)</button>':'')+'</div>';
-    h+='<div class="row"><button class="btn'+(cloud.inviteLink?' ghost':' primary')+'" data-act="newinvite">'+(cloud.inviteLink?'Gerar outro link':'Gerar link de convite')+'</button></div></div>';}
+  if(cloud.me&&cloud.me.is_admin&&!cloud.clubMissing)h+=adminPanel();
+  else if(p.is_admin){
+    if(cloud.clubMissing)h+='<div class="alert err"><b>Atualização do banco pendente</b><span>Falta aplicar a atualização do banco (supabase-clube-fase2.sql) no SQL Editor do Supabase. Até lá, só os convites funcionam.</span></div>';
+    h+='<div class="panel"><h3>Convidar amigos</h3><p class="muted">Cada link vale para até 10 pessoas. Mande só para quem você quer no clube.</p>'+inviteLinkHtml()+'</div>';}
   h+='<div class="panel"><h3>Sair ou excluir</h3><p class="muted">Ao sair, o diário continua neste celular. Ao excluir a conta, suas sessões, curtidas, comentários e fotos são apagados do clube.</p>';
   if(state.confirm==='delete')h+='<div class="alert err"><b>Excluir sua conta do clube?</b><span>Não dá para desfazer. O diário deste celular é mantido.</span><div class="row" style="margin-top:8px"><button class="btn danger" data-act="deleteaccount"'+(cloud.authBusy?' disabled':'')+'>Excluir definitivamente</button><button class="btn ghost" data-act="cancelconfirm">Cancelar</button></div></div>';
   else h+='<div class="row"><button class="btn" data-act="signout">Sair</button><button class="btn danger" data-act="askconfirm" data-id="delete">Excluir minha conta</button></div>';
@@ -1780,6 +1851,15 @@ document.addEventListener('click',function(ev){
     case 'syncnow': sync(); break;
     case 'savename': saveName(); break;
     case 'newinvite': createInvite(); break;
+    case 'admsec': cloud.club.sec=id; cloud.club.open=null; state.confirm=''; render(); refreshClub(true); break;
+    case 'admopen': cloud.club.sec='mensagens'; cloud.club.open=id; cloud.club.thread=[]; state.confirm=''; render(); refreshClub(true); break;
+    case 'admclose': cloud.club.open=null; cloud.club.thread=[]; render(); break;
+    case 'admsusp': var admS=memberById(id); if(admS&&admS.suspended_at)admDo(function(){return clubApi.setSuspended(id,false);},'Participação reativada.'); else{state.confirm='susp:'+id; render();} break;
+    case 'admadm': var admA=memberById(id); if(admA&&admA.is_admin)admDo(function(){return clubApi.setAdmin(id,false);},'Deixou de ser administrador.'); else{state.confirm='adm:'+id; render();} break;
+    case 'admconfirm': admConfirm(); break;
+    case 'avisopub': publishAviso(); break;
+    case 'avisodel': state.confirm='aviso:'+id; render(); break;
+    case 'invoff': admDo(function(){return clubApi.setInvite(id,false);},'Convite desativado.'); break;
     case 'copyinvite': copyText('invite-link',cloud.inviteLink); break;
     case 'shareinvite': navigator.share({title:'Convite para o Clube do Diário de Degustação',text:'Te convidei para o nosso clube de degustação de charutos. Abra no Chrome (Android) ou Safari (iPhone):',url:cloud.inviteLink}).catch(function(){}); break;
     case 'refreshfeed': loadFeed(); break;
