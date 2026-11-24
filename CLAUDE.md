@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.7.1 (23/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.8.0 (23/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -41,7 +41,17 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Histórico:** detalhe, edição com troca de charuto e de duração, ajustar a força no Acervo e adicionar charuto avulso ao Acervo.
 - **Paladar:** jornada (níveis Iniciante → Mestre, 15 conquistas calculadas do diário), análise (força × nota, sabores acima e abaixo da média, ranking, força esperada × sentida, hábitos) e Escola do charuto (8 lições).
 - **Início** (aba de abertura): com o diário vazio (sem charutos e sem sessões), um bloco "Comece seu diário" no topo leva a "Adicionar primeiro charuto" (abre o formulário no Acervo) e a "Importar backup". Abaixo, o Guia de bolso em carrossel, com a Dica do dia (dia do ano mod 7) e três ferramentas no detalhe do tópico: Conservação (`humidorStatus`), Corte (`cutTipOf` por vitola) e Ritmo (marcador de baforada de 30, 45 ou 60 s).
-- **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho. **Comparar:** duas sessões lado a lado. **Conta:** login, convites (admin), backup e atalho para o guia.
+- **Comparar:** duas sub-abas.
+  - **Lado a lado:** duas sessões em tabela e, embaixo, os 3 charutos do catálogo mais parecidos com o da nota maior (`similarTo`).
+  - **Para provar:** catálogo de referência (`CAT_LINES`/`CAT_ITEMS`, 475 charutos), ordenado pelo perfil de paladar (`tasteProfile` → `curate`), com filtros Cubanos/Fora de Cuba/Nacionais, busca e "Adicionar à cesta" (cria o charuto no Acervo com status `cesta`). O que já foi provado sai da lista, mas aparece na busca com a nota. Com menos de 3 sessões com nota, a ordem segue a força de referência, de suave a média.
+- **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho. **Conta:** login, convites (admin), backup e atalho para o guia.
+
+### Catálogo da curadoria
+
+- Vem das listas de compra que o Felipe consulta (cubanos, fora de Cuba e nacionais, de 19/11/2026). Entram **só nome, bitola e origem**: preço, loja, código e contato ficam de fora (Lei 9.294/1996, art. 3-A). Caixas, latas, petacas e amostradores viram um item só, ou saem quando não são charutos (purera, umidor).
+- `CAT_LINES`: `[marca, linha, país, capa, força, segmento]`. A força é uma referência aproximada por linha, de classificações públicas de fabricantes e da crítica. Sem consenso seguro, fica `null`, e o mesmo vale para país e capa (vazios). Não preencha por palpite.
+- `CAT_ITEMS`: `[nome, bitola, força do item, capa do item ('-' = nenhuma)]`. Bitola vazia onde a lista não traz o dado ou traz um valor incoerente.
+- Para atualizar com uma lista nova: acrescente linhas e itens, rode `node tests/curadoria.test.js` (ele barra preço, loja e códigos) e suba a versão.
 
 ## Regras e restrições
 
@@ -51,12 +61,13 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Nunca** coloque a chave `secret`/`service_role` no app ou no repositório. A publishable/anon é pública por natureza.
 - **Conteúdo:** sem preços, lojas ou links de compra no app (Lei 9.294/1996, art. 3-A, restringe propaganda de fumígenos por meio eletrônico). Nada que ensine a tragar. Informação técnica deve ser conservadora; onde não há consenso, o texto diz isso.
 - **UI:** mobile-first (testar em 360 a 390 px, sem rolagem horizontal), tema escuro por padrão com tema claro via tokens CSS, fontes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono, alvos de toque de pelo menos 44 px, sem emoji como ícone.
-- **Testes:** `node tests/guia.test.js` testa as funções puras entre os marcadores `/* @pure:guia */` e `/* @end:guia */`. `tests/ui-guia.js` roda no navegador com o app aberto (`eval(await (await fetch('/tests/ui-guia.js')).text())`) e só navega, sem alterar dados. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
+- **Testes:** `node tests/guia.test.js` e `node tests/curadoria.test.js` testam as funções puras entre os marcadores `/* @pure:guia */` e `/* @pure:curadoria */` (fecham com `/* @end:... */`). `tests/ui-guia.js` e `tests/ui-curadoria.js` rodam no navegador com o app aberto (`eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`; o `?` evita a cópia do service worker). Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim. O botão "Adicionar à cesta" grava no diário; confira-o à mão num navegador sem login no clube. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
 - **Privacidade:** backups JSON contêm dados pessoais e fotos; não versionar (`*.json` está no `.gitignore`). O `migracao-diario.json` foi removido na 2.6.1 (ainda existe no histórico do Git).
 
 ## Pendências conhecidas
 
 1. Recuperação de senha depende de SMTP próprio (por exemplo Brevo ou Resend); hoje o administrador apaga o usuário e reconvida.
 2. Erros HTTP 400 no console com o clube logado, provavelmente downloads de fotos de anilha ausentes no Storage: investigar.
-3. Home em formato de blog: artigos e a lista de "charutos para provar" (sem preços, lojas ou links). A lista de compras original ainda não foi localizada.
-4. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, perfil do membro no clube com conquistas, quiz do guia valendo pontos, canal beta com IndexedDB separado.
+3. Home em formato de blog: artigos tirados do guia. A lista de "charutos para provar" já existe, na aba Comparar (2.8.0).
+4. Catálogo da curadoria: 272 dos 475 itens estão sem força de referência e 96 sem país. Preencher só com fonte verificável (site do fabricante ou review publicada), nunca por palpite.
+5. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, perfil do membro no clube com conquistas, quiz do guia valendo pontos, canal beta com IndexedDB separado.

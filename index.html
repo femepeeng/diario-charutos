@@ -79,6 +79,11 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .tabs button{flex:1 0 auto; min-height:42px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
 .tabs button[aria-selected="true"]{background:var(--surface2); color:var(--fg)}
 .ginicio{display:flex; flex-direction:column; gap:12px; min-width:0}
+.catwhy{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--muted)}
+.catwhy li.warn{color:var(--warn)}
+.catseg .opt{min-height:44px}
+.catcount{font-size:13px; margin:0 0 8px}
+.cmpsim .list{gap:10px}
 .gwelcome{gap:10px; border:1.5px solid var(--line)}
 .gwelcome h3,.gwelcome p{margin:0}
 .gwelcome .row>*{flex:1 1 auto}
@@ -184,7 +189,7 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .seg button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); font-family:var(--f-mono); font-size:16px}
 .seg button[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
 .scale{display:flex; justify-content:space-between; font-size:12px; color:var(--faint)}
-textarea, input[type=text], input[type=email], input[type=password], input[type=number], select{width:100%; min-height:44px; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg); font:inherit}
+textarea, input[type=text], input[type=search], input[type=email], input[type=password], input[type=number], select{width:100%; min-height:44px; padding:10px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg); font:inherit}
 textarea{min-height:84px; resize:vertical}
 label.f{display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--muted)}
 label.check{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--fg)}
@@ -280,7 +285,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
-var APP_VERSION='2.7.1', APP_BUILD='23/11/2026';
+var APP_VERSION='2.8.0', APP_BUILD='23/11/2026';
 var FAMILIES=[
   {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo','Coco']},
   {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
@@ -320,6 +325,7 @@ function humidorStatus(u,t){
   return {nivel:'atencao',texto:'Atenção: '+p.join('; ')+'.'};}
 /* @end:guia */
 /* ===== Conhecimento: ficha técnica do charuto ===== */
+/* @pure:curadoria */
 var WRAPPERS={
   connecticut:['Connecticut Shade','Cultivada sob tecido que filtra o sol, o que deixa a folha clara, fina e elástica. Sabor suave e cremoso, com notas de creme, castanha e cedro.'],
   habano:['Habano','Capa de semente cubana cultivada fora de Cuba, como na Nicarágua e no Equador. Mais especiada e encorpada.'],
@@ -344,6 +350,7 @@ function vitolaClass(p){if(!p)return null;var L=p.len,G=p.ring;
   if(G<=44){if(L<=129)return ['Petit Corona','30 a 45 min'];if(L<=155)return ['Corona','45 a 60 min'];return ['Lonsdale','60 a 75 min'];}
   if(G<=47){if(L<=135)return ['Petit Robusto / Corona Extra','35 a 50 min'];if(L<=160)return ['Corona Gorda','50 a 70 min'];return ['Churchill','75 a 100 min'];}
   if(L<=135)return ['Robusto','45 a 60 min'];if(L<=160)return ['Toro','60 a 80 min'];if(L<=185)return ['Churchill','75 a 100 min'];return ['Double Corona','90 a 120 min'];}
+/* @end:curadoria */
 function ringEffect(p){if(!p)return '';if(p.ring<=44)return 'Bitola fina: a capa responde por boa parte do sabor, e a brasa esquenta rápido. Pede baforadas mais espaçadas.';
   if(p.ring>=52)return 'Bitola grossa: mais tripa no blend, fumaça mais fresca e volumosa. O sabor vem mais do miolo do que da capa.';
   return 'Bitola média: equilíbrio entre o sabor da capa e o do blend da tripa.';}
@@ -361,6 +368,262 @@ function fichaHtml(c,name){
   if(!p||!w)h+='<p class="faint" style="font-size:13px">'+(!p?'Informe a bitola como comprimento x ring (ex.: 129 x 42 mm ou 5 x 50) para ver o formato. ':'')+(!w?'Escolha a capa em Editar para ver o perfil da folha.':'')+'</p>';
   return h+'</div>';
 }
+/* ===== Curadoria "Para provar" (aba Comparar) ===== */
+/* @pure:curadoria */
+/* Catálogo de referência montado a partir das listas de compra que o Felipe consulta (cubanos, fora de Cuba e nacionais, 19/11/2026).
+   Entram só nome, bitola e origem: sem preço, loja, código ou contato (Lei 9.294/1996, art. 3-A). Caixas, latas e petacas viram um item só.
+   Linha: [marca, linha, país, capa, força, segmento]. Segmento: c = Cuba, f = fora de Cuba, n = nacional. País vazio = sem dado seguro.
+   Força: referência aproximada por linha (1 suave a 5 encorpado), a partir de classificações públicas de fabricantes e da crítica;
+   null onde não há consenso seguro. Capa: chave de WRAPPERS só quando a linha tem capa conhecida; a capa que aparece no nome do item vale primeiro.
+   Item: [nome, bitola, força do item, capa do item ('-' = nenhuma)]. Bitola vazia onde a lista não traz ou traz um valor incoerente. */
+var CAT_LINES={
+  bol:['Bolívar','','Cuba','',5,'c'],coh:['Cohiba','','Cuba','',4,'c'],upm:['H. Upmann','','Cuba','',2,'c'],hoy:['Hoyo de Monterrey','','Cuba','',2,'c'],
+  mon:['Montecristo','','Cuba','',3,'c'],par:['Partagás','','Cuba','',5,'c'],ryj:['Romeo y Julieta','','Cuba','',3,'c'],tri:['Trinidad','','Cuba','',4,'c'],
+  afa:['A. Fuente','Añejo Reserva','República Dominicana','maduro',4,'f'],afb:['A. Fuente','Brevas Royales','República Dominicana','',null,'f'],
+  afcc:['A. Fuente','Casa Cuba','República Dominicana','',3,'f'],afcz:['A. Fuente','Cazadores','República Dominicana','',null,'f'],
+  afch:['A. Fuente','Chateau Fuente','República Dominicana','',2,'f'],afcu:['A. Fuente','Cubanito','República Dominicana','',null,'f'],
+  afcl:['A. Fuente','Curly Head Deluxe','República Dominicana','',null,'f'],afda:['A. Fuente','Don Arturo Destino al Siglo','República Dominicana','',null,'f'],
+  afdc:['A. Fuente','Don Carlos','República Dominicana','camaroes',3,'f'],afst:['A. Fuente','Don Carlos Sangre de Toro','República Dominicana','',null,'f'],
+  afes:['A. Fuente','Especiales','República Dominicana','',null,'f'],afex:['A. Fuente','Exquisitos','República Dominicana','',null,'f'],
+  afgr:['A. Fuente','Gran Reserva','República Dominicana','',2,'f'],afhe:['A. Fuente','Hemingway','República Dominicana','camaroes',3,'f'],
+  afmg:['A. Fuente','Magnum','República Dominicana','',null,'f'],afox:['A. Fuente','Opus X','República Dominicana','',5,'f'],
+  afrp:['A. Fuente','Rare Pink Vintage 1960','República Dominicana','',null,'f'],
+  ajf:['AJ Fernandez','New World Connecticut','Nicarágua','connecticut',2,'f'],
+  aba:['Alec Bradley','American Sun Grown','','',3,'f'],abb:['Alec Bradley','Black Market Estelí','Nicarágua','',4,'f'],abh:['Alec Bradley','Black Market','','',null,'f'],
+  abd:['Alec Bradley','Double Broadleaf','','maduro',4,'f'],abk:['Alec Bradley','Kintsugi','','',null,'f'],abm:['Alec Bradley','Magic Toast','','',4,'f'],
+  abp:['Alec Bradley','Prensado','Honduras','',4,'f'],ab4:['Alec Bradley','Project 40','','',3,'f'],
+  avo:['AVO','Syncro Nicaragua Fogata','República Dominicana','',null,'f'],bri:['Brick House','Maduro','Nicarágua','maduro',null,'f'],
+  bvd:['Buena Vista','Dark Fire Kentucky','','',null,'f'],bvi:['Buena Vista','Incognito','','',null,'f'],caf:['Café Crème','','','',null,'f'],
+  cao:['CAO','','','',null,'f'],caobr:['CAO','Brazilia','','',4,'f'],caom:['CAO','Medio Tiempo','','',4,'f'],caon:['CAO','Nicaragua','Nicarágua','',3,'f'],caop:['CAO','Pilón','','',3,'f'],
+  davd:['Davidoff','Dominicana','República Dominicana','',null,'f'],davm:['Davidoff','Millennium','República Dominicana','',null,'f'],davy:['Davidoff','Yamasá','República Dominicana','',null,'f'],
+  dcm:['Diamond Crown','Maximus','República Dominicana','',4,'f'],ddc:['Don Diego','','República Dominicana','',2,'f'],dda:['Don Diego','Aniversario','República Dominicana','',null,'f'],
+  dea:['Don Emmanuel','Anunnaki','','',null,'f'],
+  defs:['Drew Estate','Factory Smoke Shade','Nicarágua','connecticut',2,'f'],defg:['Drew Estate','Factory Smoke Sun Grown','Nicarágua','',3,'f'],
+  de10:['Drew Estate','Liga Privada 10 Selección de Mercado','Nicarágua','',null,'f'],de9:['Drew Estate','Liga Privada Nº 9','Nicarágua','maduro',5,'f'],
+  det:['Drew Estate','Liga Privada T52','Nicarágua','habano',4,'f'],deu:['Drew Estate','Liga Privada Único Serie','Nicarágua','',null,'f'],
+  den:['Drew Estate','Nica Rustica','Nicarágua','',null,'f'],deu10:['Drew Estate','Undercrown 10','Nicarágua','',null,'f'],
+  deum:['Drew Estate','Undercrown Maduro','Nicarágua','maduro',4,'f'],deus:['Drew Estate','Undercrown Shade','Nicarágua','connecticut',3,'f'],
+  epe:['E.P. Carrillo','Encore','República Dominicana','',null,'f'],eph:['E.P. Carrillo','La Historia','República Dominicana','',4,'f'],
+  esp:['Espinosa','E-Bundles','Nicarágua','',null,'f'],fdc:['Flor de Copán','Classic','Honduras','',null,'f'],fdcp:['Flor de Copán','Línea Puros','Honduras','',null,'f'],
+  fdo:['Flor de Oliva','','Nicarágua','',null,'f'],frt:['Fratello','','','',null,'f'],
+  gkc:['Gurkha','Cellar Reserve','','',null,'f'],gkg:['Gurkha','Ghost','','',null,'f'],gkn:['Gurkha','Nicaragua Series','Nicarágua','',null,'f'],
+  jdna:['Joya de Nicaragua','Antaño','Nicarágua','',5,'f'],jdnct:['Joya de Nicaragua','Antaño CT','Nicarágua','connecticut',null,'f'],
+  jdnd:['Joya de Nicaragua','Antaño Dark Corojo','Nicarágua','corojo',5,'f'],jdng:['Joya de Nicaragua','Antaño Gran Reserva','Nicarágua','',null,'f'],
+  jdnc:['Joya de Nicaragua','Cabinetta','Nicarágua','',2,'f'],jdn5:['Joya de Nicaragua','Cinco de Cinco','Nicarágua','',null,'f'],
+  jdn50:['Joya de Nicaragua','Cinco Décadas','Nicarágua','',null,'f'],jdncl:['Joya de Nicaragua','Clásico','Nicarágua','',2,'f'],
+  jdnms:['Joya de Nicaragua','Clásico Medio Siglo','Nicarágua','',null,'f'],jdn45:['Joya de Nicaragua','Cuatro Cinco','Nicarágua','',null,'f'],
+  jdnu:['Joya de Nicaragua','Nº Uno','Nicarágua','',null,'f'],jdnr:['Joya de Nicaragua','Rosalones Reserva','Nicarágua','',null,'f'],
+  lau:['La Aurora',"Hors d'Age",'República Dominicana','',null,'f'],lm:['Luis Martinez','','','',null,'f'],mac:['Macanudo','','','',null,'f'],
+  dpgc:['Don Pepín García','Clásicos','Nicarágua','',null,'f'],dpgo:['Don Pepín García','Original','Nicarágua','',null,'f'],dpgj:['Don Pepín García','Serie JJ','Nicarágua','',4,'f'],
+  mfa:['My Father','Flor de las Antillas Maduro','Nicarágua','maduro',null,'f'],mob:['Mombacho','','Nicarágua','',null,'f'],mto:['Montosa','','','',null,'f'],
+  nub:['Nub','','Nicarágua','',null,'f'],
+  olmb:['Oliva','Master Blends','Nicarágua','',null,'f'],olct:['Oliva','Connecticut Reserve','Nicarágua','connecticut',2,'f'],olg:['Oliva','Serie G','Nicarágua','camaroes',3,'f'],
+  olo:['Oliva','Serie O','Nicarágua','habano',3,'f'],olv:['Oliva','Serie V','Nicarágua','habano',4,'f'],olm:['Oliva','Serie V Melanio','Nicarágua','sumatra',4,'f'],
+  pcb:['Parcero','Brasil','','',null,'f'],pdm:['Perla del Mar','','','',null,'f'],quo:['Quorum','','Nicarágua','',null,'f'],
+  ssmq:['Steve Saka','Mi Querida','Nicarágua','',null,'f'],ssmu:['Steve Saka','Muestra de Saka','Nicarágua','',null,'f'],
+  sssc:['Steve Saka','Sin Compromiso','Nicarágua','',null,'f'],ssso:['Steve Saka','Sobremesa','Nicarágua','',null,'f'],
+  vf98:['Vegafina','1998','República Dominicana','',null,'f'],vfc:['Vegafina','Classic','República Dominicana','',null,'f'],
+  vfn:['Vegafina','Nicaragua','Nicarágua','',null,'f'],vf2:['Vegafina','Serie 2','República Dominicana','',null,'f'],
+  dp:['Diógenes Puentes','','Brasil','',null,'n'],dfl:['Dona Flor','','Brasil','',null,'n'],jam:['JAMM','','Brasil','',null,'n']
+};
+var CAT_ITEMS={
+  bol:[['Belicosos Finos','140 x 52']],
+  coh:[['Robusto','124 x 50'],['Short',''],['Siglo I','102 x 40'],['Siglo II','129 x 42'],['Siglo VI','150 x 52']],
+  upm:[['Half Corona','90 x 44']],hoy:[['Epicure Nº 2','124 x 50'],['Petit Robusto','102 x 50']],
+  mon:[['Nº 4','129 x 42'],['Nº 5','102 x 40'],['Edmundo','135 x 52'],['Petit Edmundo','110 x 52'],['Puritos','']],
+  par:[['Mille Fleurs','129 x 42'],['Serie D Nº 4','124 x 50'],['Serie D Nº 6','90 x 50'],['Puritos','']],
+  ryj:[['Mille Fleurs','129 x 42'],['Wide Churchill','130 x 55'],['Puritos','']],tri:[['Vigía','110 x 54']],
+  afa:[['Nº 46','5 5/8 x 46'],['Maduro 8-8-8',''],['Nº 77 Shark','5 7/8 x 50/64']],
+  afb:[['Maduro','5 1/2 x 42'],['Natural','5 1/2 x 42']],afcc:[['Doble Cuatro','4 1/2 x 54'],['Doble Tres','5 1/2 x 44']],
+  afcz:[['','6 x 50']],afcu:[['','4 1/2 x 32']],afcl:[['','6 1/2 x 43']],afex:[['','4 1/2 x 33']],
+  afch:[['Cuban Belicoso Sun Grown','5 3/4 x 52',3],['Double Chateau Maduro','6 3/4 x 50',3],['Double Chateau Sun Grown','6 3/4 x 50',3],['King B Rosado Sun Grown','6 x 55',3],
+    ['Maduro','4 1/2 x 50',3],['Queen B Rosado Sun Grown','5 1/2 x 52',3],['Royal Salute Maduro','7 5/8 x 54',3],['Sun Grown','4 1/2 x 50',3],['King T','7 x 49'],['King T Sun Grown','7 x 49',3]],
+  afda:[['de Amistad','5 x 50'],['de Familia','6 1/8 x 47'],['de Pasión','6 3/4 x 50']],
+  afdc:[['Nº 3','5 1/2 x 44'],['Nº 4','5 x 43'],['Belicoso','5 3/8 x 52'],['Eye of the Bull','3 1/2 x 55'],['Eye of the Shark','5 1/4 x 52'],['Personal Reserve','5 x 50'],['Presidente','6 1/2 x 50'],['Robusto','5 x 50']],
+  afst:[['SD Bestia Toro',''],['Undefeat Corona','']],afes:[['Conquistadores Natural','5 1/2 x 56'],['Emperador','7 x 52']],
+  afgr:[['8-5-8 Flor Fina Candela','6 x 47'],['8-5-8 Flor Fina Maduro','6 x 47'],['8-5-8 Flor Fina Natural','6 x 47'],['8-5-8 Flor Fina Sun Grown','6 x 47'],['Cañones','8 1/2 x 52'],['Cañones Maduro','8 1/2 x 52'],
+    ['Churchill Maduro','7 1/4 x 48'],['Corona Imperial Maduro','6 1/2 x 46'],['Corona Imperial Natural','6 1/2 x 46'],['Cuban Corona','5 1/4 x 45'],['Cuban Corona Maduro','5 1/4 x 45'],
+    ['Petit Corona Maduro','5 x 38'],['Petit Corona Natural','5 x 38'],['Spanish Lonsdale Maduro','6 1/2 x 42'],['Spanish Lonsdale Natural','6 1/2 x 42']],
+  afhe:[['Best Seller Maduro','4 1/2 x 43/55'],['Best Seller Natural','4 1/2 x 43/55'],['Between the Lines','4 1/2 x 45/54'],['Classic Natural','7 x 46'],['Short Story Maduro','4 x 42/49'],
+    ['Short Story Natural','4 x 42/49'],['Signature','6 x 46'],['Signature Maduro','6 x 46']],
+  afmg:[['R44 Sun Grown','4 7/8 x 44'],['R52 Sun Grown','5 x 52'],['R54 Sun Grown','6 1/2 x 54'],['R56 Sun Grown','5 5/8 x 56'],['R58 Sun Grown','5 1/4 x 58'],['R60 Super Sixty Sun Grown','6 x 60']],
+  afox:[['20th Anniversary Power of the Dream','6 3/8 x 52'],['20th Anniversary Father & Son','6 1/4 x 49'],["20th Anniversary God's Whisper",'6 1/2 x 56'],["Angel's Share Perfection",'6 1/4 x 48'],
+    ["Angel's Share Perfection X",''],["Angel's Share Robusto",''],['Belicoso XXX','4 5/8 x 42'],['Double Corona','7 5/8 x 49'],['Double Robusto','5 3/4 x 52'],['El Gran Opus Vintage 2020',''],
+    ['El Tributo 25th Anniversary',''],['Forbidden Taurus The Bull 2021',''],['Forbidden X Amor Sensual','6 1/8 x 54'],['Forbidden X Belicoso XXX 2021',''],["Forbidden X Deseos d'Amor",'5 3/4 x 50'],
+    ['Forbidden X El Beso Prohibido','5 1/4 x 48'],["Forbidden X Pasión d'Amor",'6 1/8 x 48'],['Fuente Fuente','5 5/8 x 46'],['Love Affair','5 1/2 x 52'],['Oro Oscuro Perfection','6 1/4 x 48'],
+    ['Oro Oscuro Perfection X',''],["Oro Oscuro Reserva d'Chateau",'7 x 48'],['Oro Oscuro Robusto',''],['PerfecXion 888','6 7/8 x 44'],['PerfecXion Shark 77','5 1/2 x 52'],['PerfecXion X','6 1/4 x 48'],
+    ['Petit Lancero','6 1/4 x 39'],["Reserva d'Chateau",'7 x 48'],['Robusto','5 1/4 x 50']],
+  afrp:[['Happy Ending','5 1/2 x 53'],['Queen of Hearts','4 1/4 x 60'],['Short Story','4 x 42/49'],['Signature','6 x 46'],['Soph. Hook.','7 1/4 x 53'],['Work of Art','4 7/8 x 46/60']],
+  ajf:[['Corona Gorda','5 1/2 x 46'],['Robusto','5 x 50']],aba:[['Toro','6 x 50']],abb:[['Robusto','5 x 52'],['Toro','6 x 52']],
+  abh:[['Filthy Hooligan','6 x 50'],['Hooligan Shamrock Toro','6 x 50']],abd:[['Toro','6 x 52']],abk:[['Robusto','5 x 50']],abm:[['Robusto','5 x 52'],['Toro','6 x 52']],
+  abp:[['Churchill','7 x 48'],['Gran Toro','6 x 54'],['Robusto','5 x 50']],ab4:[['Maduro Robusto','5 x 50'],['Maduro Toro','6 x 52'],['Robusto','5 x 50']],
+  avo:[['Robusto','5 x 50']],bri:[['Robusto','5 x 54'],['Toro','6 x 52']],
+  bvd:[['Belicoso','6 x 50'],['Robusto','4 7/8 x 50'],['Short Robusto','3 7/8 x 54'],['Toro','5 7/8 x 54']],bvi:[['Robusto',''],['Toro','']],caf:[['I Azul',''],['II Vermelha','']],
+  cao:[['Amazon Basin Rothschild','4 1/2 x 50'],['Amazon Basin Toro Limited Edition','6 x 52'],['Arcana Thunder Smoke Toro','6 1/2 x 52'],['Bones Chicken Foot','5 x 54'],['BX3 Robusto','5 x 52'],
+    ['BX3 Toro','6 x 52'],['Cameron Perfecto','4 x 48'],['Gold Maduro Robusto','5 x 50'],['Vision Churchill','7 x 50']],
+  caobr:[['Corcovado','4 1/4 x 60'],['Gol','5 x 56']],caom:[['Magnífico','6 x 54'],['Robusto','5 1/2 x 50']],caon:[['Granada','6 x 50'],['Tipitapa','4 7/8 x 50']],caop:[['Robusto','5 x 52'],['Toro','6 1/4 x 54']],
+  davd:[['Robusto','5 1/8 x 52'],['Toro','6 x 54']],davm:[['Robusto','5 1/4 x 50']],davy:[['Pirámides','6 1/8 x 52'],['Robusto','5 x 50']],
+  dcm:[['Double Belicoso','6 3/4 x 54'],['Double Robusto Nº 6','5 x 56'],['Toro Nº 4','6 x 50']],ddc:[['Corona','5 1/2 x 44'],['Robusto','5 x 52'],['Torpedo','6 x 50']],
+  dda:[['Belicoso','6 1/8 x 52'],['Robusto','5 x 52'],['Toro','6 x 54']],dea:[['Anu Toro','6 x 52']],
+  defs:[['Robusto','5 x 54'],['Toro','6 x 52']],defg:[['Robusto','5 x 54'],['Toro','6 x 52']],de10:[['Toro','6 x 52']],
+  de9:[['Coronet','4 x 32'],['Flying Pig','3 x 60'],['Robusto','5 x 54'],['Toro','6 x 52']],det:[['Coronet','4 x 32'],['Flying Pig','3 x 60'],['Robusto','5 x 54'],['Toro','6 x 52']],
+  deu:[['H99 Flying Pig','3 x 60'],['H99 Robusto','5 x 54'],['H99 Toro','6 x 52'],['Papas Fritas','4 1/2 x 44'],['Papas Bravas Toro','6 x 52']],den:[['Adobe Toro','6 x 52']],
+  deu10:[['Corona','5 x 43'],['Robusto','5 x 50'],['Toro','6 x 52']],deum:[['Corona','5 5/8 x 46'],['Corona Pequeña','4 x 44'],['Coronet','4 x 32'],['Robusto','']],
+  deus:[['Corona','5 5/8 x 46'],['Corona Pequeña','4 x 44'],['Coronet','4 x 32'],['Flying Pig','3 15/16 x 60']],
+  epe:[['Majestic','5 3/8 x 52']],eph:[['E-III','6 7/8 x 54']],esp:[['Connecticut Toro','6 x 52'],['Habano Robusto','5 x 52'],['Habano Toro','6 x 52']],
+  fdc:[['Belicoso','6 x 54'],['Corona','5 1/2 x 40'],['Demi-Tasse','5 1/9 x 30'],['Gordito','4 5/7 x 55'],['Perla','4 x 40'],['Rothschild','5 x 50'],['Short Robusto','4 x 50'],['Toro','6 x 50']],
+  fdcp:[['Churchill','7 x 48'],['Corona','6 x 40'],['Edición Limitada San José 13',''],['Robusto','5 x 52']],fdo:[['Robusto','5 x 50'],['Toro','6 x 50']],
+  frt:[['Arlequin CT Robusto','5 1/2 x 52'],['Arlequin CT Toro','6 1/4 x 54'],['Bianco Boxer','6 1/4 x 52'],['Bianco Fuoco','3 1/2 x 50'],['Bianco I','6 1/4 x 44'],['Bianco II','6 x 50'],
+    ['Classico Boxer','6 1/4 x 52'],['Classico Corona','5 1/2 x 46'],['Classico Piccolo','4 x 34'],['Lunar Figurado','6 1/2 x 60'],['Navetta Boxer Atlantis','6 1/4 x 52'],
+    ['Navetta Inverso Boxer','6 1/4 x 52'],['Navetta Inverso Corona Gorda','5 7/8 x 46'],['Navetta Inverso Robusto','5 1/2 x 54'],['Navetta Robusto Discovery','5 x 50'],
+    ['Navetta Toro Endeavour','6 1/4 x 54'],['Oro Boxer','6 1/4 x 52'],['Oro Corona','5 1/2 x 47'],['Oro Robusto','5 x 50'],['Oro Shorty','4 x 58'],['Oro Toro','6 1/4 x 54'],['Vice Versa','7 x 52']],
+  gkc:[['15 Year Koi Perfecto','4 x 58'],['15 Year Solara Double Robusto','5 x 58'],['Limitada 15 Year Solara Double Robusto','5 x 58'],['18 Year Koi Perfecto','4 x 58'],['18 Year Solara Double Robusto','5 x 58']],
+  gkg:[['Gold Asura','6 x 54']],gkn:[['Robusto','5 x 52']],
+  jdna:[['Alisado','6 x 52'],['Churchill','6 7/8 x 48'],['Cónsul','4 1/2 x 52'],['Gran Cónsul','4 3/4 x 60'],['Gran Perfecto','6 x 60'],['Lancero','7 1/2 x 38'],['Machito','4 3/4 x 42'],
+    ['Robusto Grande','5 1/2 x 52'],['Edição Brasil Toro','6 x 50']],
+  jdnct:[['Belicoso','6 x 54'],['Robusto','5 x 52'],['Toro','6 x 50']],
+  jdnd:[['Azarosa','4 1/2 x 52'],['El Martillo','5 1/2 x 54'],['La Niveladora','6 x 52'],['La Pesadilla','4 3/4 x 60'],['Poderoso','6 x 54']],
+  jdng:[['Gran Cónsul','4 3/4 x 60'],['Robusto','5 1/2 x 52']],jdnc:[['Lancero','7 1/2 x 38'],['Robusto','5 x 50'],['Toro','6 x 52']],
+  jdn5:[['Corona Extra','6 1/4 x 46'],['Doble Corona','7 x 54'],['Robusto','5 x 50'],['Robusto Gordo','5 1/2 x 54'],['Toro','6 x 52']],
+  jdn50:[['Diadema','6 x 54'],['El Cumiche','5 1/4 x 52'],['El General','7 x 50'],['Fundador','6 x 54']],
+  jdncl:[['Churchill','6 7/8 x 48'],['Cónsul','4 1/2 x 52'],['Gordito','4 x 56'],['Piccolino','4 1/8 x 30'],['Robusto','5 x 50'],['Toro','6 x 50'],['Torpedo','6 x 52']],
+  jdnms:[['Gordito','4 x 56'],['Robusto','5 x 50'],['Toro','6 x 50']],jdn45:[['Doble Robusto','5 x 56'],['Petit Corona','4 1/2 x 46'],['Toro','6 1/4 x 50']],
+  jdnu:[["L'Ambassadeur",'6 5/8 x 44'],['Le Premier','6 7/8 x 48']],jdnr:[['RR 460',''],['RR 546','5 1/2 x 46'],['RR 550','5 x 50'],['RR 650','6 x 50']],
+  lau:[['2021 Toro','6 x 54']],lm:[['Churchill','7 1/8 x 47'],['Robusto','4 3/4 x 50']],
+  mac:[['Emissary Espanha Robusto','5 x 52'],['Emissary Espanha Toro','6 x 52'],['Estate Reserve Oak Barrel Churchill','7 x 52'],['Gran Reserva Limited','7 x 48'],['Heritage Nuevo Ecuador Toro','6 x 52'],
+    ['Inspirado Black Robusto','4 7/8 x 48'],['Inspirado Black Toro','5 1/2 x 54'],['Inspirado Brazilian Shade Toro','6 1/2 x 52',null,'-'],['Inspirado Green Robusto','5 x 52'],['Inspirado Green Toro','6 x 50'],
+    ['Inspirado Orange Lancero','7 1/2 x 38'],['Inspirado Orange Robusto','5 x 50'],['Inspirado Red Toro','6 x 50'],['Vintage 2013 Maduro Toro Grande','6 x 54']],
+  dpgc:[['1950 Toro','6 x 52'],['1979 Robusto','5 x 50']],
+  dpgo:[['Delicias Churchill','7 x 50'],['Demitasse','4 x 32'],['Exquisitos Corona','5 5/8 x 46'],['Generosos Toro','6 x 50'],['Imperiales Belicoso','6 1/8 x 52'],['Invictos Robusto','5 x 50']],
+  dpgj:[['Selectos Robusto','5 x 50'],['Sublimes','6 x 54']],mfa:[['Corona','5 5/8 x 46'],['Petit Robusto','4 1/2 x 50'],['Torpedo','6 1/8 x 52']],
+  mob:[['Liga Maestro Hermoso','6 x 46'],['Liga Maestro Pequeño','4 1/2 x 44'],['Tierra Volcán Corto','4 x 50'],['Tierra Volcán Fino','6 x 44']],
+  mto:[['Maduro Robusto','4 7/8 x 50'],['Maduro Short Robusto','3 7/8 x 54'],['Maduro Toro','5 7/8 x 54'],['Robusto','4 7/8 x 50'],['Short Robusto','3 7/8 x 54'],['Toro','5 7/8 x 54']],
+  nub:[['Cameroon 358','3 3/4 x 58',3],['Cameroon 460','4 x 60',3],['Connecticut 358','3 3/4 x 58',2],['Connecticut 464','4 x 64',2],['Maduro 464','4 x 64'],
+    ['Sun Grown 358','3 3/4 x 58'],['Sun Grown 460','4 x 60'],['Sun Grown 464','4 x 64']],
+  olmb:[['Churchill','7 x 50'],['Robusto','5 x 50'],['Torpedo','6 x 52']],olct:[['Petit Corona','4 x 38']],
+  olg:[['Churchill','7 x 50'],['Double Robusto','5 x 54'],['Robusto','4 1/2 x 50'],['Toro','6 x 50']],olo:[['Corona','6 x 46'],['Robusto','5 x 50'],['Toro','6 x 50']],
+  olv:[['Nº 4','5 x 43'],['135th Anniversary','5 1/2 x 54'],['Belicoso','5 x 54'],['Churchill Extra','7 x 52'],['Double Robusto','5 x 54'],['Double Toro','6 x 60'],['Lancero','7 x 38'],
+    ['Maduro Double Robusto','5 x 54'],['Maduro Double Toro','6 x 60'],['Torpedo','6 x 56']],
+  olm:[['Nº 4','4 1/2 x 46'],['Edição Limitada 2022','6 1/2 x 44'],['Double Toro','6 x 60'],['Figurado Edição Limitada 2023',''],['Maduro Figurado','6 1/2 x 52'],['Maduro Robusto','5 x 52'],
+    ['Maduro Torpedo','6 1/2 x 52'],['Robusto','5 x 52'],['Robusto Extra Edição Limitada 2025','']],
+  pcb:[['Robusto','4 7/8 x 50']],
+  pdm:[['Corona Gorda Corojo','5 1/2 x 46'],['Corona Gorda Maduro','5 1/2 x 46'],['Corona Gorda Shade','5 1/2 x 46'],['Double Toro Corojo','6 x 60'],['Double Toro Maduro','6 x 60'],
+    ['Double Toro Shade','6 x 60'],['Robusto Corojo','4 3/4 x 52'],['Short Robusto Shade','3 3/4 x 56'],['Toro Corojo','6 1/4 x 54'],['Toro Maduro','6 1/4 x 54'],['Toro Shade','6 1/4 x 54']],
+  quo:[['Churchill','7 x 48'],['Corona','5 1/2 x 43'],['Double Gordo','6 x 60'],['Robusto','4 3/4 x 50'],['Toro','6 x 50'],['Torpedo','6 x 52'],['Maduro Churchill','7 x 48'],
+    ['Maduro Robusto','4 3/4 x 50'],['Maduro Toro','6 x 50']],
+  ssmq:[['Blue Ancho Corto','5 x 52'],['Blue Ancho Largo','6 x 52'],['Blue Fino Largo','6 x 48'],['Red Corona','6 x 48'],['Red Robusto','5 x 52'],['Red Toro','6 x 52']],
+  ssmu:[['NLMTHA','7 x 38'],['Exclusivo','6 x 52'],['Nacatamale','6 x 48'],['The Bewitched','6 5/8 x 48']],
+  sssc:[['Intrépido','5 5/8 x 46'],['Paladín de Saka','7 x 52'],['Selección Nº 5','6 x 54']],
+  ssso:[['Brûlée Blue','6 1/4 x 46'],['Brûlée Robusto','5 1/4 x 52'],['Brûlée Toro','6 x 52'],['Cervantes Fino','6 1/4 x 46'],['El Americano Toro','6 x 52'],['Elegante en Cedros','7 x 50'],
+    ['Robusto Largo','5 1/4 x 52'],['Short Churchill','4 3/4 x 48']],
+  vf98:[['25 Anos','6 1/2 x 52'],['42','187 x 42'],['44','100 x 44'],['46','143 x 46'],['50','115 x 50'],['52',''],['54',''],['56','127 x 56'],['Wonders Nabateos Churchill','7 x 48']],
+  vfc:[['Ano da Cobra','6 x 46'],['Ano do Coelho','6 x 50'],['Ano do Dragão','6 3/4 x 54'],['Ano do Tigre','169 x 52'],['Corona','5 7/9 x 43'],['Exclusivo Brasil Brasilis',''],
+    ['Half Corona','3 1/2 x 46'],['Minutos',''],['Perlas','4 x 40'],['Prominentes','7 1/2 x 50'],['Robusto','5 x 50'],['Short Robusto','4 1/8 x 50'],['Supremo','5 x 56']],
+  vfn:[['Corona','5 3/4 x 43'],['Estelí Salomones','5 3/4 x 52'],['Gran Reserva Dosmilcatorce Toro Extra',''],['Gran Toro',''],['Reserva','6 x 48'],['Robusto','5 x 50'],['Short','4 x 50']],
+  vf2:[['Belicosos Coupage','5 1/2 x 52'],['Capa 20',''],['Doble Capote',''],['Reposado 10 Anos','140 x 54'],['Robusto','5 x 50'],['Short Belicoso','4 x 52'],['Toro','6 x 54']],
+  dp:[['Patricia Puentes','90 x 52']],dfl:[['Puro Mata Fina',''],['Seleção','']],
+  jam:[['Corona Medium Filler',''],['Gordito Premium','105 x 24'],['JP50',''],['JP50 Maduro','5 x 50'],['Lancero','192 x 15'],['Robusto Premium','127 x 20']]
+};
+/* Apelidos de marca para reconhecer o que a pessoa escreveu no diário (já normalizados por normName). */
+var BRAND_ALIAS={'A. Fuente':['arturo fuente','a fuente','fuente','opus x','opusx','hemingway','don carlos'],'H. Upmann':['h upmann','upmann'],
+  'Hoyo de Monterrey':['hoyo de monterrey','hoyo'],'Romeo y Julieta':['romeo y julieta','romeo e julieta','ryj'],
+  'Drew Estate':['drew estate','liga privada','undercrown','factory smoke','nica rustica'],'Steve Saka':['steve saka','dunbarton','mi querida','sobremesa','muestra de saka','sin compromiso'],
+  'Joya de Nicaragua':['joya de nicaragua','antano','cabinetta'],'Don Pepín García':['don pepin garcia','don pepin','pepin garcia'],'My Father':['my father','flor de las antillas'],
+  'E.P. Carrillo':['e p carrillo','ep carrillo'],'AJ Fernandez':['aj fernandez','a j fernandez']};
+function normName(s){s=String(s==null?'':s).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[̀-ͯ]/g,'');
+  return s.replace(/\bn\s*[º°o]\s*\.?\s*(?=\d)/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
+function countryOf(t){t=normName(t);if(!t)return '';
+  if(/\b(cuba|cubano|havana|habana|vuelta abajo)\b/.test(t))return 'Cuba';if(/nicar|esteli/.test(t))return 'Nicarágua';
+  if(/domin|\brd\b/.test(t))return 'República Dominicana';if(/hondur|copan|danli/.test(t))return 'Honduras';
+  if(/brasil|brazil|bahia|alagoas|reconcavo/.test(t))return 'Brasil';if(/equador|ecuador/.test(t))return 'Equador';if(/mexic/.test(t))return 'México';
+  if(/\beua\b|estados unidos|\busa\b/.test(t))return 'Estados Unidos';return '';}
+function hasWords(hay,needle){return !!needle&&(' '+hay+' ').indexOf(' '+needle+' ')>=0;}
+var CAT_BRANDS=null;
+function catBrands(){if(CAT_BRANDS)return CAT_BRANDS;var b={};Object.keys(CAT_LINES).forEach(function(id){var L=CAT_LINES[id];(b[L[0]]=b[L[0]]||[]).push(id);});
+  CAT_BRANDS=Object.keys(b).map(function(br){var cs={};b[br].forEach(function(id){cs[CAT_LINES[id][2]]=1;});var ck=Object.keys(cs);
+    return {brand:br,lines:b[br],country:ck.length===1?ck[0]:'',alias:(BRAND_ALIAS[br]||[]).concat([normName(br)])};});return CAT_BRANDS;}
+/* Marca e linha do catálogo a partir de um nome livre; a linha só quando o nome dela aparece. */
+function matchLine(name){var t=normName(name);if(!t)return null;var best=null;
+  catBrands().forEach(function(B){B.alias.forEach(function(a){if(hasWords(t,a)&&(!best||a.length>best.len))best={B:B,len:a.length};});});
+  if(!best)return null;var line='',ll=0;
+  best.B.lines.forEach(function(id){var lab=normName(CAT_LINES[id][1]);if(lab&&hasWords(t,lab)&&lab.length>ll){line=id;ll=lab.length;}});
+  return {brand:best.B.brand,line:line,country:best.B.country};}
+function catWrapper(name,lw,country,ov){if(ov==='-')return '';if(ov)return ov;var t=normName(name);
+  if(/\b(shade|connecticut|ct)\b/.test(t))return 'connecticut';if(/\bcorojo\b/.test(t))return 'corojo';if(/\b(maduro|oscuro|broadleaf)\b/.test(t))return 'maduro';
+  if(/\bhabano\b/.test(t))return 'habano';if(/\b(cameroon|camaroes)\b/.test(t))return 'camaroes';if(/\bsumatra\b/.test(t))return 'sumatra';if(/\bmata fina\b/.test(t))return 'matafina';
+  if(lw)return lw;if(/\b(natural|rosado|colorado)\b/.test(t))return 'natural';if(country==='Cuba')return 'cubana';return '';}
+function fmtFromName(t){t=normName(t);if(/petit corona/.test(t))return 'Petit Corona';if(/corona gorda/.test(t))return 'Corona Gorda';if(/(doble|double) corona/.test(t))return 'Double Corona';
+  if(/churchill/.test(t))return 'Churchill';if(/lancero|panetela/.test(t))return 'Lancero / Panetela';if(/\btoro\b/.test(t))return 'Toro';if(/robusto/.test(t))return 'Robusto';
+  if(/\bcorona\b/.test(t))return 'Corona';return '';}
+function isFig(name,b){return /\b(torpedo|piramides?|belicosos?|figurado|perfecto|perfection|perfecxion|salomones|shark|flying pig|diadema)\b/.test(normName(name))||/x\s*\d+\s*\/\s*\d+/i.test(String(b||''));}
+var CAT_CACHE=null;
+function catalogItems(){if(CAT_CACHE)return CAT_CACHE;var out=[];
+  Object.keys(CAT_ITEMS).forEach(function(lid){var L=CAT_LINES[lid];CAT_ITEMS[lid].forEach(function(x,k){
+    var name=[L[0],L[1],x[0]].filter(Boolean).join(' '),p=parseVitola(x[1]);
+    out.push({id:lid+'-'+k,name:name,bitola:x[1]||'',seg:L[5],brand:L[0],line:lid,lineLabel:L[1],country:L[2],wrapper:catWrapper(name,L[3],L[2],x[3]),
+      strength:x[2]!=null?x[2]:L[4],p:p,fmt:p?vitolaClass(p)[0]:fmtFromName(name),fig:isFig(name,x[1])});});});
+  return CAT_CACHE=out;}
+/* Atributos de um charuto do diário, no mesmo vocabulário do catálogo. */
+function cigarAttrs(c){c=c||{};var name=c.name||'',m=matchLine(name),L=m&&m.line?CAT_LINES[m.line]:null,p=parseVitola(c.vitola);
+  var country=countryOf(c.origin)||(L?L[2]:(m?m.country:''));
+  return {brand:m?m.brand:'',line:m?m.line:'',country:country,wrapper:c.wrapper||catWrapper(name,L?L[3]:'',country,''),
+    fmt:p?vitolaClass(p)[0]:fmtFromName(name+' '+(c.vitola||'')),fig:isFig(name+' '+(c.vitola||''),c.vitola)?'Figurados':'Parejos'};}
+/* "Capa Maduro", mas "Capa cubana" (o rótulo já começa com "Capa"). */
+function capaLabel(w){var l=WRAPPERS[w]?WRAPPERS[w][0]:'';return !l||/^capa\b/i.test(l)?l:'Capa '+l;}
+function cAvg(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+function f1(n){return (Math.round(n*10)/10).toFixed(1).replace('.',',');}
+/* Perfil de paladar: notas médias por marca, linha, origem, capa, formato e forma, e a faixa de força em que as notas ficam na média ou acima. */
+function tasteProfile(cigars,sessions){var byId={},owned={},tasted={},tr={};
+  (cigars||[]).forEach(function(c){byId[c.id]=c;var st=String(c.status||'');owned[normName(c.name)]=st.indexOf('cesta')>=0?'cesta':st.indexOf('estoque')>=0?'estoque':'acervo';});
+  var dn=(sessions||[]).filter(function(s){return s.status==='concluida';});
+  dn.forEach(function(s){var c=byId[s.cigarId],k=normName(c?c.name:s.cigarName);if(!k)return;tr[k]=tr[k]||[];if(typeof s.rating==='number')tr[k].push(s.rating);});
+  Object.keys(tr).forEach(function(k){tasted[k]=tr[k].length?cAvg(tr[k]):null;});
+  var R=dn.filter(function(s){return typeof s.rating==='number';}),mean=R.length?cAvg(R.map(function(s){return s.rating;})):null;
+  var by={brand:{},line:{},country:{},wrapper:{},fmt:{},fig:{}},lv={};
+  R.forEach(function(s){var a=cigarAttrs(byId[s.cigarId]||{name:s.cigarName});
+    Object.keys(by).forEach(function(k){if(a[k])(by[k][a[k]]=by[k][a[k]]||[]).push(s.rating);});
+    if(s.strength>=1&&s.strength<=5)(lv[s.strength]=lv[s.strength]||[]).push(s.rating);});
+  var range=null;if(R.length>=3){var good=Object.keys(lv).map(Number).filter(function(v){return cAvg(lv[v])>=mean;});if(good.length)range=[Math.min.apply(null,good),Math.max.apply(null,good)];}
+  return {n:R.length,mean:mean,by:by,range:range,tasted:tasted,owned:owned};}
+/* Pontuação de um item: diferença entre a sua média em cada atributo e a média geral, encolhida quando há poucas sessões; força fora da faixa pesa contra. */
+function scoreItem(it,P){var sc=0,why=[],warn=[];
+  function feat(k,val,w,label){var arr=val?P.by[k][val]:null;if(!arr||P.mean==null)return;var a=cAvg(arr),d=(a-P.mean)*arr.length/(arr.length+1),c=w*d;sc+=c;
+    if(d>=0.2)why.push([c,label+': sua média '+f1(a)+' em '+arr.length+(arr.length>1?' sessões':' sessão')]);
+    else if(d<=-0.2)warn.push([c,label+': sua média '+f1(a)+', abaixo da geral ('+f1(P.mean)+')']);}
+  if(P.n){feat('brand',it.brand,1.2,'Marca '+it.brand);if(it.lineLabel)feat('line',it.line,0.8,'Linha '+it.lineLabel);feat('country',it.country,0.7,it.country);
+    if(WRAPPERS[it.wrapper])feat('wrapper',it.wrapper,0.9,capaLabel(it.wrapper));feat('fmt',it.fmt,0.6,'Formato '+it.fmt);
+    var fk=it.fig?'Figurados':'Parejos';feat('fig',fk,0.4,fk);}
+  var rg=P.range||(P.n<3?[1,3]:null),s=it.strength;
+  if(s&&rg){var faixa=rg[0]===rg[1]?String(rg[0]):rg[0]+' a '+rg[1];
+    if(s>=rg[0]&&s<=rg[1]){sc+=1.2+(P.range?0:(3-s)*0.15);why.push([1.2,'Força de referência '+s+'/5, '+(P.range?'na faixa das suas notas mais altas ('+faixa+')':'suave a média, boa para começar')]);}
+    else if(s>rg[1]){var c2=-(s-rg[1]);sc+=c2;warn.push([c2,'Força de referência '+s+'/5, acima da sua faixa ('+faixa+'): coma antes e vá com calma']);}
+    else sc-=0.3;}
+  why.sort(function(a,b){return b[0]-a[0];});warn.sort(function(a,b){return a[0]-b[0];});
+  return {it:it,score:sc,why:why.slice(0,3).map(function(x){return x[1];}),warn:warn.slice(0,2).map(function(x){return x[1];})};}
+function byScore(a,b){return b.score-a.score||(a.it.strength?0:1)-(b.it.strength?0:1)||(a.it.name<b.it.name?-1:a.it.name>b.it.name?1:0);}
+/* Lista ordenada. Sem busca, esconde o que você já provou; com busca, mostra tudo, com a sua nota. */
+function curate(items,P,opt){opt=opt||{};var q=normName(opt.q),seg=opt.seg&&opt.seg!=='todos'?opt.seg:'',out=[];
+  items.forEach(function(it){if(seg&&it.seg!==seg)return;var k=normName(it.name);if(q&&k.indexOf(q)<0)return;
+    var t=Object.prototype.hasOwnProperty.call(P.tasted,k);if(t&&!q)return;
+    var r=scoreItem(it,P);r.owned=P.owned[k]||'';r.tasted=t?P.tasted[k]:undefined;out.push(r);});
+  return diversify(out);}
+/* Escolha gulosa: cada item já listado da mesma marca desconta 0,25 dos próximos, para a lista não virar uma marca só. */
+function diversify(arr){var pool=arr.slice().sort(byScore),out=[],seen={};
+  while(pool.length){var bi=0,bv=-Infinity;for(var i=0;i<pool.length;i++){var v=pool[i].score-0.25*(seen[pool[i].it.brand]||0);if(v>bv+1e-9){bv=v;bi=i;}}
+    var r=pool.splice(bi,1)[0];seen[r.it.brand]=(seen[r.it.brand]||0)+1;out.push(r);}
+  return out;}
+/* Os mais parecidos com um charuto do diário, fora os já provados. */
+function similarTo(c,felt,items,P,n){var a=cigarAttrs(c),self=normName(c&&c.name),out=[];
+  items.forEach(function(it){var k=normName(it.name);if(k===self||Object.prototype.hasOwnProperty.call(P.tasted,k))return;var sc=0,why=[];
+    if(a.line&&it.line===a.line){sc+=3;why.push('mesma linha ('+it.lineLabel+')');}else if(a.brand&&it.brand===a.brand){sc+=2;why.push('mesma marca');}
+    if(a.wrapper&&it.wrapper===a.wrapper){sc+=1;why.push('mesma capa ('+WRAPPERS[a.wrapper][0]+')');}
+    if(a.country&&it.country===a.country){sc+=0.8;why.push('mesma origem ('+a.country+')');}
+    if(a.fmt&&it.fmt===a.fmt){sc+=0.8;why.push('mesmo formato ('+a.fmt+')');}
+    if(it.fig===(a.fig==='Figurados'))sc+=0.3;
+    if(felt&&it.strength)sc+=1-Math.abs(felt-it.strength)*0.5;
+    if(sc>=2)out.push({it:it,score:sc,why:why,owned:P.owned[k]||''});});
+  return out.sort(byScore).slice(0,n||3);}
+/* @end:curadoria */
 /* ===== Escola do charuto (lições curtas) ===== */
 var LESSONS=[
   ['anatomia','Anatomia: capa, capote e tripa','<p>Todo charuto premium tem três camadas. A <b>tripa</b> é o miolo, um blend de folhas que define força e sabor. O <b>capote</b> envolve a tripa e dá forma. A <b>capa</b> é a folha externa: a mais bonita e elástica, responde por boa parte do aroma e da primeira impressão.</p><p>Na tripa, as folhas mudam conforme a altura na planta: <b>ligero</b> (topo, mais sol) traz força; <b>seco</b> (meio) traz aroma; <b>volado</b> (base) ajuda a combustão.</p>'],
@@ -818,8 +1081,10 @@ function render(){
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
   if(state.view==='guia'){app.innerHTML=viewGuia();ritmoPaint();return;}
+  var ae=document.activeElement,qf=ae&&ae.id==='cat-q'?[ae.selectionStart,ae.selectionEnd]:null;
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
   var gc=state.gcarX?app.querySelector('.gcar'):null;if(gc)gc.scrollLeft=state.gcarX;
+  var cq=qf?document.getElementById('cat-q'):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
 }
@@ -1049,8 +1314,49 @@ function paladarAnalysis(){
   return h;
 }
 function viewComparar(){
+  var m=state.cmpMode==='provar'?'provar':'lado';
+  return '<div class="minitabs" role="tablist" aria-label="Comparar"><button role="tab" aria-selected="'+(m==='lado')+'" data-act="cmpmode" data-id="lado">Lado a lado</button><button role="tab" aria-selected="'+(m==='provar')+'" data-act="cmpmode" data-id="provar">Para provar</button></div>'+
+    (m==='provar'?viewProvar():viewLado());
+}
+/* ---- Curadoria "Para provar" ---- */
+var SEG_LABEL={c:'Cuba',f:'Fora de Cuba',n:'Nacional'};
+function catCard(r){var it=r.it,meta=[SEG_LABEL[it.seg]];
+  if(it.country&&it.country!=='Cuba'&&it.country!=='Brasil')meta.push(it.country);if(it.fmt)meta.push(it.fmt);if(it.bitola)meta.push(it.bitola);
+  var h='<div class="card catc"><div class="head"><div style="min-width:0"><h3>'+esc(it.name)+'</h3><div class="meta">'+esc(meta.join(' · '))+'</div></div>'+
+    (r.tasted!==undefined?'<div class="score num" aria-label="Sua nota">'+(r.tasted==null?'—':fmt1(r.tasted))+'</div>':'')+'</div>';
+  h+='<div class="row">'+(it.strength?meter(it.strength)+'<span class="meta">Força de referência: '+esc(strengthLabel(it.strength))+'</span>':'<span class="meta faint">Força sem referência segura</span>')+'</div>';
+  var tg=[];if(WRAPPERS[it.wrapper])tg.push(capaLabel(it.wrapper));if(it.fig)tg.push('Figurado');
+  if(tg.length)h+='<div class="tags">'+tg.map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join('')+'</div>';
+  var why=r.why||[],warn=r.warn||[];
+  if(why.length||warn.length)h+='<ul class="catwhy">'+why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+warn.map(function(w){return '<li class="warn">'+esc(w)+'</li>';}).join('')+'</ul>';
+  h+='<div class="row">'+(r.owned?'<span class="chip st-'+(r.owned==='cesta'?'cesta':r.owned==='estoque'?'estoque':'hist')+'">'+(r.owned==='cesta'?'Na cesta':r.owned==='estoque'?'Em estoque':'No acervo')+'</span>'
+    :'<button class="btn" data-act="catcesta" data-id="'+esc(it.id)+'">Adicionar à cesta</button>')+'</div>';
+  return h+'</div>';}
+function catListHtml(P){P=P||tasteProfile(state.cigars,state.sessions);var R=curate(catalogItems(),P,{seg:state.catSeg,q:state.catQ}),n=state.catN||12;
+  if(!R.length)return '<div class="empty"><b>Nada encontrado.</b><span>Tente outra marca, linha ou vitola, ou troque o filtro de origem.</span></div>';
+  var h='<p class="faint catcount" aria-live="polite">'+R.length+(R.length>1?' charutos':' charuto')+(state.catQ?' para “'+esc(state.catQ)+'”':'')+'</p><div class="list">'+R.slice(0,n).map(function(r){return catCard(r);}).join('')+'</div>';
+  if(R.length>n)h+='<button class="btn ghost" data-act="catmore">Mostrar mais '+Math.min(12,R.length-n)+'</button>';
+  return h;}
+function viewProvar(){var P=tasteProfile(state.cigars,state.sessions),items=catalogItems(),seg=state.catSeg||'todos';
+  var h='<div class="panel"><h2>Para provar</h2><p class="muted" style="font-size:14px">Catálogo de referência com '+items.length+' charutos, ordenado pelo que as suas sessões mostram: marca, linha, origem, capa, formato e força. Sem preços nem lojas.</p>';
+  h+=P.n<3?'<p class="faint" style="font-size:13px">'+(P.n?'Você tem '+P.n+(P.n>1?' sessões':' sessão')+' com nota':'Você ainda não tem sessões com nota')+'. Por enquanto a ordem segue só a força de referência, de suave a média. A partir de 3 sessões com nota, ela passa a seguir o seu paladar.</p>'
+    :'<p class="faint" style="font-size:13px">Baseado em '+P.n+' sessões com nota (média '+fmt1(P.mean)+'). O que você já provou fica fora da lista; para rever, use a busca.</p>';
+  h+='<div class="row catseg" role="group" aria-label="Origem">'+[['todos','Todos'],['c','Cubanos'],['f','Fora de Cuba'],['n','Nacionais']].map(function(t){return '<button class="opt" aria-pressed="'+(seg===t[0])+'" data-act="catseg" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  h+='<label class="f" for="cat-q">Buscar no catálogo<input type="search" id="cat-q" data-catq value="'+esc(state.catQ||'')+'" placeholder="ex.: Oliva, robusto, maduro" autocomplete="off"></label></div>';
+  h+='<div id="cat-list">'+catListHtml(P)+'</div>';
+  return h+'<p class="faint" style="font-size:13px">Força de referência: aproximação por linha, a partir de classificações públicas de fabricantes e da crítica. Muda com safra e vitola, e o que você sente vale mais. Sem consenso, o campo fica sem referência.</p>';}
+function cmpSimilarHtml(A,B){var ra=typeof A.rating==='number'?A.rating:null,rb=typeof B.rating==='number'?B.rating:null;if(ra==null&&rb==null)return '';
+  var W=rb==null||(ra!=null&&ra>=rb)?A:B,O=W===A?B:A,tie=ra!=null&&ra===rb&&A.cigarName!==B.cigarName;
+  var S=similarTo(cigarById(W.cigarId)||{name:W.cigarName},W.strength,catalogItems(),tasteProfile(state.cigars,state.sessions),3);if(!S.length)return '';
+  return '<div class="panel cmpsim"><h3>Para provar a partir desta comparação</h3><p class="muted" style="font-size:14px">'+(tie?esc(W.cigarName)+' e '+esc(O.cigarName)+' empataram':esc(W.cigarName)+' levou a nota maior')+' ('+numStr(W.rating)+'). Do catálogo, os mais próximos dele:</p>'+
+    '<div class="list">'+S.map(function(r){return catCard(r);}).join('')+'</div></div>';}
+function addFromCatalog(id){var it=catalogItems().filter(function(x){return x.id===id;})[0];if(!it)return;
+  if(state.cigars.some(function(c){return normName(c.name)===normName(it.name);})){toast(it.name+' já está no acervo.');return;}
+  put('cigars',{id:uid(),order:100+state.cigars.length,name:it.name,origin:it.country||'',vitola:it.bitola,strength:it.strength||0,wrapper:it.wrapper||'',expected:'',pairing:'',status:'cesta'});
+  render();toast(it.name+' foi para a cesta, no Acervo.');}
+function viewLado(){
   var ds=done();
-  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida.</span></div>';
+  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida. Enquanto isso, veja a aba Para provar.</span></div>';
   if(!sessionById(state.cmpA))state.cmpA=ds[0].id;
   if(!sessionById(state.cmpB)||state.cmpB===state.cmpA)state.cmpB=(ds[1]||ds[0]).id;
   function opts(sel){return ds.map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.cigarName+' · '+fmtDate(s.createdAt))+'</option>';}).join('');}
@@ -1071,7 +1377,7 @@ function viewComparar(){
     cmpRow('Nota',typeof A.rating==='number'?'<b class="num">'+numStr(A.rating)+'</b>':'—',typeof B.rating==='number'?'<b class="num">'+numStr(B.rating)+'</b>':'—')+
     cmpRow('Recompraria',esc(A.rebuy||'—'),esc(B.rebuy||'—'))+
     '</tbody></table></div>';
-  return h;
+  return h+cmpSimilarHtml(A,B);
 }
 function authPanel(){
   var mode=cloud.authMode,h='<div class="panel"><h2>Clube</h2>';
@@ -1336,6 +1642,10 @@ document.addEventListener('click',function(ev){
     case 'rmcigar': removeCigar(id); break;
     case 'addopen': state.addOpen=true; state.editCigar=null; render(); var f=document.getElementById('nc-name'); if(f)f.focus(); break;
     case 'addclose': state.addOpen=false; render(); break;
+    case 'cmpmode': state.cmpMode=id; render(); break;
+    case 'catseg': state.catSeg=id; state.catN=12; render(); break;
+    case 'catmore': state.catN=(state.catN||12)+12; var cl=document.getElementById('cat-list'); if(cl)cl.innerHTML=catListHtml(); break;
+    case 'catcesta': addFromCatalog(id); break;
     case 'novo-charuto': state.tab='acervo'; state.view='home'; state.acvFilter='todos'; state.addOpen=true; state.editCigar=null; state.confirm=''; render(); var nf=document.getElementById('nc-name'); if(nf)nf.focus(); break;
     case 'export': exportDownload(); break;
     case 'share': exportShare(); break;
@@ -1362,6 +1672,9 @@ document.addEventListener('click',function(ev){
 document.addEventListener('input',function(ev){var el=ev.target,k=el.getAttribute&&el.getAttribute('data-gin');if(!k)return;
   if(k==='umid')state.umid=el.value;else if(k==='temp')state.temp=el.value;
   var o=document.getElementById('umid-out');if(o){var r=humidorStatus(state.umid,state.temp);o.textContent=r.texto;o.className='gout '+r.nivel;}});
+/* Busca da curadoria: atualiza só a lista, sem render(), para o campo não perder o foco. */
+document.addEventListener('input',function(ev){var el=ev.target;if(!el||!el.hasAttribute||!el.hasAttribute('data-catq'))return;
+  state.catQ=el.value;state.catN=12;var o=document.getElementById('cat-list');if(o)o.innerHTML=catListHtml();});
 document.addEventListener('input',function(ev){
   var el=ev.target, k=el.getAttribute('data-input'); if(!k||!draft)return;
   if(k==='thirdText')draft.thirds[state.step].text=el.value;
