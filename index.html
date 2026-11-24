@@ -79,6 +79,16 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .tabs button{flex:1 0 auto; min-height:42px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
 .tabs button[aria-selected="true"]{background:var(--surface2); color:var(--fg)}
 .ginicio{display:flex; flex-direction:column; gap:12px; min-width:0}
+.thread{display:flex; flex-direction:column; gap:8px}
+.msg{max-width:88%; padding:10px 12px; border-radius:14px; background:var(--surface2); display:flex; flex-direction:column; gap:4px; min-width:0}
+.msg.mine{align-self:flex-end; border:1.5px solid var(--ember)}
+.msg.theirs{align-self:flex-start}
+.msg p,.aviso-item p{margin:0; white-space:pre-wrap; overflow-wrap:anywhere}
+.mhead{font-size:12px; color:var(--muted)}
+.aviso-item{padding:10px 0; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:4px}
+.aviso .abody{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 200px}
+.aviso .abody span{overflow-wrap:anywhere}
+.tdot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ember); margin-left:6px; vertical-align:middle}
 .catwhy{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--muted)}
 .catwhy li.warn{color:var(--warn)}
 .catseg .opt{min-height:44px}
@@ -874,7 +884,7 @@ function isDirty(r){return !r.syncedAt||(r.updatedAt||0)>r.syncedAt;}
 function rerender(){if(state.view==='session'||state.view==='guia')return;clearTimeout(renderTimer);renderTimer=setTimeout(render,30);}
 function setStatus(s,detail){cloud.status=s;cloud.statusDetail=detail||'';rerender();}
 function scheduleSync(){if(!cloud.configured)return;clearTimeout(syncTimer);syncTimer=setTimeout(sync,2500);}
-function canSync(){return isMember()&&!cloud.ownerMismatch&&!!idb&&navigator.onLine!==false;}
+function canSync(){return isMember()&&!cloud.ownerMismatch&&!(cloud.me&&cloud.me.suspended)&&!!idb&&navigator.onLine!==false;}
 function authErr(e){var m=String(e&&(e.message||e.error_description||e)||'');
   if(/invalid login credentials/i.test(m))return 'E-mail ou senha incorretos.';
   if(/already registered|already been registered|user_already_exists/i.test(m))return 'Este e-mail já tem conta. Use "Entrar".';
@@ -899,7 +909,9 @@ function cloudInit(){
 }
 function afterLogin(){
   var u=cloud.user;if(!u||cloud._loginFor===u.id)return Promise.resolve();cloud._loginFor=u.id;
-  return loadProfile().then(function(){if(isMember()){checkOwner();sync();loadFeed();}rerender();});
+  /* O estado do clube vem antes da sincronização: membro suspenso não sincroniza. */
+  return loadProfile().then(function(){if(!isMember()){rerender();return;}
+    return refreshClub(true).then(function(){checkOwner();sync();loadFeed();rerender();});});
 }
 function loadProfile(){
   var seq=cloud._profSeq=(cloud._profSeq||0)+1;
@@ -910,6 +922,74 @@ function loadProfile(){
   }).catch(function(){if(seq!==cloud._profSeq)return;var c=null;try{c=JSON.parse(ls('clube-profile')||'null');}catch(e){}cloud.profile=(c&&c.id===cloud.user.id)?c:null;cloud.profileChecked=true;});
 }
 function checkOwner(){var owner=ls('clube-owner');cloud.ownerMismatch=!!(owner&&owner!==cloud.user.id&&(state.sessions.length||state.cigars.length));}
+
+/* ---- Clube: administração, mensagens e avisos (funções da fase 2 do SQL) ----
+   Uma função por chamada ao banco; os testes de interface trocam este objeto por um falso. Cada método devolve {data, error}. */
+var clubApi={
+  me:function(){return cloud.sb.rpc('club_me');},
+  members:function(){return cloud.sb.rpc('admin_members');},
+  invites:function(){return cloud.sb.from('invites').select('code,grants_admin,max_uses,uses,active,created_at').order('created_at',{ascending:false});},
+  setInvite:function(code,active){return cloud.sb.rpc('admin_set_invite',{p_code:code,p_active:active});},
+  setSuspended:function(id,on){return cloud.sb.rpc('admin_set_suspended',{p_member:id,p_suspend:on});},
+  setAdmin:function(id,on){return cloud.sb.rpc('admin_set_admin',{p_member:id,p_admin:on});},
+  thread:function(id){return cloud.sb.from('messages').select('id,member_id,author_id,from_admin,body,created_at').eq('member_id',id).order('created_at',{ascending:false}).limit(200);},
+  send:function(id,body){return cloud.sb.rpc('send_message',{p_member:id,p_body:body});},
+  markRead:function(id){return cloud.sb.rpc('mark_read',{p_member:id});},
+  avisos:function(){return cloud.sb.from('announcements').select('id,body,created_at,author_id').order('created_at',{ascending:false}).limit(50);},
+  postAviso:function(body){return cloud.sb.from('announcements').insert({body:body,author_id:cloud.user.id});},
+  deleteAviso:function(id){return cloud.sb.from('announcements').delete().eq('id',id);},
+  markAvisosRead:function(){return cloud.sb.rpc('mark_avisos_read');}
+};
+function newClub(){return {thread:[],avisos:[],members:[],invites:[],sec:'inscritos',open:null,at:0,sending:false,drafts:{}};}
+cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();
+/* Busca o estado do clube. Sem force, no máximo uma vez por minuto. Com a Conta aberta, carrega também a conversa e os avisos. */
+function refreshClub(force){
+  if(!isMember())return Promise.resolve();
+  var c=cloud.club;if(!force&&Date.now()-c.at<60000)return Promise.resolve();c.at=Date.now();
+  return Promise.resolve().then(function(){return clubApi.me();}).then(function(r){
+    if(r.error){if(missingSql(r.error)){cloud.clubMissing=true;cloud.me=null;}return;}
+    cloud.clubMissing=false;cloud.me=r.data||null;
+    if(!cloud.me||state.tab!=='conta')return;
+    return cloud.me.is_admin?loadAdminClub():loadMemberClub();
+  }).catch(function(){}).then(function(){rerender();});
+}
+function loadMemberClub(){var me=cloud.me,uid=cloud.user.id,c=cloud.club;
+  var ps=[clubApi.thread(uid).then(function(r){if(!r.error)c.thread=(r.data||[]).slice().reverse();})];
+  if(!me.suspended)ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
+  return Promise.all(ps).then(function(){if(me.unread_msgs>0)return clubApi.markRead(uid).then(function(r){if(!r.error)me.unread_msgs=0;});});}
+function loadAdminClub(){return Promise.resolve();}
+function isSuspended(){return !!(cloud.me&&cloud.me.suspended);}
+/* Envia na conversa de memberId (a própria, para o inscrito). Um envio por vez; se falhar, o texto fica no campo. */
+function sendMsg(memberId){var c=cloud.club;if(c.sending||!memberId)return;
+  var k='msg:'+memberId,el=document.getElementById('msg-body'),v=cleanMsg(el?el.value:c.drafts[k]);
+  if(el)c.drafts[k]=el.value;
+  if(!v.ok){toast(v.err);return;}
+  c.sending=true;render();
+  Promise.resolve().then(function(){return clubApi.send(memberId,v.text);}).then(function(r){
+    c.sending=false;if(r.error){toast(clubErrMsg(r.error));render();return;}
+    c.drafts[k]='';render();
+    return clubApi.thread(memberId).then(function(t){if(!t.error&&(c.open===memberId||memberId===cloud.user.id))c.thread=(t.data||[]).slice().reverse();render();});
+  }).catch(function(e){c.sending=false;toast(clubErrMsg(e));render();});}
+function dismissAviso(){if(cloud.me)cloud.me.aviso=null;render();Promise.resolve().then(function(){return clubApi.markAvisosRead();}).catch(function(){});}
+function threadHtml(list,adminView,memberName){
+  if(!list.length)return '<p class="faint">Nenhuma mensagem ainda.</p>';
+  return '<div class="thread">'+list.map(function(m){var mine=adminView?m.from_admin:!m.from_admin;
+    var who=mine?(adminView&&m.author_id!==cloud.user.id?'Administração':'Você'):(m.from_admin?'Administração':esc(memberName||'Inscrito'));
+    return '<div class="msg '+(mine?'mine':'theirs')+'"><div class="mhead">'+who+' · '+esc(relAgo(m.created_at))+'</div><p>'+esc(m.body)+'</p></div>';}).join('')+'</div>';}
+function composerHtml(memberId){var c=cloud.club,k='msg:'+memberId;
+  return '<label class="f" for="msg-body">Sua mensagem<textarea id="msg-body" data-cin="'+esc(k)+'" maxlength="1000" rows="3" placeholder="Escreva aqui">'+esc(c.drafts[k]||'')+'</textarea></label>'+
+    '<div class="row"><button class="btn primary" data-act="msgsend" data-id="'+esc(memberId)+'"'+(c.sending?' disabled':'')+'>'+(c.sending?'Enviando…':'Enviar')+'</button></div>';}
+/* Painel do inscrito na Conta: conversa com a administração e avisos. */
+function memberMsgsPanel(){var me=cloud.me,c=cloud.club;if(cloud.clubMissing||!me||me.is_admin)return '';
+  var h='<div class="panel" id="msgs"><div class="row" style="justify-content:space-between"><h3>Mensagens</h3><button class="btn ghost" data-act="clubrefresh">Atualizar</button></div>';
+  h+=me.suspended?'<div class="alert err"><b>Sua participação no clube está suspensa.</b><span>O feed e a sincronização ficam pausados, e o diário deste celular continua funcionando. Você pode falar com a administração aqui.</span></div>'
+    :'<p class="muted">Fale com a administração do clube: dúvidas, problemas no app ou sugestões.</p>';
+  h+=threadHtml(c.thread,false)+composerHtml(cloud.user.id);
+  if(!me.suspended)h+='<div id="avisos"><h3>Avisos</h3>'+(c.avisos.length?c.avisos.map(function(a){return '<div class="aviso-item"><div class="mhead">'+esc(relAgo(a.created_at))+'</div><p>'+esc(a.body)+'</p></div>';}).join(''):'<p class="faint">Nenhum aviso ainda.</p>')+'</div>';
+  return h+'</div>';}
+/* Faixa no Início com o aviso não lido mais recente. */
+function avisoBanner(){var me=cloud.me;if(!isMember()||!me||me.suspended||!me.aviso)return '';var b=String(me.aviso.body||''),t=b.length>160?b.slice(0,159)+'…':b;
+  return '<div class="banner aviso" role="status"><div class="abody"><b>Aviso do clube</b><span>'+esc(t)+'</span></div><div class="row"><button class="btn" data-act="avisover">Ver</button><button class="btn ghost" data-act="avisook">Dispensar</button></div></div>';}
 
 /* ---- mapeamento local <-> nuvem ---- */
 function nz(v){return (v===''||v===undefined)?null:v;}
@@ -982,7 +1062,7 @@ function resetSyncFlags(){return Promise.all([getAll('cigars'),getAll('sessions'
 /* ---- feed ---- */
 var FEED_COLS='uid,owner_id,local_id,cigar_name,started_at,ended_at,moment,drink,thirds,strength,rating,rebuy,comment,duration_min,band_photo,burn,draw,feel,profiles!sessions_owner_id_fkey(display_name)';
 function loadFeed(){
-  if(!isMember()||cloud.feedLoading)return Promise.resolve();
+  if(!isMember()||cloud.feedLoading||isSuspended())return Promise.resolve();
   cloud.feedLoading=true;rerender();var sb=cloud.sb;
   return (async function(){
     var r=await sb.from('sessions').select(FEED_COLS).eq('visibility','club').eq('status','concluida').order('ended_at',{ascending:false}).limit(60);
@@ -1048,7 +1128,7 @@ async function submitAuth(form){
   }catch(e){cloud.authBusy=false;cloud.authMsg=authErr(e);render();}
 }
 function signOut(){
-  cloud.sb.auth.signOut().catch(function(){}).then(function(){cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.likes={};cloud.comments={};cloud.inviteLink='';
+  cloud.sb.auth.signOut().catch(function(){}).then(function(){cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.likes={};cloud.comments={};cloud.inviteLink='';cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();
     ls('clube-feed',null);ls('clube-profile',null);cloud.status='idle';state.confirm='';render();toast('Você saiu do clube. O diário continua neste celular.');});
 }
 async function deleteAccount(){
@@ -1060,7 +1140,7 @@ async function deleteAccount(){
     await sb.auth.signOut().catch(function(){});
     ls('clube-owner',null);ls('clube-feed',null);ls('clube-profile',null);ls('clube-last-sync',null);
     await resetSyncFlags();
-    cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.authBusy=false;cloud.status='idle';render();
+    cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();cloud.authBusy=false;cloud.status='idle';render();
     toast('Conta excluída. Seus dados saíram do clube; o diário continua neste celular.');
   }catch(e){cloud.authBusy=false;render();toast(authErr(e));}
 }
@@ -1115,10 +1195,11 @@ function render(){
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
   if(state.view==='guia'){app.innerHTML=viewGuia();ritmoPaint();return;}
-  var ae=document.activeElement,qf=ae&&ae.id==='cat-q'?[ae.selectionStart,ae.selectionEnd]:null;
+  /* Campos de digitação que sobrevivem ao redesenho (sincronização, atualização do clube): foco e cursor voltam ao lugar. */
+  var ae=document.activeElement,fid=ae&&['cat-q','msg-body','aviso-body'].indexOf(ae.id)>=0?ae.id:null,qf=fid?[ae.selectionStart,ae.selectionEnd]:null;
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
   var gc=state.gcarX?app.querySelector('.gcar'):null;if(gc)gc.scrollLeft=state.gcarX;
-  var cq=qf?document.getElementById('cat-q'):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
+  var cq=fid?document.getElementById(fid):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
 }
@@ -1128,6 +1209,7 @@ function statusLine(){
   if(!cloud.configured)return '<span class="sdot"></span>Registros salvos neste celular.';
   if(!isMember())return '<span class="sdot"></span>Registros neste celular. Entre no clube na aba Conta para sincronizar.';
   if(cloud.ownerMismatch)return '<span class="sdot bad"></span>Sincronização pausada: os registros deste aparelho são de outra conta.';
+  if(isSuspended())return '<span class="sdot warn"></span>Participação no clube suspensa. O diário continua neste celular.';
   var s=cloud.status;
   if(s==='syncing')return '<span class="sdot warn"></span>Sincronizando com o clube…';
   if(s==='offline')return '<span class="sdot warn"></span>Sem internet. Tudo fica salvo no celular e sobe quando voltar o sinal.';
@@ -1147,7 +1229,9 @@ function viewHome(){
       var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
       var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
       h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
-  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['comparar','Comparar'],['conta','Conta']].map(function(t){return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  var novaMsg=isMember()&&cloud.me&&cloud.me.unread_msgs>0;
+  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['comparar','Comparar'],['conta','Conta']].map(function(t){var dot=t[0]==='conta'&&novaMsg;
+    return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
   if(state.tab==='inicio')h+=viewInicio();
   else if(state.tab==='acervo')h+=viewAcervo();
   else if(state.tab==='historico')h+=viewHistorico();
@@ -1197,7 +1281,8 @@ function ritmoTick(){var c=Math.floor((Date.now()-ritmo.inicio)/(ritmo.periodo*1
 function ritmoStart(){ritmo.on=true;ritmo.inicio=Date.now();ritmo.ciclo=0;if(!ritmo.timer)ritmo.timer=setInterval(ritmoTick,250);requestWake();}
 function ritmoStop(){var era=ritmo.on||ritmo.timer;ritmo.on=false;if(ritmo.timer)clearInterval(ritmo.timer);ritmo.timer=null;if(era)releaseWake();}
 /* Ganchos de teste (tests/ui-guia.js). */
-window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,state:state,render:function(){render();},rerender:function(){rerender();}};
+window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,state:state,render:function(){render();},rerender:function(){rerender();},
+  cloud:cloud,setClubApi:function(o){var p=clubApi;clubApi=o;return p;},refreshClub:function(f){return refreshClub(f);},canSync:function(){return canSync();}};
 function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
   if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
@@ -1219,7 +1304,7 @@ function welcomeHtml(){
   return '<div class="panel gwelcome"><h3>Comece seu diário</h3><p class="muted">Cadastre o primeiro charuto do seu acervo ou importe um backup de outro aparelho.'+(cloud.configured&&!isMember()?' Já é do clube? Toque na coroa no alto para entrar e trazer seus registros.':'')+'</p>'+
     '<div class="row"><button class="btn primary" data-act="novo-charuto">Adicionar primeiro charuto</button>'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';}
 function viewInicio(){
-  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=welcomeHtml()+'<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
+  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=avisoBanner()+welcomeHtml()+'<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
   for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
     h+='<button class="gcard'+(k===0?' today':'')+'" data-act="guia" data-id="'+i+'"><span class="gtags">'+(k===0?'<span class="gtag hot">Dica do dia</span>':'')+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span><span class="gico">'+GUIDE_ICONS[i]+'</span><span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></button>';
     dots+='<i'+(k===0?' class="on"':'')+'></i>';}
@@ -1281,6 +1366,7 @@ function postCard(it){
 function viewClube(){
   if(!cloud.configured)return '<div class="empty"><b>O clube ainda não foi configurado neste app.</b><span>O administrador precisa preencher o arquivo config.js com os dados do Supabase. Enquanto isso, o diário funciona normalmente neste celular.</span></div>';
   if(!isMember())return '<div class="empty"><b>Entre no clube para ver as degustações dos amigos.</b><span>Você precisa de um convite. Se já tem conta, entre pela aba Conta.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
+  if(isSuspended())return '<div class="empty"><b>Sua participação no clube está suspensa.</b><span>O diário deste celular continua funcionando. Para falar com a administração, use a aba Conta.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
   var h='<div class="row" style="justify-content:space-between"><h2>Clube</h2><button class="btn small" data-act="refreshfeed"'+(cloud.feedLoading?' disabled':'')+'>'+(cloud.feedLoading?'Atualizando…':'Atualizar')+'</button></div>';
   if(cloud.feedError)h+='<div class="alert"><b>Atenção</b><span>'+esc(cloud.feedError)+'</span></div>';
   if(!cloud.feed.length)return h+'<div class="empty"><b>Nenhuma degustação compartilhada ainda.</b><span>Ao encerrar uma sessão com "Compartilhar no clube" marcado, ela aparece aqui para os membros.</span></div>';
@@ -1450,6 +1536,7 @@ function memberPanel(){
   h+='<dl class="kv"><dt>Sincronização</dt><dd>'+(cloud.status==='syncing'?'em andamento':cloud.status==='error'?'com falha':cloud.status==='offline'?'aguardando internet':(cloud.lastSync?esc(fmtDateTime(new Date(cloud.lastSync).toISOString())):'ainda não feita'))+'</dd><dt>Seu diário</dt><dd class="num">'+state.cigars.length+' charutos · '+done().length+' sessões</dd></dl>';
   h+='<div class="row"><button class="btn" data-act="syncnow"'+(cloud.status==='syncing'?' disabled':'')+'>Sincronizar agora</button></div>';
   h+='<label class="f" for="pf-name">Nome de exibição<input type="text" id="pf-name" maxlength="40" value="'+esc(p.display_name)+'"></label><div class="row"><button class="btn small" data-act="savename">Salvar nome</button></div></div>';
+  h+=memberMsgsPanel();
   if(p.is_admin){h+='<div class="panel"><h3>Convidar amigos</h3><p class="muted">Cada link vale para até 10 pessoas. Mande só para quem você quer no clube.</p>';
     if(cloud.inviteLink)h+='<label class="f" for="invite-link">Link de convite<input type="text" id="invite-link" readonly value="'+esc(cloud.inviteLink)+'"></label><div class="row"><button class="btn primary" data-act="copyinvite">Copiar link</button>'+(navigator.share?'<button class="btn" data-act="shareinvite">Enviar (WhatsApp…)</button>':'')+'</div>';
     h+='<div class="row"><button class="btn'+(cloud.inviteLink?' ghost':' primary')+'" data-act="newinvite">'+(cloud.inviteLink?'Gerar outro link':'Gerar link de convite')+'</button></div></div>';}
@@ -1643,7 +1730,7 @@ document.addEventListener('click',function(ev){
     case 'corte': state.corteVit=id; render(); break;
     case 'ritmo-per': ritmo.periodo=parseInt(id,10)||45; if(ritmo.on){ritmo.inicio=Date.now();ritmo.ciclo=0;} render(); break;
     case 'ritmo-toggle': if(ritmo.on)ritmoStop();else ritmoStart(); render(); break;
-    case 'tab': state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); break;
+    case 'tab': state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); if(id==='conta'&&isMember())refreshClub(true); break;
     case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
@@ -1696,6 +1783,10 @@ document.addEventListener('click',function(ev){
     case 'copyinvite': copyText('invite-link',cloud.inviteLink); break;
     case 'shareinvite': navigator.share({title:'Convite para o Clube do Diário de Degustação',text:'Te convidei para o nosso clube de degustação de charutos. Abra no Chrome (Android) ou Safari (iPhone):',url:cloud.inviteLink}).catch(function(){}); break;
     case 'refreshfeed': loadFeed(); break;
+    case 'clubrefresh': refreshClub(true); break;
+    case 'msgsend': sendMsg(id); break;
+    case 'avisook': dismissAviso(); break;
+    case 'avisover': state.tab='conta'; state.view='home'; dismissAviso(); refreshClub(true).then(function(){var a=document.getElementById('avisos');if(a)a.scrollIntoView({block:'start'});}); break;
     case 'post': state.view='post'; state.postUid=id; render(); window.scrollTo(0,0); fetchFeedPhotos(); break;
     case 'backclube': state.view='home'; state.tab='clube'; render(); break;
     case 'like': toggleLike(id); break;
@@ -1706,6 +1797,8 @@ document.addEventListener('click',function(ev){
 document.addEventListener('input',function(ev){var el=ev.target,k=el.getAttribute&&el.getAttribute('data-gin');if(!k)return;
   if(k==='umid')state.umid=el.value;else if(k==='temp')state.temp=el.value;
   var o=document.getElementById('umid-out');if(o){var r=humidorStatus(state.umid,state.temp);o.textContent=r.texto;o.className='gout '+r.nivel;}});
+/* Rascunhos de mensagem e de aviso: sobrevivem aos redesenhos. */
+document.addEventListener('input',function(ev){var el=ev.target,k=el&&el.getAttribute&&el.getAttribute('data-cin');if(k)cloud.club.drafts[k]=el.value;});
 /* Busca da curadoria: atualiza só a lista, sem render(), para o campo não perder o foco. */
 document.addEventListener('input',function(ev){var el=ev.target;if(!el||!el.hasAttribute||!el.hasAttribute('data-catq'))return;
   state.catQ=el.value;state.catN=12;var o=document.getElementById('cat-list');if(o)o.innerHTML=catListHtml();});
@@ -1739,7 +1832,7 @@ document.addEventListener('submit',function(ev){
   put('cigars',c); state.addOpen=false; render(); toast('Charuto adicionado ao acervo');
 });
 document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember())scheduleSync();}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}});
 document.addEventListener('scroll',function(e){var t=e.target;if(!t||!t.classList||!t.classList.contains('gcar'))return;var c=t.querySelectorAll('.gcard');if(c.length<2)return;
   state.gcarX=t.scrollLeft;var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';},true);
 window.addEventListener('online',function(){if(isMember()){sync();if(state.tab==='clube')loadFeed();}});
