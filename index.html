@@ -672,7 +672,7 @@ function clubErrMsg(e){var m=String(e&&e.message||'');for(var k in CLUB_ERRS)if(
 function memberMeta(m,now){var c=m.invite_code,n=m.shared_sessions||0,d=Date.parse(m.created_at);
   var conv=!c?'convite não registrado':/^F-/.test(c)?'convite de fundador':'convite '+String(c).slice(0,6);
   var ss=!n?'nenhuma sessão compartilhada':n===1?'1 sessão compartilhada':n+' sessões compartilhadas';
-  return 'Entrou em '+(isNaN(d)?'—':dmy(new Date(d)))+' · '+conv+' · '+(m.last_seen_at?'último acesso '+relAgo(m.last_seen_at,now):'nunca acessou')+' · '+ss;}
+  return 'Entrou em '+(isNaN(d)?'—':dmy(new Date(d)))+' · '+conv+' · '+(m.last_seen_at?'último acesso '+relAgo(m.last_seen_at,now):'sem acesso registrado')+' · '+ss;}
 /* @end:clube */
 /* ===== Escola do charuto (lições curtas) ===== */
 var LESSONS=[
@@ -809,7 +809,7 @@ var CROWN_ICON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stro
 var CHAT_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>';
 var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 anos registrarem e compartilharem degustações de charutos.</p>'+
   '<p>Para o app funcionar guardamos no Supabase: seu nome de exibição, e-mail, senha (criptografada pelo Supabase), sessões, curtidas, comentários e fotos de anilhas. Sessões marcadas como "Só eu" não aparecem para outros membros.</p>'+
-  '<p>Pelo app, o administrador vê de cada membro: nome, data de entrada, convite usado, último acesso e quantas sessões foram compartilhadas com o clube. Ele não vê pelo app o seu e-mail nem as sessões marcadas como "Só eu". As mensagens trocadas com a administração e os avisos ficam guardados no clube até a exclusão da conta.</p>'+
+  '<p>Pelo app, o administrador vê de cada membro: nome, data de entrada, convite usado, último acesso e quantas sessões foram compartilhadas com o clube. Ele não vê pelo app o seu e-mail nem as sessões marcadas como "Só eu". As mensagens trocadas com a administração ficam guardadas no clube até a exclusão da sua conta.</p>'+
   '<p>Não é permitido anunciar, vender, divulgar preços, lojas ou links de compra de produtos de tabaco.</p>'+
   '<p>Você pode excluir sua conta e todos os seus dados do clube a qualquer momento em Conta › Excluir minha conta. O diário guardado no seu celular continua com você.</p>'+
   '<p>Dúvidas ou pedidos sobre seus dados: fale com o administrador do clube.</p>';
@@ -891,7 +891,8 @@ function isDirty(r){return !r.syncedAt||(r.updatedAt||0)>r.syncedAt;}
 function rerender(){if(state.view==='session'||state.view==='guia')return;clearTimeout(renderTimer);renderTimer=setTimeout(render,30);}
 function setStatus(s,detail){cloud.status=s;cloud.statusDetail=detail||'';rerender();}
 function scheduleSync(){if(!cloud.configured)return;clearTimeout(syncTimer);syncTimer=setTimeout(sync,2500);}
-function canSync(){return isMember()&&!cloud.ownerMismatch&&!(cloud.me&&cloud.me.suspended)&&!!idb&&navigator.onLine!==false;}
+/* Só sincroniza com o estado do clube confirmado nesta sessão (ou sem a fase 2 do SQL): suspenso não sincroniza. */
+function canSync(){return isMember()&&!cloud.ownerMismatch&&(!!cloud.me||cloud.clubMissing)&&!(cloud.me&&cloud.me.suspended)&&!!idb&&navigator.onLine!==false;}
 function authErr(e){var m=String(e&&(e.message||e.error_description||e)||'');
   if(/invalid login credentials/i.test(m))return 'E-mail ou senha incorretos.';
   if(/already registered|already been registered|user_already_exists/i.test(m))return 'Este e-mail já tem conta. Use "Entrar".';
@@ -965,12 +966,12 @@ function loadMemberClub(){var me=cloud.me,uid=cloud.user.id,c=cloud.club;
   if(!me.suspended)ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
   return Promise.all(ps).then(function(){if(me.unread_msgs>0)return clubApi.markRead(uid).then(function(r){if(!r.error)me.unread_msgs=0;});});}
 /* Administrador com a Conta aberta: inscritos sempre; convites, avisos e conversa conforme a seção. */
-function loadAdminClub(){var c=cloud.club,ps=[clubApi.members().then(function(r){if(!r.error)c.members=r.data||[];})];
+function loadAdminClub(){var c=cloud.club,open=c.open,ps=[clubApi.members().then(function(r){if(!r.error)c.members=r.data||[];})];
   if(c.sec==='convites')ps.push(clubApi.invites().then(function(r){if(!r.error)c.invites=r.data||[];}));
   if(c.sec==='avisos')ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
-  if(c.open)ps.push(clubApi.thread(c.open).then(function(r){if(!r.error)c.thread=(r.data||[]).slice().reverse();}));
-  return Promise.all(ps).then(function(){var o=c.open&&c.members.filter(function(m){return m.id===c.open;})[0];
-    if(o&&o.unread>0)return clubApi.markRead(o.id).then(function(r){if(!r.error){cloud.me.unread_msgs=Math.max(0,(cloud.me.unread_msgs||0)-o.unread);o.unread=0;}});});}
+  if(open)ps.push(clubApi.thread(open).then(function(r){if(!r.error&&c.open===open)c.thread=(r.data||[]).slice().reverse();}));
+  return Promise.all(ps).then(function(){if(!open||c.open!==open)return;var o=c.members.filter(function(m){return m.id===open;})[0];
+    if(o&&o.unread>0)return clubApi.markRead(open).then(function(r){if(!r.error){cloud.me.unread_msgs=Math.max(0,(cloud.me.unread_msgs||0)-o.unread);o.unread=0;}});});}
 /* Ação de administrador: erro do banco vira aviso em português; sucesso recarrega o painel. */
 function admDo(fn,okMsg){Promise.resolve().then(fn).then(function(r){if(r&&r.error){toast(clubErrMsg(r.error));return;}if(okMsg)toast(okMsg);return refreshClub(true);})
   .catch(function(e){toast(clubErrMsg(e));});}
@@ -1269,7 +1270,7 @@ function render(){
   /* Campos de digitação que sobrevivem ao redesenho (sincronização, atualização do clube): foco e cursor voltam ao lugar. */
   var ae=document.activeElement,fid=ae&&['cat-q','msg-body','aviso-body'].indexOf(ae.id)>=0?ae.id:null,qf=fid?[ae.selectionStart,ae.selectionEnd]:null;
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
-  var gc=state.gcarX?app.querySelector('.gcar'):null;if(gc)gc.scrollLeft=state.gcarX;
+  var gc=state.gcarX?app.querySelector('.gcar'):null;if(gc){gc.scrollLeft=state.gcarX;syncGcar(gc);}
   var cq=fid?document.getElementById(fid):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
@@ -1606,7 +1607,8 @@ function memberPanel(){
       (state.confirm==='wipe'?'<div class="row" style="margin-top:8px"><button class="btn danger" data-act="wipe">Apagar registros deste celular</button><button class="btn ghost" data-act="cancelconfirm">Cancelar</button></div>':'<div class="row" style="margin-top:8px"><button class="btn small" data-act="askconfirm" data-id="wipe">Usar esta conta neste celular</button></div>')+'</div>';}
   h+='<dl class="kv"><dt>Sincronização</dt><dd>'+(cloud.status==='syncing'?'em andamento':cloud.status==='error'?'com falha':cloud.status==='offline'?'aguardando internet':(cloud.lastSync?esc(fmtDateTime(new Date(cloud.lastSync).toISOString())):'ainda não feita'))+'</dd><dt>Seu diário</dt><dd class="num">'+state.cigars.length+' charutos · '+done().length+' sessões</dd></dl>';
   h+='<div class="row"><button class="btn" data-act="syncnow"'+(cloud.status==='syncing'?' disabled':'')+'>Sincronizar agora</button></div>';
-  h+='<label class="f" for="pf-name">Nome de exibição<input type="text" id="pf-name" maxlength="40" value="'+esc(p.display_name)+'"></label><div class="row"><button class="btn small" data-act="savename">Salvar nome</button></div></div>';
+  h+='<label class="f" for="pf-name">Nome de exibição<input type="text" id="pf-name" maxlength="40" value="'+esc(p.display_name)+'"></label><div class="row"><button class="btn small" data-act="savename">Salvar nome</button></div>'+
+    '<details class="terms" id="regras"><summary>Regras do clube e uso dos dados</summary><div>'+TERMS_HTML+'</div></details></div>';
   h+=memberMsgsPanel();
   if(cloud.me&&cloud.me.is_admin&&!cloud.clubMissing)h+=adminPanel();
   else if(p.is_admin){
@@ -1849,7 +1851,7 @@ document.addEventListener('click',function(ev){
     case 'cancelconfirm': state.confirm=''; render(); break;
     case 'deleteaccount': deleteAccount(); break;
     case 'wipe': wipeLocalForAccount(); break;
-    case 'syncnow': sync(); break;
+    case 'syncnow': refreshClub(true).then(function(){sync();}); break;
     case 'savename': saveName(); break;
     case 'newinvite': createInvite(); break;
     case 'admsec': cloud.club.sec=id; cloud.club.open=null; state.confirm=''; render(); refreshClub(true); break;
@@ -1914,9 +1916,11 @@ document.addEventListener('submit',function(ev){
 });
 document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}});
-document.addEventListener('scroll',function(e){var t=e.target;if(!t||!t.classList||!t.classList.contains('gcar'))return;var c=t.querySelectorAll('.gcard');if(c.length<2)return;
-  state.gcarX=t.scrollLeft;var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';},true);
-window.addEventListener('online',function(){if(isMember()){sync();if(state.tab==='clube')loadFeed();}});
+/* Posição do carrossel do guia e ponto ativo; chamada no evento scroll e logo depois do render, sem esperar o próximo quadro. */
+function syncGcar(t){var c=t.querySelectorAll('.gcard');if(c.length<2)return;
+  state.gcarX=t.scrollLeft;var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';}
+document.addEventListener('scroll',function(e){var t=e.target;if(!t||!t.classList||!t.classList.contains('gcar'))return;syncGcar(t);},true);
+window.addEventListener('online',function(){if(isMember()){refreshClub(true).then(function(){sync();});if(state.tab==='clube')loadFeed();}});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});
 window.addEventListener('appinstalled',function(){installPrompt=null;toast('App instalado na tela inicial');});

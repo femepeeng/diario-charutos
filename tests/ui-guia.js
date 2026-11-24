@@ -90,7 +90,9 @@
   await irInicio();
   var car = q('.gcar'), cs = qa('.gcard');
   if (car && cs.length > 3) {
-    car.scrollLeft = cs[3].offsetLeft - cs[0].offsetLeft; await wait(250);
+    car.scrollLeft = cs[3].offsetLeft - cs[0].offsetLeft;
+    // O evento scroll sai no próximo quadro; com o painel do navegador oculto, os quadros chegam a ~300 ms.
+    for (var tries = 0; tries < 40 && !(window.__t && __t.state.gcarX === car.scrollLeft); tries++) await wait(50);
     var antes = car.scrollLeft;
     if (window.__t && __t.render) __t.render(); await wait(250);
     var car2 = q('.gcar'), dot = qa('.gdots i').findIndex(function (i) { return i.className === 'on'; });

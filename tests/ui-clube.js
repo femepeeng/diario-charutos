@@ -24,9 +24,10 @@
   var bk = { sb: C.sb, user: C.user, profile: C.profile, checked: C.profileChecked, me: C.me, missing: C.clubMissing, club: C.club,
     feed: C.feed, feedAt: C.feedAt, mismatch: C.ownerMismatch, tab: S.tab, view: S.view, confirm: S.confirm };
 
-  // Cliente Supabase falso: qualquer cadeia de métodos termina em {data: [], error: null}.
+  // Cliente Supabase falso: qualquer cadeia de métodos termina em erro. Uma sincronização acidental durante o teste
+  // falha em vez de receber listas vazias (que fariam o app apagar registros locais).
   function fakeSb() {
-    var res = { data: [], error: null }, px;
+    var res = { data: null, error: { message: 'cliente falso: chamada não esperada no teste' } }, px;
     px = new Proxy(function () {}, { get: function (t, p) {
       if (p === 'then') return function (ok, ko) { return Promise.resolve(res).then(ok, ko); };
       return function () { return px; };
@@ -40,7 +41,8 @@
     function ok(data) { return Promise.resolve({ data: data, error: null }); }
     var api = { calls: calls, opt: opt,
       me: function () { rec('me', arguments); return Promise.resolve(opt.meErr ? { data: null, error: opt.meErr } : { data: JSON.parse(JSON.stringify(opt.me)), error: null }); },
-      thread: function () { rec('thread', arguments); return ok(JSON.parse(JSON.stringify(opt.thread || []))); },
+      thread: function (id) { rec('thread', arguments); var d = (opt.threadDelay || {})[id] || 0, data = JSON.parse(JSON.stringify((opt.threads && opt.threads[id]) || opt.thread || []));
+        return new Promise(function (res) { setTimeout(function () { res({ data: data, error: null }); }, d); }); },
       avisos: function () { rec('avisos', arguments); return ok(JSON.parse(JSON.stringify(opt.avisos || []))); },
       members: function () { rec('members', arguments); return ok(JSON.parse(JSON.stringify(opt.members || []))); },
       invites: function () { rec('invites', arguments); return ok(JSON.parse(JSON.stringify(opt.invites || []))); },
@@ -77,7 +79,10 @@
     login('M', 'Membro Teste', false);
     prevApi = T.setClubApi(apiM);
     S.view = 'home'; S.tab = 'inicio'; S.confirm = '';
+    C.me = null; C.clubMissing = false;
+    check('sem o estado do clube confirmado, o app não sincroniza', T.canSync() === false);
     await T.refreshClub(true); T.render(); await wait(80);
+    check('com o estado confirmado e sem suspensão, sincroniza', T.canSync() === true);
 
     var tc = q('.tabs [data-act="tab"][data-id="conta"]');
     check('aba Conta avisa nova mensagem sem mudar o nome', !!tc && /nova mensagem/.test(tc.getAttribute('aria-label') || '') && tc.innerText.trim() === 'Conta');
@@ -95,6 +100,7 @@
     var adm = q('#msgs .msg.theirs');
     check('texto da mensagem não vira HTML nem link', !!adm && /<b>x<\/b>/.test(adm.textContent) && !adm.querySelector('b,a'));
     check('avisos aparecem na Conta', /Nova versão no ar/.test((q('#avisos') || {}).textContent || ''));
+    check('quem já é membro consegue abrir as regras do clube na Conta', !!q('#regras summary'));
 
     var nThread = count(apiM, 'thread');
     type(q('#msg-body'), '  Olá  ');
@@ -183,7 +189,7 @@
     check('4 cartões de inscritos', qa('.mcard').length === 4);
     check('o próprio cartão tem "você" e nenhuma ação', !!card('A') && /você/.test(card('A').textContent) && !card('A').querySelector('button'));
     check('suspenso aparece marcado, com Reativar e sem Tornar administrador', !!card('N') && /suspenso/.test(card('N').textContent) && /Reativar/.test(card('N').textContent) && !card('N').querySelector('[data-act="admadm"]'));
-    check('quem nunca abriu o app aparece como "nunca"', !!card('P') && /nunca/.test(card('P').textContent));
+    check('quem ainda não abriu o app novo aparece como sem acesso registrado', !!card('P') && /sem acesso registrado/.test(card('P').textContent));
     check('Inscritos sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
 
     var nMembers = count(apiA, 'members');
@@ -215,8 +221,20 @@
     check('responder envia para a conversa do inscrito', !!sm && sm[1] === 'M' && sm[2] === 'Resposta do admin');
     click(act('admclose')); await wait(80);
     check('Voltar fecha a conversa', !q('#msg-body') && !!q('.inbox-row[data-member="M"]'));
+    apiA.opt.threads = { M: apiA.opt.thread, N: [{ id: 'n1', member_id: 'N', author_id: 'N', from_admin: false, body: 'Mensagem do N', created_at: iso(5) }] };
+    apiA.opt.threadDelay = { M: 300 };
+    click(sec('inscritos')); await wait(120);
+    click(act('admopen', 'M')); await wait(20); click(act('admclose')); await wait(20);
+    click(sec('inscritos')); await wait(20); click(act('admopen', 'N')); await wait(450);
+    var corpo = qa('#admin .msg p').map(function (p) { return p.textContent; });
+    check('resposta atrasada de outra conversa não aparece com o nome errado', /Conversa com Membro N/.test((q('#admin') || {}).textContent || '') && corpo.length === 1 && corpo[0] === 'Mensagem do N');
+    click(act('admclose')); await wait(60); apiA.opt.threads = null; apiA.opt.threadDelay = null;
 
     click(sec('avisos')); await wait(150);
+    var ab = q('#aviso-body'); type(ab, 'Aviso em digi'); ab.setSelectionRange(13, 13);
+    if (T.rerender) T.rerender(); await wait(120);
+    var ab2 = q('#aviso-body');
+    check('redesenho no meio do aviso mantém foco, texto e cursor', !!ab2 && document.activeElement === ab2 && ab2.value === 'Aviso em digi' && ab2.selectionStart === 13);
     type(q('#aviso-body'), 'Aviso novo');
     click(act('avisopub')); await wait(150);
     var pa = last(apiA, 'postAviso');

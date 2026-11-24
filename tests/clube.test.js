@@ -91,9 +91,9 @@ test('memberMeta: data de entrada, convite, último acesso e sessões', () => {
   assert.strictEqual(X.memberMeta(Object.assign({}, base, { invite_code: 'F-ABCDEF123', last_seen_at: antes(2 * 3600 * 1000) }), AGORA),
     'Entrou em 12/11/2026 · convite de fundador · último acesso há 2 h · 4 sessões compartilhadas');
   assert.strictEqual(X.memberMeta(Object.assign({}, base, { invite_code: 'K7Q2M9XAB1', last_seen_at: null, shared_sessions: 1 }), AGORA),
-    'Entrou em 12/11/2026 · convite K7Q2M9 · nunca acessou · 1 sessão compartilhada');
+    'Entrou em 12/11/2026 · convite K7Q2M9 · sem acesso registrado · 1 sessão compartilhada');
   assert.strictEqual(X.memberMeta(Object.assign({}, base, { invite_code: null, last_seen_at: null, shared_sessions: 0 }), AGORA),
-    'Entrou em 12/11/2026 · convite não registrado · nunca acessou · nenhuma sessão compartilhada');
+    'Entrou em 12/11/2026 · convite não registrado · sem acesso registrado · nenhuma sessão compartilhada');
 });
 
 console.log(`\n${pass} ok, ${fail} falha(s)`);
