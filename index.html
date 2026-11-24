@@ -624,6 +624,40 @@ function similarTo(c,felt,items,P,n){var a=cigarAttrs(c),self=normName(c&&c.name
     if(sc>=2)out.push({it:it,score:sc,why:why,owned:P.owned[k]||''});});
   return out.sort(byScore).slice(0,n||3);}
 /* @end:curadoria */
+/* ===== Clube: administração, mensagens e avisos (2.9.0) ===== */
+/* @pure:clube */
+function p2(n){return (n<10?'0':'')+n;}
+function dmy(d){return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear();}
+/* "agora", "há 5 min", "há 3 h", "ontem", "há 3 dias" ou a data. Diferente de relTime (feed), que mostra a data por extenso. */
+function relAgo(iso,now){var t=iso?Date.parse(iso):NaN;if(isNaN(t))return '—';var n=now==null?Date.now():+now,ms=n-t;
+  if(ms<60000)return 'agora';if(ms<3600000)return 'há '+Math.floor(ms/60000)+' min';if(ms<86400000)return 'há '+Math.floor(ms/3600000)+' h';
+  var a=new Date(t),b=new Date(n),dd=Math.round((Date.UTC(b.getFullYear(),b.getMonth(),b.getDate())-Date.UTC(a.getFullYear(),a.getMonth(),a.getDate()))/86400000);
+  if(dd<=1)return 'ontem';if(dd<=6)return 'há '+dd+' dias';return dmy(a);}
+/* Texto de mensagem ou aviso: sem espaços nas pontas, no máximo duas quebras seguidas, de 1 a 1000 caracteres. */
+function cleanMsg(s){var t=String(s==null?'':s).replace(/\r\n?/g,'\n').replace(/\n{3,}/g,'\n\n').replace(/^\s+|\s+$/g,'');
+  if(!t)return {ok:false,text:'',err:'Escreva a mensagem.'};
+  if(t.length>1000)return {ok:false,text:t,err:'Use no máximo 1000 caracteres.'};
+  return {ok:true,text:t,err:''};}
+/* Caixa de entrada: só quem tem mensagem; não lidas primeiro, depois a mais recente e o nome. */
+function inboxOrder(ms){return (ms||[]).filter(function(m){return !!m.last_msg_at;}).sort(function(a,b){
+  var ua=a.unread>0?1:0,ub=b.unread>0?1:0;if(ua!==ub)return ub-ua;var ta=Date.parse(a.last_msg_at),tb=Date.parse(b.last_msg_at);if(ta!==tb)return tb-ta;
+  return String(a.display_name).localeCompare(String(b.display_name),'pt-BR');});}
+/* "esgotado" vence "desativado": o convite de fundador fica inativo justamente porque foi usado. */
+function inviteStatus(v){var full=(v.uses||0)>=(v.max_uses||0),lab=full?'esgotado':!v.active?'desativado':'ativo · '+(v.uses||0)+'/'+v.max_uses+' usos';
+  return {label:(v.grants_admin?'fundador · ':'')+lab,canOff:!!v.active&&!full};}
+/* A fase 2 do SQL ainda não foi aplicada no Supabase. */
+function missingSql(e){if(!e)return false;return e.code==='PGRST202'||e.code==='42883'||/could not find the function/i.test(String(e.message||''));}
+var CLUB_ERRS={not_admin:'Só administradores podem fazer isso.',not_self:'Essa ação não vale para a sua própria conta.',
+  is_admin:'Administrador não pode ser suspenso. Tire o papel de administrador antes.',suspended:'Reative a pessoa antes de torná-la administradora.',
+  no_member:'Essa pessoa não está mais no clube.',not_allowed:'Você não tem permissão para essa conversa.',
+  invalid_body:'A mensagem precisa ter de 1 a 1000 caracteres.',admin_invite:'Convite de fundador não pode ser reativado.',no_invite:'Esse convite não existe mais.'};
+function clubErrMsg(e){var m=String(e&&e.message||'');for(var k in CLUB_ERRS)if(m.indexOf(k)>=0)return CLUB_ERRS[k];
+  return 'Não foi possível concluir. Confira a internet e tente de novo.';}
+function memberMeta(m,now){var c=m.invite_code,n=m.shared_sessions||0,d=Date.parse(m.created_at);
+  var conv=!c?'convite não registrado':/^F-/.test(c)?'convite de fundador':'convite '+String(c).slice(0,6);
+  var ss=!n?'nenhuma sessão compartilhada':n===1?'1 sessão compartilhada':n+' sessões compartilhadas';
+  return 'Entrou em '+(isNaN(d)?'—':dmy(new Date(d)))+' · '+conv+' · '+(m.last_seen_at?'último acesso '+relAgo(m.last_seen_at,now):'nunca acessou')+' · '+ss;}
+/* @end:clube */
 /* ===== Escola do charuto (lições curtas) ===== */
 var LESSONS=[
   ['anatomia','Anatomia: capa, capote e tripa','<p>Todo charuto premium tem três camadas. A <b>tripa</b> é o miolo, um blend de folhas que define força e sabor. O <b>capote</b> envolve a tripa e dá forma. A <b>capa</b> é a folha externa: a mais bonita e elástica, responde por boa parte do aroma e da primeira impressão.</p><p>Na tripa, as folhas mudam conforme a altura na planta: <b>ligero</b> (topo, mais sol) traz força; <b>seco</b> (meio) traz aroma; <b>volado</b> (base) ajuda a combustão.</p>'],
