@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.8.0 (23/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.9.0 (23/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -16,7 +16,9 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 | `config.js` | `window.CLUBE_CONFIG = {url, key}` do Supabase. **Vazio = clube desativado** (o app funciona só como diário local) |
 | `supabase.js` | Bundle UMD de `@supabase/supabase-js@2.117.2`, vendorizado para funcionar offline |
 | `manifest.webmanifest`, `icon-*.png` | Instalação como app |
-| `supabase/supabase-clube.sql` | Esquema, RLS e funções do clube. **Não vai para o GitHub** (repo público; contém o código de fundador de uso único). Está no `.gitignore` |
+| `supabase/supabase-clube.sql` | Fase 1: esquema, RLS e funções do clube. **A pasta `supabase/` não vai para o GitHub** (repo público; o SQL gera o código de fundador de uso único). Está no `.gitignore` |
+| `supabase/supabase-clube-fase2.sql` | Fase 2 (app 2.9.0): administração, mensagens, avisos e suspensão. Aplique depois da fase 1; se rodar a fase 1 de novo, rode a fase 2 logo em seguida (a fase 1 recria funções e permissões na versão anterior). **Publique o SQL antes do app**; o app tolera a ordem inversa e esconde os painéis novos |
+| `supabase/tests/fase2.test.mjs` | 27 casos das regras de acesso num Postgres embutido (PGlite 0.3.0, instalado em `supabase/node_modules` com `npm install`), com stubs de `auth`, `storage` e do privilégio padrão do Supabase |
 
 ## Arquitetura
 
@@ -24,6 +26,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Render.** Função `render()` com `innerHTML` a partir de `state`. Eventos são delegados por `data-act` (click), `data-input` (input) e `data-change`/ids (change). Na tela de sessão, a edição fica em `draft` e é salva com debounce (`scheduleSave` → `flush` → `put`).
 - **Sincronização** (`sync()`, só se `config.js` estiver preenchido e o usuário for membro): sobe fotos ainda não enviadas, aplica tombstones, faz upsert por `(owner_id, local_id)`, puxa os registros próprios e mescla por `client_updated_at` (last-writer-wins). A chave localStorage `clube-owner` impede misturar diários de contas diferentes no mesmo aparelho.
 - **Clube:** login por e-mail e senha (o SMTP padrão do Supabase só envia para a equipe do projeto, por isso "Confirm email" fica desligado), convite por código (`join_club`, `create_invite`), feed de sessões com `visibility='club'` e `status='concluida'`, curtidas, comentários e `delete_my_account` (LGPD). As regras de acesso foram testadas em Postgres (36 casos).
+- **Administração do clube (fase 2):** `club_me()` devolve o estado de quem chama (administrador, suspenso, mensagens não lidas, aviso não lido mais recente) e registra o último acesso a cada 10 min. Conversa por inscrito em `messages` (escrita só por `send_message`), avisos em `announcements`, funções `admin_*` que checam `is_admin()`. Membros só leem `id, display_name, is_admin, created_at` dos perfis; o resto sai pelas funções. Suspenso deixa de ser membro (`is_member()`), perde feed e sincronização, e as sessões dele somem do feed, mas a conversa continua. No app, a camada `clubApi` faz as chamadas e `refreshClub()` atualiza ao abrir, ao voltar para o app (no máximo 1x/min) e ao abrir a Conta.
 - **Backup:** exporta e importa JSON `{app:'diario-degustacao', version:1, cigars, sessions, photos:[{id, dataUrl}]}`.
 
 ## Modelo de dados (local)
@@ -44,7 +47,10 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Comparar:** duas sub-abas.
   - **Lado a lado:** duas sessões em tabela e, embaixo, os 3 charutos do catálogo mais parecidos com o da nota maior (`similarTo`).
   - **Para provar:** catálogo de referência (`CAT_LINES`/`CAT_ITEMS`, 475 charutos), ordenado pelo perfil de paladar (`tasteProfile` → `curate`), com filtros Cubanos/Fora de Cuba/Nacionais, busca e "Adicionar à cesta" (cria o charuto no Acervo com status `cesta`). O que já foi provado sai da lista, mas aparece na busca com a nota. Com menos de 3 sessões com nota, a ordem segue a força de referência, de suave a média.
-- **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho. **Conta:** login, convites (admin), backup e atalho para o guia.
+- **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho.
+- **Conta:** login, backup e atalho para o guia.
+  - **Inscrito:** painel Mensagens (conversa com a administração e avisos). Aviso não lido vira faixa no Início; mensagem não lida acende um ponto na aba Conta.
+  - **Administrador:** painel Administração com Inscritos (suspender/reativar, tornar/tirar administrador, com confirmação), Mensagens (caixa de entrada por inscrito), Avisos e Convites (gerar link, usos, desativar).
 
 ### Catálogo da curadoria
 
@@ -61,7 +67,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Nunca** coloque a chave `secret`/`service_role` no app ou no repositório. A publishable/anon é pública por natureza.
 - **Conteúdo:** sem preços, lojas ou links de compra no app (Lei 9.294/1996, art. 3-A, restringe propaganda de fumígenos por meio eletrônico). Nada que ensine a tragar. Informação técnica deve ser conservadora; onde não há consenso, o texto diz isso.
 - **UI:** mobile-first (testar em 360 a 390 px, sem rolagem horizontal), tema escuro por padrão com tema claro via tokens CSS, fontes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono, alvos de toque de pelo menos 44 px, sem emoji como ícone.
-- **Testes:** `node tests/guia.test.js` e `node tests/curadoria.test.js` testam as funções puras entre os marcadores `/* @pure:guia */` e `/* @pure:curadoria */` (fecham com `/* @end:... */`). `tests/ui-guia.js` e `tests/ui-curadoria.js` rodam no navegador com o app aberto (`eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`; o `?` evita a cópia do service worker). Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim. O botão "Adicionar à cesta" grava no diário; confira-o à mão num navegador sem login no clube. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
+- **Testes:** `node tests/guia.test.js`, `node tests/curadoria.test.js` e `node tests/clube.test.js` testam as funções puras entre os marcadores `/* @pure:guia */`, `/* @pure:curadoria */` e `/* @pure:clube */` (fecham com `/* @end:... */`). `node supabase/tests/fase2.test.mjs` testa o SQL do clube no PGlite. `tests/ui-guia.js`, `tests/ui-curadoria.js` e `tests/ui-clube.js` rodam no navegador com o app aberto (`eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`; o `?` evita a cópia do service worker). Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim. O `ui-clube.js` também troca o cliente Supabase e o `clubApi` por versões falsas em memória (ganchos `__t.cloud`, `__t.setClubApi`, `__t.refreshClub`, `__t.canSync`). O botão "Adicionar à cesta" grava no diário; confira-o à mão num navegador sem login no clube. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
 - **Privacidade:** backups JSON contêm dados pessoais e fotos; não versionar (`*.json` está no `.gitignore`). O `migracao-diario.json` foi removido na 2.6.1 (ainda existe no histórico do Git).
 
 ## Pendências conhecidas
@@ -70,4 +76,5 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 2. Erros HTTP 400 no console com o clube logado, provavelmente downloads de fotos de anilha ausentes no Storage: investigar.
 3. Home em formato de blog: artigos tirados do guia. A lista de "charutos para provar" já existe, na aba Comparar (2.8.0).
 4. Catálogo da curadoria: 272 dos 475 itens estão sem força de referência e 96 sem país. Preencher só com fonte verificável (site do fabricante ou review publicada), nunca por palpite.
-5. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, perfil do membro no clube com conquistas, quiz do guia valendo pontos, canal beta com IndexedDB separado.
+5. Clube: mensagens chegam quando o app abre (sem tempo real nem notificação push; push exigiria servidor e, no iPhone, app instalado). A 360 px a barra de abas rola e a aba Conta, com o ponto de mensagem nova, pode ficar fora da tela.
+6. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, perfil do membro no clube com conquistas, quiz do guia valendo pontos, canal beta com IndexedDB separado.

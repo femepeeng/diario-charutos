@@ -301,7 +301,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
-var APP_VERSION='2.8.0', APP_BUILD='23/11/2026';
+var APP_VERSION='2.9.0', APP_BUILD='23/11/2026';
 var FAMILIES=[
   {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo','Coco']},
   {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
@@ -809,6 +809,7 @@ var CROWN_ICON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stro
 var CHAT_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>';
 var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 anos registrarem e compartilharem degustações de charutos.</p>'+
   '<p>Para o app funcionar guardamos no Supabase: seu nome de exibição, e-mail, senha (criptografada pelo Supabase), sessões, curtidas, comentários e fotos de anilhas. Sessões marcadas como "Só eu" não aparecem para outros membros.</p>'+
+  '<p>Pelo app, o administrador vê de cada membro: nome, data de entrada, convite usado, último acesso e quantas sessões foram compartilhadas com o clube. Ele não vê pelo app o seu e-mail nem as sessões marcadas como "Só eu". As mensagens trocadas com a administração e os avisos ficam guardados no clube até a exclusão da conta.</p>'+
   '<p>Não é permitido anunciar, vender, divulgar preços, lojas ou links de compra de produtos de tabaco.</p>'+
   '<p>Você pode excluir sua conta e todos os seus dados do clube a qualquer momento em Conta › Excluir minha conta. O diário guardado no seu celular continua com você.</p>'+
   '<p>Dúvidas ou pedidos sobre seus dados: fale com o administrador do clube.</p>';
