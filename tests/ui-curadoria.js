@@ -1,4 +1,4 @@
-/* Verificações de interface da curadoria "Para provar" (aba Comparar), rodadas no navegador com o app aberto.
+/* Verificações de interface da curadoria: Catálogo (aba Cesta) e Lado a lado (sub-aba do Histórico), rodadas no navegador com o app aberto.
    Uso no console (ou javascript_tool): eval(await (await fetch('/tests/ui-curadoria.js?' + Date.now())).text())
    Devolve {ok, falhas, resultados}. Não grava nada: troca charutos e sessões só na memória e restaura no fim.
    Os registros falsos levam syncedAt = updatedAt, então uma sincronização no meio do teste não os envia ao clube.
@@ -14,7 +14,7 @@
   var S = window.__t && __t.state;
   check('estado exposto para teste', !!S && !!__t.render);
   if (!S || !__t.render) return { ok: false, falhas: 1, resultados: R };
-  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, mode: S.cmpMode, seg: S.catSeg, q: S.catQ, n: S.catN, a: S.cmpA, b: S.cmpB };
+  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, hist: S.histMode, seg: S.catSeg, q: S.catQ, n: S.catN, a: S.cmpA, b: S.cmpB };
   var T = { updatedAt: 1, syncedAt: 1 };
   function rec(o) { return Object.assign({}, T, o); }
   S.cigars = [
@@ -30,20 +30,27 @@
     ses('ui-s3', 'ui-c2', 'Partagás Serie D Nº 4', 5, 5, '2026-11-08T20:00:00Z'),
     ses('ui-s4', 'ui-c4', 'Hoyo de Monterrey Epicure No. 2', 8, 2, '2026-11-10T20:00:00Z')
   ];
-  S.view = 'home'; S.tab = 'comparar'; S.cmpMode = 'lado'; S.catSeg = 'todos'; S.catQ = ''; S.catN = 12; S.cmpA = 'ui-s1'; S.cmpB = 'ui-s3';
+  S.view = 'home'; S.tab = 'historico'; S.histMode = 'lado'; S.catSeg = 'todos'; S.catQ = ''; S.catN = 12; S.cmpA = 'ui-s1'; S.cmpB = 'ui-s3';
   __t.render(); await wait(120);
 
+  // ---- Barra e Histórico ----
+  check('barra tem Cesta e não tem Comparar', !!q('[data-act="tab"][data-id="cesta"]') && !q('[data-id="comparar"]'));
+  check('Histórico tem as sub-abas Sessões e Lado a lado', !!act('histmode', 'sessoes') && !!act('histmode', 'lado'));
+
   // ---- Lado a lado ----
-  check('Comparar tem as sub-abas Lado a lado e Para provar', !!act('cmpmode', 'lado') && !!act('cmpmode', 'provar'));
   check('Lado a lado continua com a tabela', !!q('.cmp table'));
   var sim = q('.cmpsim');
   check('Lado a lado mostra parecidos com a sessão de nota maior', !!sim && /Montecristo #4/.test(sim.textContent) && /nota maior/.test(sim.textContent));
   check('parecidos: 3 cartões', qa('.cmpsim .catc').length === 3);
   check('parecidos não repetem o charuto provado', qa('.cmpsim .catc h3').every(function (h) { return h.textContent !== 'Montecristo Nº 4'; }));
+  click(act('histmode', 'sessoes')); await wait(120);
+  check('sub-aba Sessões lista as 4 sessões', qa('[data-act="detail"]').length === 4);
 
-  // ---- Para provar ----
-  click(act('cmpmode', 'provar')); await wait(150);
-  check('Para provar fica selecionado', (act('cmpmode', 'provar') || {}).getAttribute && act('cmpmode', 'provar').getAttribute('aria-selected') === 'true');
+  // ---- Catálogo (aba Cesta) ----
+  click(q('[data-act="tab"][data-id="cesta"]')); await wait(150);
+  var tabC = q('[data-act="tab"][data-id="cesta"]');
+  check('aba Cesta fica selecionada', !!tabC && tabC.getAttribute('aria-selected') === 'true');
+  check('aba Cesta mostra o Catálogo', qa('h2').some(function (h) { return h.textContent === 'Catálogo'; }));
   check('lista começa com 12 cartões', qa('.catc').length === 12);
   check('primeiro cartão é da marca de nota mais alta (Montecristo)', /^Montecristo /.test(titles()[0] || ''));
   check('primeiro cartão explica o porquê', /Marca Montecristo/.test((q('.catc .catwhy') || {}).textContent || ''));
@@ -90,7 +97,7 @@
   S.sessions = S.sessions.slice(0, 1); __t.render(); await wait(120);
   check('com menos de 3 sessões avisa que a ordem segue a força', /A partir de 3 sessões com nota/.test(document.body.textContent));
 
-  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.cmpMode = bk.mode; S.catSeg = bk.seg; S.catQ = bk.q; S.catN = bk.n; S.cmpA = bk.a; S.cmpB = bk.b;
+  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.histMode = bk.hist; S.catSeg = bk.seg; S.catQ = bk.q; S.catN = bk.n; S.cmpA = bk.a; S.cmpB = bk.b;
   __t.render(); await wait(80);
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };

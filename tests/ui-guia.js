@@ -10,8 +10,8 @@
   async function irInicio() { click(qa('[role=tab]').filter(function (b) { return b.innerText.trim() === 'Início'; })[0]); await wait(150); }
 
   // ---- Tarefa 1 ----
-  check('abas: Início,Acervo,Histórico,Paladar,Comparar,Conta',
-    qa('[role=tab]').map(function (b) { return b.innerText.trim(); }).join(',') === 'Início,Acervo,Histórico,Paladar,Comparar,Conta');
+  check('abas: Início,Acervo,Histórico,Paladar,Cesta,Conta',
+    qa('[role=tab]').map(function (b) { return b.innerText.trim(); }).join(',') === 'Início,Acervo,Histórico,Paladar,Cesta,Conta');
   check('aba aberta ao carregar é Início', (q('[role=tab][aria-selected=true]') || {}).innerText === 'Início');
   await irInicio();
   check('carrossel tem 7 cartões', qa('.gcard').length === 7);

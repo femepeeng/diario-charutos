@@ -1,4 +1,4 @@
-// Testes das funções puras da curadoria "Para provar" (aba Comparar).
+// Testes das funções puras da curadoria: Catálogo da aba Cesta (ex-Para provar) e parecidos do Lado a lado.
 // Uso: node tests/curadoria.test.js
 // Avalia, num sandbox vm, os trechos de index.html entre /* @pure:curadoria */ e /* @end:curadoria */.
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');

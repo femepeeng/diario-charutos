@@ -384,7 +384,7 @@ function fichaHtml(c,name){
   if(!p||!w)h+='<p class="faint" style="font-size:13px">'+(!p?'Informe a bitola como comprimento x ring (ex.: 129 x 42 mm ou 5 x 50) para ver o formato. ':'')+(!w?'Escolha a capa em Editar para ver o perfil da folha.':'')+'</p>';
   return h+'</div>';
 }
-/* ===== Curadoria "Para provar" (aba Comparar) ===== */
+/* ===== Curadoria: Catálogo da aba Cesta (ex-Para provar) ===== */
 /* @pure:curadoria */
 /* Catálogo de referência montado a partir das listas de compra que o Felipe consulta (cubanos, fora de Cuba e nacionais, 19/11/2026).
    Entram só nome, bitola e origem: sem preço, loja, código ou contato (Lei 9.294/1996, art. 3-A). Caixas, latas e petacas viram um item só.
@@ -1380,13 +1380,13 @@ function viewHome(){
       var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
       h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
   var novaMsg=isMember()&&cloud.me&&cloud.me.unread_msgs>0;
-  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['comparar','Comparar'],['conta','Conta']].map(function(t){var dot=t[0]==='conta'&&novaMsg;
+  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['cesta','Cesta'],['conta','Conta']].map(function(t){var dot=t[0]==='conta'&&novaMsg;
     return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
   if(state.tab==='inicio')h+=viewInicio();
   else if(state.tab==='acervo')h+=viewAcervo();
   else if(state.tab==='historico')h+=viewHistorico();
   else if(state.tab==='clube')h+=viewClube();
-  else if(state.tab==='comparar')h+=viewComparar();
+  else if(state.tab==='cesta')h+=viewCesta();
   else if(state.tab==='paladar')h+=viewPaladar();
   else h+=viewConta();
   return h;
@@ -1498,9 +1498,12 @@ function sessionCard(s){
   return '<button class="card" style="text-align:left; width:100%" data-act="detail" data-id="'+esc(s.id)+'"><div class="head"><div class="withthumb">'+(s.bandId?bandImg(s.bandId,'thumb','Anilha do '+s.cigarName):'')+'<div style="min-width:0"><span class="h3">'+esc(s.cigarName)+'</span><div class="meta">'+esc(fmtDate(s.createdAt))+' · '+esc([s.moment,s.drink].filter(Boolean).join(' · '))+'</div></div></div>'+(typeof s.rating==='number'?'<div class="score num">'+numStr(s.rating)+'</div>':'')+'</div><div class="row">'+(s.rebuy?'<span class="chip">Recompraria: '+esc(s.rebuy)+'</span>':'')+(s.durationMin?'<span class="meta num">'+s.durationMin+' min</span>':'')+(cloud.configured?'<span class="meta">'+(s.visibility==='private'?'Só eu':'Clube')+'</span>':'')+'</div></button>';
 }
 function viewHistorico(){
+  var m=state.histMode==='lado'?'lado':'sessoes';
+  var h='<div class="minitabs" role="tablist" aria-label="Histórico"><button role="tab" aria-selected="'+(m==='sessoes')+'" data-act="histmode" data-id="sessoes">Sessões</button><button role="tab" aria-selected="'+(m==='lado')+'" data-act="histmode" data-id="lado">Lado a lado</button></div>';
+  if(m==='lado')return h+viewLado();
   var ds=done();
-  if(!ds.length)return '<div class="empty"><b>Nenhuma sessão registrada ainda.</b><span>No Acervo, toque em “Iniciar sessão” quando acender o charuto. O cronômetro corre enquanto você anota cada terço.</span></div>';
-  return '<div class="list">'+ds.map(sessionCard).join('')+'</div>';
+  if(!ds.length)return h+'<div class="empty"><b>Nenhuma sessão registrada ainda.</b><span>No Acervo, toque em “Iniciar sessão” quando acender o charuto. O cronômetro corre enquanto você anota cada terço.</span></div>';
+  return h+'<div class="list">'+ds.map(sessionCard).join('')+'</div>';
 }
 function postCard(it){
   var name=(it.profiles&&it.profiles.display_name)||'Membro',likes=cloud.likes[it.uid]||[],cms=cloud.comments[it.uid]||[],mine=cloud.user&&likes.indexOf(cloud.user.id)>=0;
@@ -1583,12 +1586,9 @@ function paladarAnalysis(){
   if(ctx.length)h+='<div class="panel"><h3>Seus hábitos</h3>'+ctx.map(function(t){return '<p class="muted">'+t+'</p>';}).join('')+'</div>';
   return h;
 }
-function viewComparar(){
-  var m=state.cmpMode==='provar'?'provar':'lado';
-  return '<div class="minitabs" role="tablist" aria-label="Comparar"><button role="tab" aria-selected="'+(m==='lado')+'" data-act="cmpmode" data-id="lado">Lado a lado</button><button role="tab" aria-selected="'+(m==='provar')+'" data-act="cmpmode" data-id="provar">Para provar</button></div>'+
-    (m==='provar'?viewProvar():viewLado());
-}
-/* ---- Curadoria "Para provar" ---- */
+/* ---- Aba Cesta: por enquanto, o catálogo (ex-Para provar) ---- */
+function viewCesta(){return viewCatalogo();}
+/* ---- Curadoria: Catálogo da aba Cesta ---- */
 var SEG_LABEL={c:'Cuba',f:'Fora de Cuba',n:'Nacional'};
 function catCard(r){var it=r.it,meta=[SEG_LABEL[it.seg]];
   if(it.country&&it.country!=='Cuba'&&it.country!=='Brasil')meta.push(it.country);if(it.fmt)meta.push(it.fmt);if(it.bitola)meta.push(it.bitola);
@@ -1607,10 +1607,10 @@ function catListHtml(P){P=P||tasteProfile(state.cigars,state.sessions);var R=cur
   var h='<p class="faint catcount" aria-live="polite">'+R.length+(R.length>1?' charutos':' charuto')+(state.catQ?' para “'+esc(state.catQ)+'”':'')+'</p><div class="list">'+R.slice(0,n).map(function(r){return catCard(r);}).join('')+'</div>';
   if(R.length>n)h+='<button class="btn ghost" data-act="catmore">Mostrar mais '+Math.min(12,R.length-n)+'</button>';
   return h;}
-function viewProvar(){var P=tasteProfile(state.cigars,state.sessions),items=catalogItems(),seg=state.catSeg||'todos';
-  var h='<div class="panel"><h2>Para provar</h2><p class="muted" style="font-size:14px">Catálogo de referência com '+items.length+' charutos, ordenado pelo que as suas sessões mostram: marca, linha, origem, capa, formato e força. Sem preços nem lojas.</p>';
-  h+=P.n<3?'<p class="faint" style="font-size:13px">'+(P.n?'Você tem '+P.n+(P.n>1?' sessões':' sessão')+' com nota':'Você ainda não tem sessões com nota')+'. Por enquanto a ordem segue só a força de referência, de suave a média. A partir de 3 sessões com nota, ela passa a seguir o seu paladar.</p>'
-    :'<p class="faint" style="font-size:13px">Baseado em '+P.n+' sessões com nota (média '+fmt1(P.mean)+'). O que você já provou fica fora da lista; para rever, use a busca.</p>';
+function viewCatalogo(){var P=tasteProfile(state.cigars,state.sessions),items=catalogItems(),seg=state.catSeg||'todos';
+  var h='<div class="panel"><h2>Catálogo</h2><p class="muted" style="font-size:14px">Catálogo de referência com '+items.length+' charutos, ordenado pelo que as suas sessões e o seu Acervo mostram: marca, linha, origem, capa, formato e força. Sem preços nem lojas.</p>';
+  h+=P.n<3?'<p class="faint" style="font-size:13px">'+(P.n?'Você tem '+P.n+(P.n>1?' sessões':' sessão')+' com nota':'Você ainda não tem sessões com nota')+'. Por enquanto a ordem segue a força de referência, de suave a média, e o que está no seu Acervo. A partir de 3 sessões com nota, ela passa a seguir o seu paladar.</p>'
+    :'<p class="faint" style="font-size:13px">Baseado em '+P.n+' sessões com nota (média '+fmt1(P.mean)+') e no seu Acervo. O que você já provou fica fora da lista; para rever, use a busca.</p>';
   h+='<div class="row catseg" role="group" aria-label="Origem">'+[['todos','Todos'],['c','Cubanos'],['f','Fora de Cuba'],['n','Nacionais']].map(function(t){return '<button class="opt" aria-pressed="'+(seg===t[0])+'" data-act="catseg" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   h+='<label class="f" for="cat-q">Buscar no catálogo<input type="search" id="cat-q" data-catq value="'+esc(state.catQ||'')+'" placeholder="ex.: Oliva, robusto, maduro" autocomplete="off"></label></div>';
   h+='<div id="cat-list">'+catListHtml(P)+'</div>';
@@ -1626,7 +1626,7 @@ function addFromCatalog(id){var it=catalogItems().filter(function(x){return x.id
   render();toast(it.name+' foi para a cesta, no Acervo.');}
 function viewLado(){
   var ds=done();
-  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida. Enquanto isso, veja a aba Para provar.</span></div>';
+  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida. Enquanto isso, veja o catálogo na aba Cesta.</span></div>';
   if(!sessionById(state.cmpA))state.cmpA=ds[0].id;
   if(!sessionById(state.cmpB)||state.cmpB===state.cmpA)state.cmpB=(ds[1]||ds[0]).id;
   function opts(sel){return ds.map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.cigarName+' · '+fmtDate(s.createdAt))+'</option>';}).join('');}
@@ -1915,7 +1915,7 @@ document.addEventListener('click',function(ev){
     case 'rmcigar': removeCigar(id); break;
     case 'addopen': state.addOpen=true; state.editCigar=null; render(); var f=document.getElementById('nc-name'); if(f)f.focus(); break;
     case 'addclose': state.addOpen=false; render(); break;
-    case 'cmpmode': state.cmpMode=id; render(); break;
+    case 'histmode': state.histMode=id; render(); break;
     case 'catseg': state.catSeg=id; state.catN=12; render(); break;
     case 'catmore': state.catN=(state.catN||12)+12; var cl=document.getElementById('cat-list'); if(cl)cl.innerHTML=catListHtml(); break;
     case 'catcesta': addFromCatalog(id); break;
