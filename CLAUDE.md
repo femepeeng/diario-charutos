@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.10.0 (24/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.11.0 (25/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -43,14 +43,18 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 ## Funcionalidades por área
 
+- **Navegação** (2.11.0): a barra tem Início, Acervo e Conta e cabe inteira a 360 px. A Conta tem as sub-abas Histórico, Paladar, Cesta e Perfil, para todos, com ou sem login no clube.
+  - Tocar em Conta abre o Perfil quando há mensagem não lida (`novaMsg()`). Sem ela, abre a última sub-aba usada nesta sessão do app (`state.contaSec`, só na memória) ou, na primeira vez, o Histórico.
+  - Os valores de `state.tab` não mudaram (`historico`, `paladar`, `cesta` e `conta`, que é o Perfil). O botão da Conta na barra leva `data-hub` e fica marcado em qualquer sub-aba (`CONTA_SECS`, `isContaSec`). Os atalhos que apontam para uma sub-aba abrem direto nela: o nível do cabeçalho abre o Paladar, e "Fazer backup", "Ir para Conta" e o aviso do Início abrem o Perfil.
+  - `viewHome` grava `state.contaSec` sempre que desenha uma sub-aba da Conta, inclusive quando o código muda `state.tab` direto (por exemplo, ao apagar uma sessão).
 - **Acervo:** filtros Todos/Cesta/Estoque/Arquivo, botões Cesta e Estoque, editar e remover charuto, ficha do charuto (formato pela bitola, capa, terroir, corte) e sugestão da próxima degustação.
 - **Sessão:** cronômetro, momento (pré-preenchido com o da última sessão), bebida, foto da anilha (câmera ou galeria), notas por terço em 8 famílias (incluindo "Gostos na boca"), missão de aroma, dicas do guia por terço e fechamento com força, queima, tiragem, bem-estar (alerta de mal-estar), nota, recompraria, impressão e visibilidade.
-- **Histórico:** duas sub-abas.
+- **Histórico** (Conta › Histórico): duas sub-abas.
   - **Sessões:** detalhe, edição com troca de charuto e de duração, ajustar a força no Acervo e adicionar charuto avulso ao Acervo.
   - **Lado a lado** (era a aba Comparar até a 2.9.0): duas sessões em tabela e, embaixo, os 3 charutos do catálogo mais parecidos com o da nota maior (`similarTo`).
-- **Paladar:** jornada (níveis Iniciante → Mestre, 15 conquistas calculadas do diário), análise (força × nota, sabores acima e abaixo da média, ranking, força esperada × sentida, hábitos) e Escola do charuto (8 lições).
+- **Paladar** (Conta › Paladar): jornada (níveis Iniciante → Mestre, 15 conquistas calculadas do diário), análise (força × nota, sabores acima e abaixo da média, ranking, força esperada × sentida, hábitos) e Escola do charuto (8 lições).
 - **Início** (aba de abertura): com o diário vazio (sem charutos e sem sessões), um bloco "Comece seu diário" no topo leva a "Adicionar primeiro charuto" (abre o formulário no Acervo) e a "Importar backup". Abaixo, o Guia de bolso em carrossel, com a Dica do dia (dia do ano mod 7) e três ferramentas no detalhe do tópico: Conservação (`humidorStatus`), Corte (`cutTipOf` por vitola) e Ritmo (marcador de baforada de 30, 45 ou 60 s).
-- **Cesta** (2.10.0, no lugar da aba Comparar): monta um pedido de 3 a 8 charutos para o Felipe mandar à loja pelo WhatsApp. O app só escreve a lista, sem preço, loja nem link.
+- **Cesta** (Conta › Cesta; entrou na 2.10.0 no lugar da aba Comparar): monta um pedido de 3 a 8 charutos para o Felipe mandar à loja pelo WhatsApp. O app só escreve a lista, sem preço, loja nem link.
   - **Montagem** (`cestaPlan`, pura):
     - Primeiro entram os charutos do Acervo com Cesta.
     - Depois, até ⌊N/3⌋ de **Repor**: provados cuja resposta mais recente de "Recompraria" é Sim, fora o que está em Estoque.
@@ -72,8 +76,8 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
     - O perfil e os selos são calculados uma vez por desenho da aba (`cestaPerfil`, `cestaSelos`; `cestaPlan` aceita o perfil pronto em `opt.P`). A busca e o "Mostrar mais" os reaproveitam, sem remontar a cesta a cada tecla.
   - **Reforço do Acervo** (2.10.0): charutos com Cesta ou Estoque ainda sem nota reforçam de leve a marca, a linha, a origem, a capa e o formato deles (`ACV_W`, teto de 0,6 por item). O motivo aparece como "Parecido com o que você tem no Acervo: …".
 - **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho.
-- **Conta:** login, backup e atalho para o guia.
-  - **Inscrito:** painel Mensagens (conversa com a administração e avisos). Aviso não lido vira faixa no Início; mensagem não lida acende um ponto na aba Conta.
+- **Perfil** (Conta › Perfil; até a 2.10.0 era o conteúdo da aba Conta): login, backup e atalho para o guia.
+  - **Inscrito:** painel Mensagens (conversa com a administração e avisos). Aviso não lido vira faixa no Início; mensagem não lida acende um ponto na aba Conta e na sub-aba Perfil.
   - **Administrador:** painel Administração com Inscritos (suspender/reativar, tornar/tirar administrador, com confirmação), Mensagens (caixa de entrada por inscrito), Avisos e Convites (gerar link, usos, desativar).
 
 ### Catálogo da curadoria
@@ -95,7 +99,8 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
   - **Funções puras:** `node tests/guia.test.js`, `node tests/curadoria.test.js`, `node tests/clube.test.js` e `node tests/cesta.test.js` testam o que fica entre os marcadores `/* @pure:guia */`, `/* @pure:curadoria */`, `/* @pure:clube */` e `/* @pure:cesta */` (fecham com `/* @end:... */`). O teste da Cesta carrega a curadoria junto.
   - **SQL:** `node supabase/tests/fase2.test.mjs` testa o SQL do clube no PGlite.
   - **Interface:** `tests/ui-guia.js`, `tests/ui-curadoria.js`, `tests/ui-clube.js` e `tests/ui-cesta.js` rodam no navegador com o app aberto: `eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`. O `?` evita a cópia do service worker.
-    - Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim.
+    - Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim, inclusive `state.tab` e `state.contaSec`.
+    - O `ui-guia.js` também confere a navegação da Conta. Nessa seção ele tira o login só na memória (`cloud.user`), para valer a regra sem mensagem nova e nenhum toque chamar o clube.
     - O `ui-clube.js` também troca o cliente Supabase e o `clubApi` por versões falsas em memória (ganchos `__t.cloud`, `__t.setClubApi`, `__t.refreshClub`, `__t.canSync`).
     - O `ui-cesta.js` e o `ui-curadoria.js` guardam e restauram o estado da Cesta (gancho `__t.cesta` e `localStorage diario-cesta`). O `ui-cesta.js` também troca `navigator.share` e `navigator.clipboard` por versões falsas.
   - **À mão:** os botões "Adicionar à cesta" e "Guardar no estoque" gravam no diário; confira-os num navegador sem login no clube e apague depois os charutos de teste. No navegador embutido do app desktop, a área de transferência real falha, e o "Copiar" cai na seleção do texto. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
@@ -105,7 +110,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 1. Recuperação de senha depende de SMTP próprio (por exemplo Brevo ou Resend); hoje o administrador apaga o usuário e reconvida.
 2. Erros HTTP 400 no console com o clube logado, provavelmente downloads de fotos de anilha ausentes no Storage: investigar.
-3. Home em formato de blog: artigos tirados do guia. A lista de "charutos para provar" já existe, no Catálogo da aba Cesta (2.10.0).
+3. Home em formato de blog: artigos tirados do guia. A lista de "charutos para provar" já existe, no Catálogo de Conta › Cesta (2.10.0).
 4. Catálogo da curadoria: 272 dos 475 itens estão sem força de referência e 96 sem país. Preencher só com fonte verificável (site do fabricante ou review publicada), nunca por palpite.
-5. Clube: mensagens chegam quando o app abre (sem tempo real nem notificação push; push exigiria servidor e, no iPhone, app instalado). A 360 px a barra de abas rola, e a aba Conta, com o ponto de mensagem nova, pode ficar fora da tela. Na 2.10.0 a Cesta entrou no lugar de Comparar, e as abas passaram a somar 389 px para 326 px visíveis (eram 417 px). A solução definitiva seria uma barra no rodapé, com ícones.
+5. Clube: mensagens chegam quando o app abre (sem tempo real nem notificação push; push exigiria servidor e, no iPhone, app instalado).
 6. Ideias em aberto: quantidade em estoque com baixa automática ao encerrar sessão, perfil do membro no clube com conquistas, quiz do guia valendo pontos, canal beta com IndexedDB separado.
