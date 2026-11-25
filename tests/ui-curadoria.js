@@ -14,7 +14,10 @@
   var S = window.__t && __t.state;
   check('estado exposto para teste', !!S && !!__t.render);
   if (!S || !__t.render) return { ok: false, falhas: 1, resultados: R };
-  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, hist: S.histMode, seg: S.catSeg, q: S.catQ, n: S.catN, a: S.cmpA, b: S.cmpB };
+  /* O filtro de origem é o da Cesta (cesta.seg, guardado no localStorage diario-cesta): guarda e restaura os dois. */
+  var LS = 'diario-cesta', temCesta = typeof __t.cesta === 'function';
+  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, hist: S.histMode, q: S.catQ, n: S.catN, a: S.cmpA, b: S.cmpB,
+    cesta: temCesta ? JSON.stringify(__t.cesta()) : null, ls: localStorage.getItem(LS) };
   var T = { updatedAt: 1, syncedAt: 1 };
   function rec(o) { return Object.assign({}, T, o); }
   S.cigars = [
@@ -30,7 +33,8 @@
     ses('ui-s3', 'ui-c2', 'Partagás Serie D Nº 4', 5, 5, '2026-11-08T20:00:00Z'),
     ses('ui-s4', 'ui-c4', 'Hoyo de Monterrey Epicure No. 2', 8, 2, '2026-11-10T20:00:00Z')
   ];
-  S.view = 'home'; S.tab = 'historico'; S.histMode = 'lado'; S.catSeg = 'todos'; S.catQ = ''; S.catN = 12; S.cmpA = 'ui-s1'; S.cmpB = 'ui-s3';
+  if (temCesta) __t.cesta(Object.assign(JSON.parse(bk.cesta), { seg: 'todos', fora: [], enviados: [] }));
+  S.view = 'home'; S.tab = 'historico'; S.histMode = 'lado'; S.catQ = ''; S.catN = 12; S.cmpA = 'ui-s1'; S.cmpB = 'ui-s3';
   __t.render(); await wait(120);
 
   // ---- Barra e Histórico ----
@@ -97,7 +101,9 @@
   S.sessions = S.sessions.slice(0, 1); __t.render(); await wait(120);
   check('com menos de 3 sessões avisa que a ordem segue a força', /A partir de 3 sessões com nota/.test(document.body.textContent));
 
-  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.histMode = bk.hist; S.catSeg = bk.seg; S.catQ = bk.q; S.catN = bk.n; S.cmpA = bk.a; S.cmpB = bk.b;
+  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.histMode = bk.hist; S.catQ = bk.q; S.catN = bk.n; S.cmpA = bk.a; S.cmpB = bk.b;
+  if (temCesta) __t.cesta(JSON.parse(bk.cesta));
+  if (bk.ls == null) localStorage.removeItem(LS); else localStorage.setItem(LS, bk.ls);
   __t.render(); await wait(80);
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };

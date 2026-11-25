@@ -98,6 +98,10 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .catwhy{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--muted)}
 .catwhy li.warn{color:var(--warn)}
 .catseg .opt{min-height:44px}
+.cestaopts{display:flex; flex-direction:column; gap:6px}
+.cestasize{gap:4px}
+.cestasize .opt{flex:1 1 0; min-height:44px; min-width:44px; padding-left:0; padding-right:0; justify-content:center}
+.cestac .head .chip{flex:none}
 .catcount{font-size:13px; margin:0 0 8px}
 .cmpsim .list{gap:10px}
 .gwelcome{gap:10px; border:1.5px solid var(--line)}
@@ -893,6 +897,9 @@ var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 
   '<p>Dúvidas ou pedidos sobre seus dados: fale com o administrador do clube.</p>';
 
 var state={cigars:[],sessions:[],view:'home',tab:'inicio',detailId:null,postUid:null,step:0,cmpA:'',cmpB:'',confirmDelete:false,addOpen:false,loaded:false,dbError:false,confirm:''};
+/* Estado da aba Cesta: só neste aparelho (fora do backup e do clube). */
+var cesta=cestaLoad(ls('diario-cesta'));
+function cestaPersist(){ls('diario-cesta',cestaSave(cesta));}
 var draft=null, saveTimer=null, tick=null, wakeLock=null, installPrompt=null;
 var photoURL={}, busy={uploading:false,importing:false,persisted:null};
 
@@ -1432,6 +1439,7 @@ function ritmoStart(){ritmo.on=true;ritmo.inicio=Date.now();ritmo.ciclo=0;if(!ri
 function ritmoStop(){var era=ritmo.on||ritmo.timer;ritmo.on=false;if(ritmo.timer)clearInterval(ritmo.timer);ritmo.timer=null;if(era)releaseWake();}
 /* Ganchos de teste (tests/ui-guia.js). */
 window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,state:state,render:function(){render();},rerender:function(){rerender();},
+  cesta:function(v){if(v!==undefined)cesta=v;return cesta;},
   cloud:cloud,setClubApi:function(o){var p=clubApi;clubApi=o;return p;},refreshClub:function(f){return refreshClub(f);},canSync:function(){return canSync();}};
 function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
@@ -1586,11 +1594,36 @@ function paladarAnalysis(){
   if(ctx.length)h+='<div class="panel"><h3>Seus hábitos</h3>'+ctx.map(function(t){return '<p class="muted">'+t+'</p>';}).join('')+'</div>';
   return h;
 }
-/* ---- Aba Cesta: por enquanto, o catálogo (ex-Para provar) ---- */
-function viewCesta(){return viewCatalogo();}
+/* ---- Aba Cesta: pedidos enviados, montagem da cesta e Catálogo ---- */
+function cestaAtual(){return cestaPlan(catalogItems(),state.cigars,state.sessions,{size:cesta.size,seg:cesta.seg,fora:cesta.fora,enviados:cestaEnviadosKeys(cesta.enviados)});}
+/* Selos do Catálogo: o que está na cesta montada e o que está num pedido enviado. */
+function cestaMarks(plan){plan=plan||cestaAtual();var m={};plan.list.forEach(function(e){m[e.key]='cesta';});cestaEnviadosKeys(cesta.enviados).forEach(function(k){m[k]='enviado';});return m;}
+function cestaMeta(e){var a=e.it||cigarAttrs(e.c||{name:e.name}),m=[];if(SEG_LABEL[e.seg])m.push(SEG_LABEL[e.seg]);
+  if(a.country&&a.country!=='Cuba'&&a.country!=='Brasil')m.push(a.country);if(a.fmt)m.push(a.fmt);if(e.bitola)m.push(e.bitola);return m.join(' · ');}
+var CESTA_KIND={cesta:['Da cesta','chip st-cesta'],repor:['Repor','chip st-estoque'],novo:['Novo','chip']};
+function cestaCard(e){var k=CESTA_KIND[e.kind]||CESTA_KIND.novo,st=e.it?e.it.strength:((e.c&&e.c.strength)||0);
+  var h='<div class="card cestac" data-key="'+esc(e.key)+'" data-name="'+esc(e.name)+'"><div class="head"><div style="min-width:0"><h3>'+esc(e.name)+'</h3><div class="meta">'+esc(cestaMeta(e))+'</div></div><span class="'+k[1]+'">'+k[0]+'</span></div>';
+  if(st)h+='<div class="row">'+meter(st)+'<span class="meta">'+(e.it?'Força de referência: ':'Força no Acervo: ')+esc(strengthLabel(st))+'</span></div>';
+  var why=e.why||[],warn=e.warn||[];
+  if(why.length||warn.length)h+='<ul class="catwhy">'+why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+warn.map(function(w){return '<li class="warn">'+esc(w)+'</li>';}).join('')+'</ul>';
+  return h+'<div class="row"><button class="btn" data-act="cestatroca" data-id="'+esc(e.key)+'" aria-label="Trocar '+esc(e.name)+'">Trocar</button></div></div>';}
+function cestaPanelHtml(plan){var L=plan.list,h='<div class="panel" id="cesta"><h2>Cesta</h2><p class="muted" style="font-size:14px">Monte o pedido e envie para a loja pelo WhatsApp. O app escreve a lista; preço e disponibilidade ficam com a loja.</p>';
+  h+='<div class="cestaopts"><span class="faint" style="font-size:13px">Tamanho do pedido</span><div class="row cestasize" role="group" aria-label="Tamanho do pedido">'+[3,4,5,6,7,8].map(function(n){return '<button class="opt" aria-pressed="'+(plan.size===n)+'" data-act="cestasize" data-id="'+n+'">'+n+'</button>';}).join('')+'</div>';
+  h+='<span class="faint" style="font-size:13px">Origem</span><div class="row catseg" role="group" aria-label="Origem">'+[['todos','Todos'],['c','Cubanos'],['f','Fora de Cuba'],['n','Nacionais']].map(function(t){return '<button class="opt" aria-pressed="'+(cesta.seg===t[0])+'" data-act="catseg" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div></div>';
+  if(plan.sobra)h+='<p class="hint">'+(plan.sobra===1?'1 charuto da cesta ficou de fora.':plan.sobra+' charutos da cesta ficaram de fora.')+' Aumente o tamanho ou troque algum.</p>';
+  if(plan.faltam&&L.length)h+='<p class="hint">Não há mais opções com esse filtro: a cesta ficou com '+L.length+' de '+plan.size+'.</p>';
+  h+=L.length?'<div class="list" id="cesta-list">'+L.map(cestaCard).join('')+'</div>':'<div class="empty" id="cesta-list"><b>Nenhum charuto disponível com esse filtro.</b><span>Troque a origem ou use Desfazer trocas.</span></div>';
+  if(L.length)h+='<label class="f" for="cesta-texto">Texto do pedido<textarea id="cesta-texto" readonly rows="'+(L.length+3)+'">'+esc(pedidoTexto(L))+'</textarea></label>';
+  var acts=cestaAcoesHtml(plan)+(cesta.fora.length?'<button class="btn ghost" data-act="cestadesfaz">Desfazer trocas</button>':'');
+  if(acts)h+='<div class="row">'+acts+'</div>';
+  return h+'</div>';}
+/* Enviar e Copiar (pedido enviado): Task 5. */
+function cestaAcoesHtml(plan){return '';}
+function enviadosHtml(){return '';}
+function viewCesta(){var plan=cestaAtual();return enviadosHtml()+cestaPanelHtml(plan)+viewCatalogo(cestaMarks(plan));}
 /* ---- Curadoria: Catálogo da aba Cesta ---- */
 var SEG_LABEL={c:'Cuba',f:'Fora de Cuba',n:'Nacional'};
-function catCard(r){var it=r.it,meta=[SEG_LABEL[it.seg]];
+function catCard(r,marks){var it=r.it,mk=marks&&marks[normName(it.name)],meta=[SEG_LABEL[it.seg]];
   if(it.country&&it.country!=='Cuba'&&it.country!=='Brasil')meta.push(it.country);if(it.fmt)meta.push(it.fmt);if(it.bitola)meta.push(it.bitola);
   var h='<div class="card catc"><div class="head"><div style="min-width:0"><h3>'+esc(it.name)+'</h3><div class="meta">'+esc(meta.join(' · '))+'</div></div>'+
     (r.tasted!==undefined?'<div class="score num" aria-label="Sua nota">'+(r.tasted==null?'—':fmt1(r.tasted))+'</div>':'')+'</div>';
@@ -1599,21 +1632,22 @@ function catCard(r){var it=r.it,meta=[SEG_LABEL[it.seg]];
   if(tg.length)h+='<div class="tags">'+tg.map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join('')+'</div>';
   var why=r.why||[],warn=r.warn||[];
   if(why.length||warn.length)h+='<ul class="catwhy">'+why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+warn.map(function(w){return '<li class="warn">'+esc(w)+'</li>';}).join('')+'</ul>';
-  h+='<div class="row">'+(r.owned?'<span class="chip st-'+(r.owned==='cesta'?'cesta':r.owned==='estoque'?'estoque':'hist')+'">'+(r.owned==='cesta'?'Na cesta':r.owned==='estoque'?'Em estoque':'No acervo')+'</span>'
+  h+='<div class="row">'+(mk==='enviado'?'<span class="chip">Pedido enviado</span>'
+    :r.owned?'<span class="chip st-'+(r.owned==='cesta'?'cesta':r.owned==='estoque'?'estoque':'hist')+'">'+(r.owned==='cesta'?'Na cesta':r.owned==='estoque'?'Em estoque':'No acervo')+'</span>'
+    :mk==='cesta'?'<span class="chip st-cesta">Na cesta</span>'
     :'<button class="btn" data-act="catcesta" data-id="'+esc(it.id)+'">Adicionar à cesta</button>')+'</div>';
   return h+'</div>';}
-function catListHtml(P){P=P||tasteProfile(state.cigars,state.sessions);var R=curate(catalogItems(),P,{seg:state.catSeg,q:state.catQ}),n=state.catN||12;
+function catListHtml(P,marks){P=P||tasteProfile(state.cigars,state.sessions);marks=marks||cestaMarks();var R=curate(catalogItems(),P,{seg:cesta.seg,q:state.catQ}),n=state.catN||12;
   if(!R.length)return '<div class="empty"><b>Nada encontrado.</b><span>Tente outra marca, linha ou vitola, ou troque o filtro de origem.</span></div>';
-  var h='<p class="faint catcount" aria-live="polite">'+R.length+(R.length>1?' charutos':' charuto')+(state.catQ?' para “'+esc(state.catQ)+'”':'')+'</p><div class="list">'+R.slice(0,n).map(function(r){return catCard(r);}).join('')+'</div>';
+  var h='<p class="faint catcount" aria-live="polite">'+R.length+(R.length>1?' charutos':' charuto')+(state.catQ?' para “'+esc(state.catQ)+'”':'')+'</p><div class="list">'+R.slice(0,n).map(function(r){return catCard(r,marks);}).join('')+'</div>';
   if(R.length>n)h+='<button class="btn ghost" data-act="catmore">Mostrar mais '+Math.min(12,R.length-n)+'</button>';
   return h;}
-function viewCatalogo(){var P=tasteProfile(state.cigars,state.sessions),items=catalogItems(),seg=state.catSeg||'todos';
+function viewCatalogo(marks){var P=tasteProfile(state.cigars,state.sessions),items=catalogItems();
   var h='<div class="panel"><h2>Catálogo</h2><p class="muted" style="font-size:14px">Catálogo de referência com '+items.length+' charutos, ordenado pelo que as suas sessões e o seu Acervo mostram: marca, linha, origem, capa, formato e força. Sem preços nem lojas.</p>';
   h+=P.n<3?'<p class="faint" style="font-size:13px">'+(P.n?'Você tem '+P.n+(P.n>1?' sessões':' sessão')+' com nota':'Você ainda não tem sessões com nota')+'. Por enquanto a ordem segue a força de referência, de suave a média, e o que está no seu Acervo. A partir de 3 sessões com nota, ela passa a seguir o seu paladar.</p>'
     :'<p class="faint" style="font-size:13px">Baseado em '+P.n+' sessões com nota (média '+fmt1(P.mean)+') e no seu Acervo. O que você já provou fica fora da lista; para rever, use a busca.</p>';
-  h+='<div class="row catseg" role="group" aria-label="Origem">'+[['todos','Todos'],['c','Cubanos'],['f','Fora de Cuba'],['n','Nacionais']].map(function(t){return '<button class="opt" aria-pressed="'+(seg===t[0])+'" data-act="catseg" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   h+='<label class="f" for="cat-q">Buscar no catálogo<input type="search" id="cat-q" data-catq value="'+esc(state.catQ||'')+'" placeholder="ex.: Oliva, robusto, maduro" autocomplete="off"></label></div>';
-  h+='<div id="cat-list">'+catListHtml(P)+'</div>';
+  h+='<div id="cat-list">'+catListHtml(P,marks)+'</div>';
   return h+'<p class="faint" style="font-size:13px">Força de referência: aproximação por linha, a partir de classificações públicas de fabricantes e da crítica. Muda com safra e vitola, e o que você sente vale mais. Sem consenso, o campo fica sem referência.</p>';}
 function cmpSimilarHtml(A,B){var ra=typeof A.rating==='number'?A.rating:null,rb=typeof B.rating==='number'?B.rating:null;if(ra==null&&rb==null)return '';
   var W=rb==null||(ra!=null&&ra>=rb)?A:B,O=W===A?B:A,tie=ra!=null&&ra===rb&&A.cigarName!==B.cigarName;
@@ -1623,7 +1657,7 @@ function cmpSimilarHtml(A,B){var ra=typeof A.rating==='number'?A.rating:null,rb=
 function addFromCatalog(id){var it=catalogItems().filter(function(x){return x.id===id;})[0];if(!it)return;
   if(state.cigars.some(function(c){return normName(c.name)===normName(it.name);})){toast(it.name+' já está no acervo.');return;}
   put('cigars',{id:uid(),order:100+state.cigars.length,name:it.name,origin:it.country||'',vitola:it.bitola,strength:it.strength||0,wrapper:it.wrapper||'',expected:'',pairing:'',status:'cesta'});
-  render();toast(it.name+' foi para a cesta, no Acervo.');}
+  render();toast(it.name+' entrou na cesta.');}
 function viewLado(){
   var ds=done();
   if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida. Enquanto isso, veja o catálogo na aba Cesta.</span></div>';
@@ -1916,7 +1950,10 @@ document.addEventListener('click',function(ev){
     case 'addopen': state.addOpen=true; state.editCigar=null; render(); var f=document.getElementById('nc-name'); if(f)f.focus(); break;
     case 'addclose': state.addOpen=false; render(); break;
     case 'histmode': state.histMode=id; render(); break;
-    case 'catseg': state.catSeg=id; state.catN=12; render(); break;
+    case 'catseg': cesta.seg=id; cestaPersist(); state.catN=12; render(); break;
+    case 'cestasize': cesta.size=parseInt(id,10)||5; cestaPersist(); render(); break;
+    case 'cestatroca': if(id&&cesta.fora.indexOf(id)<0)cesta.fora.push(id); cestaPersist(); render(); break;
+    case 'cestadesfaz': cesta.fora=[]; cestaPersist(); render(); break;
     case 'catmore': state.catN=(state.catN||12)+12; var cl=document.getElementById('cat-list'); if(cl)cl.innerHTML=catListHtml(); break;
     case 'catcesta': addFromCatalog(id); break;
     case 'novo-charuto': state.tab='acervo'; state.view='home'; state.acvFilter='todos'; state.addOpen=true; state.editCigar=null; state.confirm=''; render(); var nf=document.getElementById('nc-name'); if(nf)nf.focus(); break;
