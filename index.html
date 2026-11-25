@@ -649,6 +649,75 @@ function similarTo(c,felt,items,P,n){var a=cigarAttrs(c),self=normName(c&&c.name
     if(sc>=2)out.push({it:it,score:sc,why:why,owned:P.owned[k]||''});});
   return out.sort(byScore).slice(0,n||3);}
 /* @end:curadoria */
+/* ===== Cesta: pedido montado pela afinidade (2.10.0) ===== */
+/* @pure:cesta */
+var SEG_PLURAL={c:'Cubanos',f:'Fora de Cuba',n:'Nacionais'};
+function cestaIndex(items){var o={};(items||[]).forEach(function(it){var k=normName(it.name);if(k&&!o[k])o[k]=it;});return o;}
+function cestaFlag(c,f){return String(c&&c.status||'').split(',').indexOf(f)>=0;}
+/* Origem de um charuto do Acervo: o segmento do item de mesmo nome; sem item, o país. Sem país, fica vazio (só entra no filtro Todos). */
+function cestaSeg(c,byName){var it=byName&&byName[normName(c&&c.name)];if(it)return it.seg;var k=cigarAttrs(c||{}).country;return k==='Cuba'?'c':k==='Brasil'?'n':k?'f':'';}
+/* Reposição: provados cuja resposta mais recente de "Recompraria" é Sim, fora o que está no Estoque. */
+function cestaRepor(cigars,sessions){var byId={},byKey={},g={},ord=[];
+  (cigars||[]).forEach(function(c){byId[c.id]=c;var k=normName(c.name);if(k&&!byKey[k])byKey[k]=c;});
+  (sessions||[]).forEach(function(s){if(s.status!=='concluida')return;var c0=s.cigarId?byId[s.cigarId]:null,name=c0?c0.name:s.cigarName,k=normName(name);if(!k)return;
+    var x=g[k];if(!x){x=g[k]={key:k,name:name,c:c0||byKey[k]||null,r:[],ans:'',at:'',last:''};ord.push(k);}
+    var t=String(s.endedAt||s.createdAt||'');if(typeof s.rating==='number')x.r.push(s.rating);if(t>x.last)x.last=t;
+    if(s.rebuy&&t>=x.at){x.ans=s.rebuy;x.at=t;}});
+  return ord.map(function(k){return g[k];}).filter(function(x){return x.ans==='Sim'&&!(x.c&&cestaFlag(x.c,'estoque'));})
+    .map(function(x){return {key:x.key,name:x.name,c:x.c,avg:x.r.length?cAvg(x.r):null,n:x.r.length,last:x.last};})
+    .sort(function(a,b){if(a.avg!==b.avg){if(a.avg==null)return 1;if(b.avg==null)return -1;return b.avg-a.avg;}return a.last<b.last?1:a.last>b.last?-1:0;});}
+/* Monta a cesta: primeiro o que está marcado Cesta no Acervo, depois até um terço de reposição, depois novos do catálogo pela afinidade. */
+function cestaPlan(items,cigars,sessions,opt){opt=opt||{};
+  var N=parseInt(opt.size,10);N=isNaN(N)?5:Math.min(8,Math.max(3,N));
+  var seg=opt.seg&&opt.seg!=='todos'?opt.seg:'',P=tasteProfile(cigars,sessions),byName=cestaIndex(items),ex={};
+  (opt.fora||[]).concat(opt.enviados||[]).forEach(function(k){ex[k]=1;});
+  var list=[],have={},lines={},brands={},sobra=0;
+  function add(e){list.push(e);have[e.key]=1;if(e.line)lines[e.line]=1;if(e.brand)brands[e.brand]=(brands[e.brand]||0)+1;}
+  function entry(kind,name,c,why){var k=normName(name),it=byName[k]||null,a=it?null:cigarAttrs(c||{name:name});
+    return {key:k,kind:kind,name:it?it.name:name,bitola:it?(it.bitola||''):((c&&c.vitola)||''),it:it,c:c||null,brand:it?it.brand:a.brand,line:it?it.line:a.line,
+      seg:it?it.seg:cestaSeg(c||{name:name},byName),why:why,warn:[]};}
+  (cigars||[]).filter(function(c){return cestaFlag(c,'cesta');}).map(function(c){var it=byName[normName(c.name)];return {c:c,sc:it?scoreItem(it,P).score:0};})
+    .sort(function(a,b){return b.sc-a.sc||(a.c.order||0)-(b.c.order||0);})
+    .forEach(function(x){var k=normName(x.c.name);if(!k||ex[k]||have[k])return;if(seg&&cestaSeg(x.c,byName)!==seg)return;
+      if(list.length>=N){sobra++;return;}add(entry('cesta',x.c.name,x.c,['Marcado na Cesta do Acervo']));});
+  var slots=Math.min(Math.floor(N/3),N-list.length);
+  cestaRepor(cigars,sessions).forEach(function(r){if(slots<=0||ex[r.key]||have[r.key])return;if(seg&&cestaSeg(r.c||{name:r.name},byName)!==seg)return;
+    add(entry('repor',r.name,r.c,['Recompraria: Sim'+(r.avg!=null?' · sua média '+f1(r.avg)+' em '+r.n+(r.n>1?' sessões':' sessão'):'')]));slots--;});
+  curate(items,P,{seg:seg}).forEach(function(r){if(list.length>=N)return;var k=normName(r.it.name);
+    if(ex[k]||have[k]||P.owned[k])return;if(r.it.line&&lines[r.it.line])return;if((brands[r.it.brand]||0)>=2)return;
+    add({key:k,kind:'novo',name:r.it.name,bitola:r.it.bitola||'',it:r.it,c:null,brand:r.it.brand,line:r.it.line,seg:r.it.seg,why:r.why.slice(0,2),warn:r.warn.slice(0,1)});});
+  return {list:list,faltam:N-list.length,sobra:sobra,size:N};}
+/* Texto do pedido: sem preço, loja nem link. */
+function pedidoTexto(list){if(!list||!list.length)return '';var n=list.length;
+  return ['Olá! Gostaria de fazer um pedido:'].concat(list.map(function(e){return '1 '+e.name+(e.bitola?' ('+e.bitola+')':'');}))
+    .concat([(n===1?'É 1 charuto.':'São '+n+' charutos.')+' Pode me confirmar a disponibilidade?']).join('\n');}
+/* Item de pedido enviado: guarda os dados do charuto, não o id do catálogo (que muda quando o catálogo é atualizado). */
+function pedidoItem(e){var it=e.it,c=e.c;
+  return {key:e.key,name:e.name,bitola:e.bitola||'',origin:it?(it.country||''):((c&&c.origin)||''),strength:it?(it.strength||0):((c&&c.strength)||0),
+    wrapper:it?(it.wrapper||''):((c&&c.wrapper)||''),cigarId:c?c.id:'',veio:true};}
+function novoPedido(plan,seg,iso,id){return {id:id,em:iso,seg:seg||'todos',itens:plan.list.map(pedidoItem),texto:pedidoTexto(plan.list)};}
+function pedidoResumo(p){var d=new Date(p&&p.em),n=((p&&p.itens)||[]).length,s=p&&SEG_PLURAL[p.seg];
+  var dt=isNaN(d.getTime())?'':('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
+  return [dt,s||'',n+(n===1?' charuto':' charutos')].filter(Boolean).join(' · ');}
+function cestaEnviadosKeys(enviados){var o={},out=[];(enviados||[]).forEach(function(p){((p&&p.itens)||[]).forEach(function(x){var k=normName(x&&x.name);if(k&&!o[k]){o[k]=1;out.push(k);}});});return out;}
+/* Chegada: o que veio vai para o Estoque; acha no Acervo pelo id e depois pelo nome, e cria o que não estiver lá. */
+function chegadaPlan(itens,cigars){var byId={},byKey={},seen={},up=[],cr=[],n=0;
+  (cigars||[]).forEach(function(c){byId[c.id]=c;var k=normName(c.name);if(k&&!byKey[k])byKey[k]=c;});
+  (itens||[]).forEach(function(x){if(!x||x.veio===false)return;var k=normName(x.name);if(!k||seen[k])return;seen[k]=1;n++;
+    var c=(x.cigarId&&byId[x.cigarId])||byKey[k];
+    if(c){if(String(c.status||'')!=='estoque')up.push({id:c.id,status:'estoque'});}
+    else cr.push({name:x.name,origin:x.origin||'',vitola:x.bitola||'',strength:x.strength||0,wrapper:x.wrapper||'',status:'estoque'});});
+  return {update:up,create:cr,chegou:n};}
+/* Estado da aba (localStorage diario-cesta): valor ausente, inválido ou fora do formato volta ao padrão, campo a campo. */
+function cestaLoad(raw){var d={v:1,size:5,seg:'todos',fora:[],enviados:[]},o=null;try{o=JSON.parse(raw);}catch(e){o=null;}
+  if(!o||typeof o!=='object'||Array.isArray(o))return d;
+  var n=parseInt(o.size,10);if(n>=3&&n<=8)d.size=n;
+  if(o.seg==='c'||o.seg==='f'||o.seg==='n')d.seg=o.seg;
+  if(Array.isArray(o.fora))d.fora=o.fora.filter(function(k){return typeof k==='string'&&k;}).slice(-200);
+  if(Array.isArray(o.enviados))d.enviados=o.enviados.filter(function(p){return p&&typeof p.id==='string'&&Array.isArray(p.itens);}).slice(-20);
+  return d;}
+function cestaSave(st){st=st||{};return JSON.stringify({v:1,size:st.size,seg:st.seg,fora:(st.fora||[]).slice(-200),enviados:(st.enviados||[]).slice(-20)});}
+/* @end:cesta */
 /* ===== Clube: administração, mensagens e avisos (2.9.0) ===== */
 /* @pure:clube */
 function p2(n){return (n<10?'0':'')+n;}
