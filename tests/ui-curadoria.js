@@ -1,4 +1,4 @@
-/* Verificações de interface da curadoria: Catálogo (aba Cesta) e Lado a lado (sub-aba do Histórico), rodadas no navegador com o app aberto.
+/* Verificações de interface da curadoria: Catálogo (Conta › Cesta) e Lado a lado (Conta › Histórico), rodadas no navegador com o app aberto.
    Uso no console (ou javascript_tool): eval(await (await fetch('/tests/ui-curadoria.js?' + Date.now())).text())
    Devolve {ok, falhas, resultados}. Não grava nada: troca charutos e sessões só na memória e restaura no fim.
    Os registros falsos levam syncedAt = updatedAt, então uma sincronização no meio do teste não os envia ao clube.
@@ -16,7 +16,7 @@
   if (!S || !__t.render) return { ok: false, falhas: 1, resultados: R };
   /* O filtro de origem é o da Cesta (cesta.seg, guardado no localStorage diario-cesta): guarda e restaura os dois. */
   var LS = 'diario-cesta', temCesta = typeof __t.cesta === 'function';
-  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, hist: S.histMode, q: S.catQ, n: S.catN, a: S.cmpA, b: S.cmpB,
+  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, sec: S.contaSec, view: S.view, hist: S.histMode, q: S.catQ, n: S.catN, a: S.cmpA, b: S.cmpB,
     cesta: temCesta ? JSON.stringify(__t.cesta()) : null, ls: localStorage.getItem(LS) };
   var T = { updatedAt: 1, syncedAt: 1 };
   function rec(o) { return Object.assign({}, T, o); }
@@ -38,7 +38,7 @@
   __t.render(); await wait(120);
 
   // ---- Barra e Histórico ----
-  check('barra tem Cesta e não tem Comparar', !!q('[data-act="tab"][data-id="cesta"]') && !q('[data-id="comparar"]'));
+  check('Conta tem a sub-aba Cesta e não há Comparar', !!q('.minitabs [data-act="tab"][data-id="cesta"]') && !q('[data-id="comparar"]'));
   check('Histórico tem as sub-abas Sessões e Lado a lado', !!act('histmode', 'sessoes') && !!act('histmode', 'lado'));
 
   // ---- Lado a lado ----
@@ -53,8 +53,8 @@
   // ---- Catálogo (aba Cesta) ----
   click(q('[data-act="tab"][data-id="cesta"]')); await wait(150);
   var tabC = q('[data-act="tab"][data-id="cesta"]');
-  check('aba Cesta fica selecionada', !!tabC && tabC.getAttribute('aria-selected') === 'true');
-  check('aba Cesta mostra o Catálogo', qa('h2').some(function (h) { return h.textContent === 'Catálogo'; }));
+  check('sub-aba Cesta fica selecionada', !!tabC && tabC.getAttribute('aria-selected') === 'true');
+  check('Cesta mostra o Catálogo', qa('h2').some(function (h) { return h.textContent === 'Catálogo'; }));
   check('lista começa com 12 cartões', qa('.catc').length === 12);
   check('primeiro cartão é da marca de nota mais alta (Montecristo)', /^Montecristo /.test(titles()[0] || ''));
   check('primeiro cartão explica o porquê', /Marca Montecristo/.test((q('.catc .catwhy') || {}).textContent || ''));
@@ -101,7 +101,7 @@
   S.sessions = S.sessions.slice(0, 1); __t.render(); await wait(120);
   check('com menos de 3 sessões avisa que a ordem segue a força', /A partir de 3 sessões com nota/.test(document.body.textContent));
 
-  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.histMode = bk.hist; S.catQ = bk.q; S.catN = bk.n; S.cmpA = bk.a; S.cmpB = bk.b;
+  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.contaSec = bk.sec; S.view = bk.view; S.histMode = bk.hist; S.catQ = bk.q; S.catN = bk.n; S.cmpA = bk.a; S.cmpB = bk.b;
   if (temCesta) __t.cesta(JSON.parse(bk.cesta));
   if (bk.ls == null) localStorage.removeItem(LS); else localStorage.setItem(LS, bk.ls);
   __t.render(); await wait(80);

@@ -76,7 +76,7 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 
 .tabs{display:flex; gap:4px; padding:4px; background:var(--surface); border-radius:14px; border:1px solid var(--line); overflow-x:auto; scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:1 0 auto; min-height:42px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
+.tabs button{flex:1 0 auto; min-height:44px; border:0; border-radius:10px; background:transparent; font-weight:600; color:var(--muted); font-size:15px; padding:0 10px}
 .tabs button[aria-selected="true"]{background:var(--surface2); color:var(--fg)}
 .ginicio{display:flex; flex-direction:column; gap:12px; min-width:0}
 .thread{display:flex; flex-direction:column; gap:8px}
@@ -154,7 +154,7 @@ details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 
 .rnum b{font-family:var(--f-display); font-size:44px; line-height:1}
 .rnum span{font-size:12px; color:var(--muted)}
 .minitabs{display:flex; gap:6px}
-.minitabs button{flex:1; min-height:40px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
+.minitabs button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
 .minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
 .minitabs button{white-space:nowrap; padding:0 6px; min-width:0}
 @media (max-width:400px){ .minitabs button{font-size:14px} }
@@ -1375,7 +1375,7 @@ function statusLine(){
   if(state.dbError)return '<span class="sdot bad"></span>Este navegador bloqueou o armazenamento. Abra pelo Chrome, fora da aba anônima.';
   if(!state.loaded)return 'Carregando seus registros…';
   if(!cloud.configured)return '<span class="sdot"></span>Registros salvos neste celular.';
-  if(!isMember())return '<span class="sdot"></span>Registros neste celular. Entre no clube na aba Conta para sincronizar.';
+  if(!isMember())return '<span class="sdot"></span>Registros neste celular. Entre no clube em Conta › Perfil para sincronizar.';
   if(cloud.ownerMismatch)return '<span class="sdot bad"></span>Sincronização pausada: os registros deste aparelho são de outra conta.';
   if(isSuspended())return '<span class="sdot warn"></span>Participação no clube suspensa. O diário continua neste celular.';
   var s=cloud.status;
@@ -1387,7 +1387,16 @@ function statusLine(){
 function clubButton(){if(!cloud.configured)return '';var on=state.tab==='clube',lbl=isMember()?'Abrir o clube':'Entrar no clube';
   return '<button class="crown" data-act="tab" data-id="'+(isMember()?'clube':'conta')+'" aria-label="'+lbl+'" title="'+lbl+'"'+(on?' aria-current="page"':'')+'>'+CROWN_ICON+(isMember()?'':'<span class="cdot" aria-hidden="true"></span>')+'</button>';}
 function viewHeader(){var j=state.loaded&&done().length?journey():null;return '<header class="top"><div class="toprow"><div class="toptitle"><div class="eyebrow">Charutos · paladar e sensações</div><h1>Diário de Degustação</h1></div>'+clubButton()+'</div>'+(j?'<button class="linkbtn lvl" style="text-decoration:none" data-act="tab" data-id="paladar"><b>'+esc(j.name)+'</b><span class="num faint">'+j.xp+' pts · '+j.on.length+' conquistas</span></button>':'')+'<p class="mode">'+statusLine()+'</p></header>';}
+/* Conta: Histórico, Paladar, Cesta e Perfil são sub-abas dela (2.11.0). Os valores de state.tab não mudaram;
+   'conta' é o Perfil. state.contaSec guarda a última sub-aba aberta nesta sessão do app, só na memória. */
+var CONTA_SECS=[['historico','Histórico'],['paladar','Paladar'],['cesta','Cesta'],['conta','Perfil']];
+function isContaSec(t){for(var i=0;i<CONTA_SECS.length;i++)if(CONTA_SECS[i][0]===t)return true;return false;}
+function novaMsg(){return !!(isMember()&&cloud.me&&cloud.me.unread_msgs>0);}
+function contaTabs(){var nm=novaMsg();
+  return '<div class="minitabs" role="tablist" aria-label="Conta">'+CONTA_SECS.map(function(t){var dot=nm&&t[0]==='conta';
+    return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(dot?' aria-label="Perfil, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';}
 function viewHome(){
+  if(isContaSec(state.tab))state.contaSec=state.tab;
   var h=viewHeader();
   var live=openSession();
   if(live){h+='<div class="card live"><div class="head"><div><div class="eyebrow">Sessão em andamento</div><h3>'+esc(live.cigarName)+'</h3><div class="meta num">'+fmtClock(elapsed(live))+' · '+esc(live.moment||'momento não marcado')+'</div></div><button class="btn primary" data-act="resume" data-id="'+esc(live.id)+'">Retomar</button></div></div>';}
@@ -1397,9 +1406,10 @@ function viewHome(){
       var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
       var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
       h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
-  var novaMsg=isMember()&&cloud.me&&cloud.me.unread_msgs>0;
-  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['historico','Histórico'],['paladar','Paladar'],['cesta','Cesta'],['conta','Conta']].map(function(t){var dot=t[0]==='conta'&&novaMsg;
-    return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
+  var nm=novaMsg(),naConta=isContaSec(state.tab);
+  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['conta','Conta']].map(function(t){var hub=t[0]==='conta',dot=hub&&nm;
+    return '<button role="tab" aria-selected="'+(hub?naConta:state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(hub?' data-hub="1"':'')+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
+  if(naConta)h+=contaTabs();
   if(state.tab==='inicio')h+=viewInicio();
   else if(state.tab==='acervo')h+=viewAcervo();
   else if(state.tab==='historico')h+=viewHistorico();
@@ -1537,8 +1547,8 @@ function postCard(it){
 }
 function viewClube(){
   if(!cloud.configured)return '<div class="empty"><b>O clube ainda não foi configurado neste app.</b><span>O administrador precisa preencher o arquivo config.js com os dados do Supabase. Enquanto isso, o diário funciona normalmente neste celular.</span></div>';
-  if(!isMember())return '<div class="empty"><b>Entre no clube para ver as degustações dos amigos.</b><span>Você precisa de um convite. Se já tem conta, entre pela aba Conta.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
-  if(isSuspended())return '<div class="empty"><b>Sua participação no clube está suspensa.</b><span>O diário deste celular continua funcionando. Para falar com a administração, use a aba Conta.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
+  if(!isMember())return '<div class="empty"><b>Entre no clube para ver as degustações dos amigos.</b><span>Você precisa de um convite. Se já tem conta, entre em Conta › Perfil.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
+  if(isSuspended())return '<div class="empty"><b>Sua participação no clube está suspensa.</b><span>O diário deste celular continua funcionando. Para falar com a administração, use Conta › Perfil.</span><div class="row"><button class="btn primary" data-act="tab" data-id="conta">Ir para Conta</button></div></div>';
   var h='<div class="row" style="justify-content:space-between"><h2>Clube</h2><button class="btn small" data-act="refreshfeed"'+(cloud.feedLoading?' disabled':'')+'>'+(cloud.feedLoading?'Atualizando…':'Atualizar')+'</button></div>';
   if(cloud.feedError)h+='<div class="alert"><b>Atenção</b><span>'+esc(cloud.feedError)+'</span></div>';
   if(!cloud.feed.length)return h+'<div class="empty"><b>Nenhuma degustação compartilhada ainda.</b><span>Ao encerrar uma sessão com "Compartilhar no clube" marcado, ela aparece aqui para os membros.</span></div>';
@@ -1694,7 +1704,7 @@ function addFromCatalog(id){var it=catalogItems().filter(function(x){return x.id
   render();toast(it.name+' entrou na cesta.');}
 function viewLado(){
   var ds=done();
-  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida. Enquanto isso, veja o catálogo na aba Cesta.</span></div>';
+  if(ds.length<2)return '<div class="empty"><b>Compare duas sessões lado a lado.</b><span>Registre pelo menos duas sessões. Sugestão: Montecristo #4 e Cohiba Siglo II, mesma bitola, em noites diferentes e com a mesma bebida. Enquanto isso, veja o catálogo em Conta › Cesta.</span></div>';
   if(!sessionById(state.cmpA))state.cmpA=ds[0].id;
   if(!sessionById(state.cmpB)||state.cmpB===state.cmpA)state.cmpB=(ds[1]||ds[0]).id;
   function opts(sel){return ds.map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.cigarName+' · '+fmtDate(s.createdAt))+'</option>';}).join('');}
@@ -1952,7 +1962,7 @@ document.addEventListener('click',function(ev){
     case 'corte': state.corteVit=id; render(); break;
     case 'ritmo-per': ritmo.periodo=parseInt(id,10)||45; if(ritmo.on){ritmo.inicio=Date.now();ritmo.ciclo=0;} render(); break;
     case 'ritmo-toggle': if(ritmo.on)ritmoStop();else ritmoStart(); render(); break;
-    case 'tab': state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); if(id==='conta'&&isMember())refreshClub(true); break;
+    case 'tab': if(b.hasAttribute('data-hub'))id=novaMsg()?'conta':(state.contaSec||'historico'); state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); if(id==='conta'&&isMember())refreshClub(true); break;
     case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;

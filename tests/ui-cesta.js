@@ -1,4 +1,4 @@
-/* Verificações de interface da aba Cesta, rodadas no navegador com o app aberto.
+/* Verificações de interface da Cesta (sub-aba da Conta), rodadas no navegador com o app aberto.
    Uso no console (ou javascript_tool): eval(await (await fetch('/tests/ui-cesta.js?' + Date.now())).text())
    Devolve {ok, falhas, resultados}. Não grava no diário: troca charutos e sessões só na memória e restaura no fim.
    Os registros falsos levam syncedAt = updatedAt, então uma sincronização no meio do teste não os envia ao clube.
@@ -15,7 +15,7 @@
   check('estado exposto para teste', !!S && !!__t.render && typeof __t.cesta === 'function');
   if (!S || !__t.render || typeof __t.cesta !== 'function') return { ok: false, falhas: 1, resultados: R };
   var LS = 'diario-cesta';
-  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, q: S.catQ, n: S.catN, confirm: S.confirm, pedOpen: S.pedOpen, cesta: JSON.stringify(__t.cesta()), ls: localStorage.getItem(LS) };
+  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, sec: S.contaSec, view: S.view, q: S.catQ, n: S.catN, confirm: S.confirm, pedOpen: S.pedOpen, cesta: JSON.stringify(__t.cesta()), ls: localStorage.getItem(LS) };
   var T = { updatedAt: 1, syncedAt: 1 };
   function rec(o) { return Object.assign({}, T, o); }
   S.cigars = [
@@ -48,7 +48,7 @@
   function grande(b) { var r = b.getBoundingClientRect(); return r.height >= 44 && r.width >= 44; }
 
   // ---- Montagem ----
-  check('barra tem Cesta e não tem Comparar', !!q('[data-act="tab"][data-id="cesta"]') && !q('[data-id="comparar"]'));
+  check('Conta tem a sub-aba Cesta e não há Comparar', !!q('.minitabs [data-act="tab"][data-id="cesta"]') && !q('[data-id="comparar"]'));
   check('tamanho 5 mostra 5 cartões', cards().length === 5);
   check('o primeiro cartão é Da cesta', cards().length > 0 && chip(cards()[0]) === 'Da cesta');
   var rep = cards().filter(function (c) { return chip(c) === 'Repor'; })[0];
@@ -147,7 +147,7 @@
     if (dClip) Object.defineProperty(navigator, 'clipboard', dClip); else delete navigator.clipboard;
   }
 
-  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.catQ = bk.q; S.catN = bk.n; S.confirm = bk.confirm; S.pedOpen = bk.pedOpen;
+  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.contaSec = bk.sec; S.view = bk.view; S.catQ = bk.q; S.catN = bk.n; S.confirm = bk.confirm; S.pedOpen = bk.pedOpen;
   __t.cesta(JSON.parse(bk.cesta));
   if (bk.ls == null) localStorage.removeItem(LS); else localStorage.setItem(LS, bk.ls);
   __t.render(); await wait(80);

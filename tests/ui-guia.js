@@ -10,8 +10,8 @@
   async function irInicio() { click(qa('[role=tab]').filter(function (b) { return b.innerText.trim() === 'Início'; })[0]); await wait(150); }
 
   // ---- Tarefa 1 ----
-  check('abas: Início,Acervo,Histórico,Paladar,Cesta,Conta',
-    qa('[role=tab]').map(function (b) { return b.innerText.trim(); }).join(',') === 'Início,Acervo,Histórico,Paladar,Cesta,Conta');
+  check('abas: Início,Acervo,Conta',
+    qa('[role=tab]').map(function (b) { return b.innerText.trim(); }).join(',') === 'Início,Acervo,Conta');
   check('aba aberta ao carregar é Início', (q('[role=tab][aria-selected=true]') || {}).innerText === 'Início');
   await irInicio();
   check('carrossel tem 7 cartões', qa('.gcard').length === 7);
@@ -143,6 +143,60 @@
     S.cigars = []; S.sessions = [{ id: 'teste-ui', cigarName: 'Teste', status: 'concluida', visibility: 'private', thirds: [], updatedAt: 1, syncedAt: 1 }]; __t.render(); await wait(120);
     check('só com sessões no Histórico: sem boas-vindas', !q('.gwelcome'));
     S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.addOpen = bk.add; __t.render(); await wait(120);
+  }
+
+  // ---- Navegação da Conta (2.11.0) ----
+  // Histórico, Paladar, Cesta e Perfil são sub-abas da Conta. O teste tira o login só na memória (cloud.user):
+  // assim vale a regra sem mensagem nova e nenhum toque chama o clube. Charutos e sessões falsos ficam só na
+  // memória (syncedAt = updatedAt). No fim restaura tudo, inclusive a última sub-aba (contaSec).
+  if (S && __t.render) {
+    var C = __t.cloud || null;
+    var nb = { c: S.cigars, s: S.sessions, tab: S.tab, sec: S.contaSec, hist: S.histMode, view: S.view, user: C ? C.user : null };
+    var CT = '.minitabs[aria-label="Conta"]';
+    var hub = function () { return q('.tabs [data-act="tab"][data-hub]'); };
+    var hubOn = function () { var b = hub(); return !!b && b.getAttribute('aria-selected') === 'true'; };
+    var subSel = function () { var b = q(CT + ' [role=tab][aria-selected="true"]'); return b ? b.getAttribute('data-id') : ''; };
+    var sub = async function (id) { click(q(CT + ' [data-act="tab"][data-id="' + id + '"]')); await wait(150); };
+    var appText = function () { return document.getElementById('app').textContent; };
+    try {
+      if (C) C.user = null;
+      S.cigars = [{ id: 'ui-nav-c', name: 'Teste Nav', status: 'estoque', strength: 3, updatedAt: 1, syncedAt: 1 }];
+      S.sessions = [{ id: 'ui-nav-s', cigarId: 'ui-nav-c', cigarName: 'Teste Nav', status: 'concluida', visibility: 'private', rating: 8, strength: 3,
+        thirds: [{}, {}, {}], createdAt: '2026-11-20T20:00:00Z', endedAt: '2026-11-20T21:00:00Z', updatedAt: 1, syncedAt: 1 }];
+      S.contaSec = undefined; S.tab = 'inicio'; S.view = 'home'; __t.render(); await wait(120);
+      var barra = q('.tabs');
+      check('barra cabe inteira', !!barra && barra.scrollWidth <= barra.clientWidth);
+      check('botões da barra com 44 px', qa('.tabs [role=tab]').length === 3 && qa('.tabs [role=tab]').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+      check('fora do clube, a linha de estado aponta para Conta › Perfil', /Entre no clube em Conta › Perfil para sincronizar\./.test((q('header.top .mode') || {}).textContent || ''));
+      click(hub()); await wait(150);
+      check('Conta abre o Histórico na primeira vez', S.tab === 'historico' && subSel() === 'historico' && hubOn());
+      var subs = qa(CT + ' [role=tab]');
+      check('Conta tem as sub-abas Histórico, Paladar, Cesta e Perfil', subs.map(function (b) { return b.innerText.trim(); }).join(',') === 'Histórico,Paladar,Cesta,Perfil');
+      check('sub-abas com 44 px', subs.length === 4 && subs.every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+      var marcada = true, ordem = ['paladar', 'cesta', 'conta', 'historico'];
+      for (var oi = 0; oi < ordem.length; oi++) { await sub(ordem[oi]); marcada = marcada && S.tab === ordem[oi] && subSel() === ordem[oi] && hubOn(); }
+      check('a aba Conta fica marcada em todas as sub-abas', marcada);
+      await sub('paladar'); await irInicio(); click(hub()); await wait(150);
+      check('Conta lembra a última sub-aba', S.tab === 'paladar' && subSel() === 'paladar');
+      await sub('cesta'); await irInicio(); click(q('header.top .lvl')); await wait(150);
+      check('nível do cabeçalho abre Conta › Paladar', S.tab === 'paladar' && subSel() === 'paladar' && hubOn());
+      S.tab = 'historico'; __t.render(); await wait(120); await irInicio(); click(hub()); await wait(150);
+      check('sub-aba aberta por atalho, sem toque na sub-aba, também vira a última', S.tab === 'historico' && subSel() === 'historico');
+      click(act('histmode', 'lado')); await wait(150);
+      var filas = qa(CT + ' [role=tab], .minitabs[aria-label="Histórico"] [role=tab]');
+      check('Histórico › Lado a lado sem rolagem horizontal, com 44 px nas duas fileiras', S.histMode === 'lado' && filas.length === 6 &&
+        filas.every(function (b) { return b.getBoundingClientRect().height >= 44; }) && document.documentElement.scrollWidth <= innerWidth);
+      check('Lado a lado vazio aponta o catálogo em Conta › Cesta', /veja o catálogo em Conta › Cesta\./.test(appText()));
+      S.tab = 'clube'; __t.render(); await wait(120);
+      check('fora do clube, o Clube aponta para Conta › Perfil', /Se já tem conta, entre em Conta › Perfil\./.test(appText()));
+      click(q('.empty [data-act="tab"][data-id="conta"]')); await wait(150);
+      check('Ir para Conta abre o Perfil com a Conta marcada', S.tab === 'conta' && subSel() === 'conta' && hubOn());
+    } catch (e) {
+      check('sem exceção na navegação da Conta: ' + e.message, false);
+    } finally {
+      if (C) C.user = nb.user;
+      S.cigars = nb.c; S.sessions = nb.s; S.tab = nb.tab; S.contaSec = nb.sec; S.histMode = nb.hist; S.view = nb.view; __t.render(); await wait(120);
+    }
   }
 
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;

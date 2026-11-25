@@ -9,7 +9,11 @@
   function qa(s) { return Array.prototype.slice.call(document.querySelectorAll(s)); }
   function click(el) { if (el) el.click(); }
   function act(a, id) { return q('[data-act="' + a + '"]' + (id != null ? '[data-id="' + id + '"]' : '')); }
-  function tab(id) { click(q('.tabs [data-act="tab"][data-id="' + id + '"]')); }
+  /* A Conta tem sub-abas desde a 2.11.0: tab('conta') toca na Conta da barra e, se ela não abriu o Perfil, toca na sub-aba Perfil. */
+  function tab(id) {
+    click(q('.tabs [data-act="tab"][data-id="' + id + '"]'));
+    if (id === 'conta' && S.tab !== 'conta') click(q('.minitabs [data-act="tab"][data-id="conta"]'));
+  }
   function toastText() { var t = q('#toast'); return t && !t.hidden ? t.textContent : ''; }
   function hideToast() { var t = q('#toast'); if (t) t.hidden = true; }
   function type(el, v) { el.focus(); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -22,7 +26,7 @@
   var LS = ['clube-owner', 'clube-feed', 'clube-profile'], lsBk = {};
   LS.forEach(function (k) { lsBk[k] = localStorage.getItem(k); });
   var bk = { sb: C.sb, user: C.user, profile: C.profile, checked: C.profileChecked, me: C.me, missing: C.clubMissing, club: C.club,
-    feed: C.feed, feedAt: C.feedAt, mismatch: C.ownerMismatch, tab: S.tab, view: S.view, confirm: S.confirm };
+    feed: C.feed, feedAt: C.feedAt, mismatch: C.ownerMismatch, tab: S.tab, view: S.view, confirm: S.confirm, sec: S.contaSec };
 
   // Cliente Supabase falso: qualquer cadeia de métodos termina em erro. Uma sincronização acidental durante o teste
   // falha em vez de receber listas vazias (que fariam o app apagar registros locais).
@@ -92,6 +96,15 @@
     click(act('avisook')); await wait(60);
     check('Dispensar marca o aviso como lido uma vez e tira a faixa', count(apiM, 'markAvisosRead') === 1 && !q('.aviso'));
 
+    // A última sub-aba foi a Cesta, mas há mensagem nova: a Conta abre o Perfil. A conferência é logo após o toque,
+    // antes de a conversa ser marcada como lida (o que apaga o ponto).
+    S.contaSec = 'cesta';
+    click(q('.tabs [data-act="tab"][data-hub]'));
+    var perfil = q('.minitabs [data-act="tab"][data-id="conta"]');
+    check('com mensagem nova, a aba Conta abre o Perfil, que também mostra o ponto', S.tab === 'conta' && !!perfil &&
+      perfil.getAttribute('aria-selected') === 'true' && !!perfil.querySelector('.tdot') && /nova mensagem/.test(perfil.getAttribute('aria-label') || '') && perfil.innerText.trim() === 'Perfil');
+    await wait(150);
+
     tab('conta'); await wait(150);
     var box = q('#msgs');
     check('Conta mostra o painel Mensagens com a conversa', !!box && /Mensagens/.test((box.querySelector('h3') || {}).textContent || '') && box.querySelectorAll('.msg').length === 2);
@@ -142,6 +155,7 @@
     check('suspenso: app não sincroniza', T.canSync() === false);
     click(q('[data-act="tab"][data-id="clube"]')); await wait(120);
     check('suspenso: Clube explica a suspensão no lugar do feed', /suspensa/.test(document.getElementById('app').textContent) && !q('.list article'));
+    check('suspenso: Clube aponta para Conta › Perfil', /use Conta › Perfil\./.test(document.getElementById('app').textContent));
 
     // ---- SQL da fase 2 ainda não aplicado ----
     hideToast();
@@ -266,7 +280,7 @@
   } finally {
     if (prevApi) T.setClubApi(prevApi);
     C.sb = bk.sb; C.user = bk.user; C.profile = bk.profile; C.profileChecked = bk.checked; C.me = bk.me; C.clubMissing = bk.missing; C.club = bk.club;
-    C.feed = bk.feed; C.feedAt = bk.feedAt; C.ownerMismatch = bk.mismatch; S.tab = bk.tab; S.view = bk.view; S.confirm = bk.confirm;
+    C.feed = bk.feed; C.feedAt = bk.feedAt; C.ownerMismatch = bk.mismatch; S.tab = bk.tab; S.view = bk.view; S.confirm = bk.confirm; S.contaSec = bk.sec;
     LS.forEach(function (k) { if (lsBk[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, lsBk[k]); });
     hideToast(); T.render();
   }
