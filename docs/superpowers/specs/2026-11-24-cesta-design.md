@@ -65,7 +65,7 @@ A cesta se preenche nesta ordem, sem repetir nome:
 
 1. **Da cesta.** Charutos do Acervo com Cesta marcada, fora os trocados e os de outra origem quando há filtro. Ordem pela pontuação de afinidade do item de catálogo de mesmo nome (sem item, conta 0), depois pela ordem do Acervo. Entram até N; os que passam disso são avisados ("2 charutos da cesta ficaram de fora; aumente o tamanho ou troque algum").
 2. **Repor.** Charutos já provados cuja sessão concluída mais recente com "Recompraria" respondido diz "Sim" (a mais recente pela data de fim, ou de início quando não houver). Ficam de fora os que estão com Estoque marcado, os trocados e os de outra origem. Ordem pela média das notas, da maior para a menor, e no empate pela sessão mais recente. Ocupam até ⌊N/3⌋ vagas (1 para N de 3 a 5, 2 para N de 6 a 8), limitadas às vagas que sobraram.
-3. **Novos.** A lista do catálogo pela afinidade, na ordem que a seção Catálogo mostra sem busca, sem os já provados, sem os que estão no Acervo em qualquer situação, sem os trocados e no filtro de origem. A busca do Catálogo não mexe na cesta. Para variar, um novo não repete uma linha que já está na cesta, e nenhuma marca passa de 2 charutos na cesta. Completam as vagas restantes.
+3. **Novos.** A lista do catálogo pela afinidade, na ordem que a seção Catálogo mostra sem busca, sem os já provados, sem os que estão no Acervo em qualquer situação, sem os trocados e no filtro de origem. A busca do Catálogo não mexe na cesta. Para variar, os novos evitam repetir uma linha que já está na cesta e evitam passar de 2 charutos da mesma marca. Se isso deixar vagas sem candidato (Nacionais, por exemplo, têm só 3 linhas), a cesta aceita repetir linha e, se ainda faltar, repetir marca. Completam as vagas restantes.
 
 Quando os candidatos acabam (por exemplo, Nacionais com tudo já provado), a cesta sai menor e diz quantas vagas ficaram sem opção com aquele filtro.
 
@@ -181,7 +181,7 @@ Versão 2.10.0 (recurso novo). Sem SQL, então a publicação é só o app, por 
 - Uma unidade de cada charuto; quantidade maior se ajusta no WhatsApp.
 - Tamanho padrão 5, lembrado entre aberturas.
 - Reposição: vale a resposta de "Recompraria" da sessão mais recente; "Talvez" não entra.
-- Variedade nos novos: sem repetir linha e no máximo 2 charutos da mesma marca na cesta.
+- Variedade nos novos é preferência: primeiro sem repetir linha e com no máximo 2 charutos da mesma marca; quando isso deixaria a cesta curta, ela repete linha e depois marca. Na primeira versão a regra era rígida, e a revisão final mostrou cestas de Cubanos e de Nacionais paradas abaixo do tamanho escolhido.
 - Reforço do acervo: só charutos com Cesta ou Estoque ainda sem nota, com teto de 0,6 ponto por item.
 - Charuto do Acervo sem origem conhecida só entra com o filtro Todos.
 - Copiar ou enviar marca o pedido como enviado; "Descartar" desfaz e devolve os charutos à montagem.

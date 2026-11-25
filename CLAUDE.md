@@ -54,7 +54,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
   - **Montagem** (`cestaPlan`, pura):
     - Primeiro entram os charutos do Acervo com Cesta.
     - Depois, até ⌊N/3⌋ de **Repor**: provados cuja resposta mais recente de "Recompraria" é Sim, fora o que está em Estoque.
-    - O resto são **Novos** do catálogo, pela afinidade (`curate`), sem repetir linha e com no máximo 2 da mesma marca.
+    - O resto são **Novos** do catálogo, pela afinidade (`curate`). De preferência sem repetir linha e com no máximo 2 da mesma marca; se faltar candidato no filtro (Nacionais têm só 3 linhas), a cesta repete linha e depois marca.
     - O filtro de origem (Todos/Cubanos/Fora de Cuba/Nacionais) vale para a cesta e para o Catálogo.
     - "Trocar" passa a vaga ao próximo candidato; "Desfazer trocas" esvazia a lista de trocas.
     - Charuto do Acervo sem origem conhecida só entra no filtro Todos.
@@ -69,6 +69,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
     - O que já foi provado sai da lista, mas aparece na busca com a nota.
     - Com menos de 3 sessões com nota, a ordem segue a força de referência, de suave a média.
     - Os selos "Na cesta" e "Pedido enviado" marcam o que já está na montagem ou a caminho.
+    - O perfil e os selos são calculados uma vez por desenho da aba (`cestaPerfil`, `cestaSelos`; `cestaPlan` aceita o perfil pronto em `opt.P`). A busca e o "Mostrar mais" os reaproveitam, sem remontar a cesta a cada tecla.
   - **Reforço do Acervo** (2.10.0): charutos com Cesta ou Estoque ainda sem nota reforçam de leve a marca, a linha, a origem, a capa e o formato deles (`ACV_W`, teto de 0,6 por item). O motivo aparece como "Parecido com o que você tem no Acervo: …".
 - **Clube:** feed, curtidas e comentários. Fora da barra de abas: abre pela coroa no cabeçalho.
 - **Conta:** login, backup e atalho para o guia.

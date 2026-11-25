@@ -74,6 +74,13 @@
   if (inp && nome) { inp.focus(); inp.value = nome; inp.dispatchEvent(new Event('input', { bubbles: true })); await wait(100); }
   var cc = qa('#cat-list .catc').filter(function (c) { return c.querySelector('h3').textContent === nome; })[0];
   check('Catálogo mostra Na cesta para um charuto da montagem, sem o botão', !!cc && /Na cesta/.test(cc.textContent) && !cc.querySelector('[data-act="catcesta"]'));
+  /* A busca não remonta a cesta: os selos seguem a cesta que está na tela, mesmo que o estado mude antes do próximo desenho. */
+  var key2 = nv && nv.getAttribute('data-key');
+  if (key2) __t.cesta().fora.push(key2);
+  if (inp && nome) { inp.value = nome + ' '; inp.dispatchEvent(new Event('input', { bubbles: true })); await wait(100); inp.value = nome; inp.dispatchEvent(new Event('input', { bubbles: true })); await wait(100); }
+  var cc2 = qa('#cat-list .catc').filter(function (c) { return c.querySelector('h3').textContent === nome; })[0];
+  check('durante a busca, os selos seguem a cesta que está na tela', !!cc2 && /Na cesta/.test(cc2.textContent));
+  if (key2) __t.cesta().fora.pop();
   if (inp) { inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.blur(); }
   click(act('cestasize', '6')); await wait(100); click(act('catseg', 'f')); await wait(100);
   var guardado = {}; try { guardado = JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) {}
@@ -99,6 +106,8 @@
     check('Enviar compartilha exatamente o texto da tela', shared.length === 1 && !!txt1 && shared[0] === txt1);
     var peds = qa('#enviados details[data-ped]');
     check('Pedidos enviados mostra 1 pedido, com o resumo', peds.length === 1 && /charutos?$/.test(((peds[0] && peds[0].querySelector('summary')) || {}).textContent || ''));
+    var sm = peds[0] && peds[0].querySelector('summary');
+    check('o bloco do pedido mostra o marcador de abrir e fechar, com 44 px', !!sm && getComputedStyle(sm).display === 'list-item' && sm.getBoundingClientRect().height >= 44);
     check('a cesta se remonta sem os charutos enviados', keys().length > 0 && keys().every(function (k) { return k1.indexOf(k) < 0; }));
     check('as trocas se apagam depois do envio', __t.cesta().fora.length === 0);
     click(q('#enviados [data-act="pedveio"][data-val="0"]')); await wait(100);
@@ -110,6 +119,10 @@
     check('Copiar guarda um segundo pedido com o texto da tela', copied.length === 1 && !!txt2 && copied[0] === txt2 && qa('#enviados details[data-ped]').length === 2);
     shareMode = 'abort'; click(act('cestaenviar')); await wait(200); shareMode = 'ok';
     check('compartilhamento cancelado não guarda pedido', qa('#enviados details[data-ped]').length === 2 && __t.cesta().enviados.length === 2);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: function () { return Promise.reject(new Error('negado')); } } });
+    click(act('cestacopiar')); await wait(200);
+    check('cópia que falha seleciona o texto e não guarda pedido', __t.cesta().enviados.length === 2 && document.activeElement === q('#cesta-texto'));
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: function (t) { copied.push(t); return Promise.resolve(); } } });
     Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }); __t.render(); await wait(100);
     check('sem navigator.share, só Copiar aparece', !act('cestaenviar') && !!act('cestacopiar'));
     Object.defineProperty(navigator, 'share', { configurable: true, value: fakeShare }); __t.render(); await wait(100);

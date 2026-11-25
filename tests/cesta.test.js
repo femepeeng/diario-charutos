@@ -9,7 +9,7 @@ const pick = tag => [...html.matchAll(new RegExp('\\/\\* @pure:' + tag + ' \\*\\
 const blocks = pick('curadoria').concat(pick('cesta'));
 const sb = {};
 vm.createContext(sb);
-const NOMES = ['normName', 'catalogItems', 'SEG_PLURAL', 'cestaIndex', 'cestaSeg', 'cestaRepor', 'cestaPlan', 'pedidoTexto', 'pedidoItem',
+const NOMES = ['normName', 'catalogItems', 'tasteProfile', 'SEG_PLURAL', 'cestaIndex', 'cestaSeg', 'cestaRepor', 'cestaPlan', 'pedidoTexto', 'pedidoItem',
   'novoPedido', 'pedidoResumo', 'cestaEnviadosKeys', 'chegadaPlan', 'cestaLoad', 'cestaSave'];
 vm.runInContext(blocks.join('\n') + '\nthis.__x={' + NOMES.map(n => n + ':typeof ' + n + '!=="undefined"?' + n + ':undefined').join(',') + '};', sb);
 const X = sb.__x;
@@ -145,6 +145,38 @@ test('faltam: filtro sem candidatos suficientes', () => {
   const p = plan({ size: 8, seg: 'n', fora: nac.slice(0, 7) });
   assert.strictEqual(p.faltam, 8 - p.list.length);
   assert.ok(p.faltam > 0, 'faltam ' + p.faltam);
+});
+// ---- Correções da revisão final ----
+test('variedade é preferência: Nacionais com o diário vazio enche a cesta de 5, variando primeiro', () => {
+  const p = X.cestaPlan(ITEMS, [], [], { size: 5, seg: 'n', fora: [], enviados: [] });
+  assert.strictEqual(p.list.length, 5, plain(p.list.map(e => e.name)).join(', '));
+  assert.strictEqual(p.faltam, 0);
+  const linhas = p.list.slice(0, 3).map(e => e.line);
+  assert.strictEqual(new Set(linhas).size, 3, 'os 3 primeiros deveriam ser de linhas diferentes: ' + linhas.join(', '));
+});
+test('Cubanos com histórico: a cesta de 8 chega a 8', () => {
+  const C = [
+    { id: 'h1', name: 'Cohiba Siglo II', origin: 'Cuba', vitola: '129 x 42', strength: 4, status: 'cesta', order: 1 },
+    { id: 'h2', name: 'Montecristo #4', origin: 'Cuba', vitola: '129 x 42', strength: 3, status: '' },
+    { id: 'h3', name: 'Bolívar Belicosos Finos', origin: 'Cuba', vitola: '140 x 52', strength: 5, status: '' },
+    { id: 'h4', name: 'Trinidad Vigía', origin: 'Cuba', vitola: '110 x 54', strength: 4, status: '' },
+    { id: 'h5', name: 'H. Upmann Half Corona', origin: 'Cuba', vitola: '90 x 44', strength: 2, status: '' }
+  ];
+  const S2 = [ses('h2', 'Montecristo #4', 9, 'Sim', '11-01'), ses('h3', 'Bolívar Belicosos Finos', 6, '', '11-02'),
+    ses('h4', 'Trinidad Vigía', 7, '', '11-03'), ses('h5', 'H. Upmann Half Corona', 8, '', '11-04')];
+  const p = X.cestaPlan(ITEMS, C, S2, { size: 8, seg: 'c', fora: [], enviados: [] });
+  assert.strictEqual(p.list.length, 8, plain(p.list.map(e => e.name)).join(', '));
+  assert.ok(p.list.every(e => e.seg === 'c'));
+});
+test('cestaPlan usa o perfil pronto em opt.P', () => {
+  const P = X.tasteProfile(CIG, SES), nv = plan().list.find(e => e.kind === 'novo');
+  P.owned[nv.key] = 'estoque';
+  const B = X.cestaPlan(ITEMS, CIG, SES, { size: 5, seg: 'todos', fora: [], enviados: [], P });
+  assert.ok(!B.list.some(e => e.key === nv.key), 'o perfil recebido foi ignorado');
+});
+test('cestaLoad descarta itens inválidos e pedidos que ficam vazios', () => {
+  const st = X.cestaLoad('{"enviados":[{"id":"p1","itens":[null,{"name":"A","veio":true},5,{"x":1}]},{"id":"p2","itens":[null]}]}');
+  assert.deepStrictEqual(plain(st.enviados), [{ id: 'p1', itens: [{ name: 'A', veio: true }] }]);
 });
 test('tamanho fora de 3 a 8', () => {
   assert.strictEqual(plan({ size: 12 }).size, 8);
