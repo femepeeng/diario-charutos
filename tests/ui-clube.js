@@ -114,6 +114,7 @@
     check('texto da mensagem não vira HTML nem link', !!adm && /<b>x<\/b>/.test(adm.textContent) && !adm.querySelector('b,a'));
     check('avisos aparecem na Conta', /Nova versão no ar/.test((q('#avisos') || {}).textContent || ''));
     check('quem já é membro consegue abrir as regras do clube na Conta', !!q('#regras summary'));
+    check('regras levam a Conta › Perfil › Excluir minha conta', /em Conta › Perfil › Excluir minha conta\./.test((q('#regras') || {}).textContent || ''));
 
     var nThread = count(apiM, 'thread');
     type(q('#msg-body'), '  Olá  ');
