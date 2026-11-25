@@ -15,7 +15,7 @@
   check('estado exposto para teste', !!S && !!__t.render && typeof __t.cesta === 'function');
   if (!S || !__t.render || typeof __t.cesta !== 'function') return { ok: false, falhas: 1, resultados: R };
   var LS = 'diario-cesta';
-  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, q: S.catQ, n: S.catN, confirm: S.confirm, cesta: JSON.stringify(__t.cesta()), ls: localStorage.getItem(LS) };
+  var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, q: S.catQ, n: S.catN, confirm: S.confirm, pedOpen: S.pedOpen, cesta: JSON.stringify(__t.cesta()), ls: localStorage.getItem(LS) };
   var T = { updatedAt: 1, syncedAt: 1 };
   function rec(o) { return Object.assign({}, T, o); }
   S.cigars = [
@@ -83,9 +83,58 @@
     qa('[data-act="cestasize"],[data-act="catseg"],[data-act="cestatroca"]').every(grande));
   check('página sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
 
-  // ---- Envio ---- (Task 5)
+  // ---- Envio ----
+  /* navigator.share e navigator.clipboard falsos, que guardam o texto recebido; os originais voltam no finally. */
+  var shared = [], copied = [], shareMode = 'ok';
+  var dShare = Object.getOwnPropertyDescriptor(navigator, 'share'), dClip = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  function fakeShare(o) { if (shareMode === 'abort') return Promise.reject({ name: 'AbortError' }); shared.push(o && o.text); return Promise.resolve(); }
+  Object.defineProperty(navigator, 'share', { configurable: true, value: fakeShare });
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: function (t) { copied.push(t); return Promise.resolve(); } } });
+  try {
+    __t.cesta({ v: 1, size: 5, seg: 'todos', fora: [], enviados: [] }); S.confirm = ''; __t.render(); await wait(120);
+    check('Enviar pedido aparece quando há compartilhamento', !!act('cestaenviar'));
+    click(q('#cesta-list .cestac:last-child [data-act="cestatroca"]')); await wait(100);
+    var txt1 = ((q('#cesta-texto') || {}).value) || '', k1 = keys();
+    click(act('cestaenviar')); await wait(200);
+    check('Enviar compartilha exatamente o texto da tela', shared.length === 1 && !!txt1 && shared[0] === txt1);
+    var peds = qa('#enviados details[data-ped]');
+    check('Pedidos enviados mostra 1 pedido, com o resumo', peds.length === 1 && /charutos?$/.test(((peds[0] && peds[0].querySelector('summary')) || {}).textContent || ''));
+    check('a cesta se remonta sem os charutos enviados', keys().length > 0 && keys().every(function (k) { return k1.indexOf(k) < 0; }));
+    check('as trocas se apagam depois do envio', __t.cesta().fora.length === 0);
+    click(q('#enviados [data-act="pedveio"][data-val="0"]')); await wait(100);
+    __t.render(); await wait(100);
+    var b0 = q('#enviados [data-act="pedveio"][data-val="0"]'), det = q('#enviados details[data-ped]');
+    check('Chegou desligado continua desligado depois do redesenho, com o bloco aberto', !!b0 && b0.getAttribute('aria-pressed') === 'false' && !!det && det.open);
+    var txt2 = ((q('#cesta-texto') || {}).value) || '';
+    click(act('cestacopiar')); await wait(200);
+    check('Copiar guarda um segundo pedido com o texto da tela', copied.length === 1 && !!txt2 && copied[0] === txt2 && qa('#enviados details[data-ped]').length === 2);
+    shareMode = 'abort'; click(act('cestaenviar')); await wait(200); shareMode = 'ok';
+    check('compartilhamento cancelado não guarda pedido', qa('#enviados details[data-ped]').length === 2 && __t.cesta().enviados.length === 2);
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }); __t.render(); await wait(100);
+    check('sem navigator.share, só Copiar aparece', !act('cestaenviar') && !!act('cestacopiar'));
+    Object.defineProperty(navigator, 'share', { configurable: true, value: fakeShare }); __t.render(); await wait(100);
+    var p1 = __t.cesta().enviados[0], alvo = p1 && p1.itens[p1.itens.length - 1], inp3 = q('#cat-q');
+    if (inp3 && alvo) { inp3.focus(); inp3.value = alvo.name; inp3.dispatchEvent(new Event('input', { bubbles: true })); await wait(100); }
+    var ce = alvo && qa('#cat-list .catc').filter(function (c) { return c.querySelector('h3').textContent === alvo.name; })[0];
+    check('Catálogo marca Pedido enviado', !!ce && /Pedido enviado/.test(ce.textContent) && !ce.querySelector('[data-act="catcesta"]'));
+    if (inp3) { inp3.value = ''; inp3.dispatchEvent(new Event('input', { bubbles: true })); inp3.blur(); }
+    var p2 = __t.cesta().enviados[1], k2s = p2 ? p2.itens.map(function (x) { return x.key; }) : [];
+    click(p2 && q('#enviados [data-act="peddescartar"][data-id="' + p2.id + '"]')); await wait(100);
+    var conf = p2 && q('#enviados [data-act="pedconfirm"][data-id="' + p2.id + '"]');
+    click(conf); await wait(150);
+    var kk = keys();
+    check('Descartar pede confirmação e devolve os charutos à montagem', !!conf && __t.cesta().enviados.length === 1 &&
+      kk.length === k2s.length && kk.every(function (k) { return k2s.indexOf(k) >= 0; }));
+    var d1 = q('#enviados details[data-ped]'); if (d1 && !d1.open) { d1.open = true; await wait(80); }
+    check('alvos de 44 px: Enviar, Copiar, Chegou, Guardar no estoque, Reenviar e Descartar',
+      ['cestaenviar', 'cestacopiar', 'pedveio', 'pedguardar', 'pedreenviar', 'peddescartar'].every(function (a) { var el = qa('[data-act="' + a + '"]'); return el.length > 0 && el.every(grande); }));
+    check('página sem rolagem horizontal com o pedido aberto', document.documentElement.scrollWidth <= innerWidth);
+  } finally {
+    if (dShare) Object.defineProperty(navigator, 'share', dShare); else delete navigator.share;
+    if (dClip) Object.defineProperty(navigator, 'clipboard', dClip); else delete navigator.clipboard;
+  }
 
-  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.catQ = bk.q; S.catN = bk.n; S.confirm = bk.confirm;
+  S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.catQ = bk.q; S.catN = bk.n; S.confirm = bk.confirm; S.pedOpen = bk.pedOpen;
   __t.cesta(JSON.parse(bk.cesta));
   if (bk.ls == null) localStorage.removeItem(LS); else localStorage.setItem(LS, bk.ls);
   __t.render(); await wait(80);

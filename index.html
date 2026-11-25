@@ -102,6 +102,12 @@ header.top{padding-top:28px; display:flex; flex-direction:column; gap:8px}
 .cestasize{gap:4px}
 .cestasize .opt{flex:1 1 0; min-height:44px; min-width:44px; padding-left:0; padding-right:0; justify-content:center}
 .cestac .head .chip{flex:none}
+details.ped{border:1.5px solid var(--line); border-radius:12px; padding:4px 12px}
+details.ped summary{cursor:pointer; font-weight:600; min-height:44px; display:flex; align-items:center}
+details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 0 12px}
+.pedlist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.pedlist li{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.pedlist .opt{min-height:44px; flex:none}
 .catcount{font-size:13px; margin:0 0 8px}
 .cmpsim .list{gap:10px}
 .gwelcome{gap:10px; border:1.5px solid var(--line)}
@@ -700,9 +706,9 @@ function pedidoItem(e){var it=e.it,c=e.c;
   return {key:e.key,name:e.name,bitola:e.bitola||'',origin:it?(it.country||''):((c&&c.origin)||''),strength:it?(it.strength||0):((c&&c.strength)||0),
     wrapper:it?(it.wrapper||''):((c&&c.wrapper)||''),cigarId:c?c.id:'',veio:true};}
 function novoPedido(plan,seg,iso,id){return {id:id,em:iso,seg:seg||'todos',itens:plan.list.map(pedidoItem),texto:pedidoTexto(plan.list)};}
-function pedidoResumo(p){var d=new Date(p&&p.em),n=((p&&p.itens)||[]).length,s=p&&SEG_PLURAL[p.seg];
-  var dt=isNaN(d.getTime())?'':('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
-  return [dt,s||'',n+(n===1?' charuto':' charutos')].filter(Boolean).join(' · ');}
+function pedidoData(iso){var d=new Date(iso);return isNaN(d.getTime())?'':('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);}
+function pedidoResumo(p){var n=((p&&p.itens)||[]).length,s=p&&SEG_PLURAL[p.seg];
+  return [pedidoData(p&&p.em),s||'',n+(n===1?' charuto':' charutos')].filter(Boolean).join(' · ');}
 function cestaEnviadosKeys(enviados){var o={},out=[];(enviados||[]).forEach(function(p){((p&&p.itens)||[]).forEach(function(x){var k=normName(x&&x.name);if(k&&!o[k]){o[k]=1;out.push(k);}});});return out;}
 /* Chegada: o que veio vai para o Estoque; acha no Acervo pelo id e depois pelo nome, e cria o que não estiver lá. */
 function chegadaPlan(itens,cigars){var byId={},byKey={},seen={},up=[],cr=[],n=0;
@@ -1617,9 +1623,29 @@ function cestaPanelHtml(plan){var L=plan.list,h='<div class="panel" id="cesta"><
   var acts=cestaAcoesHtml(plan)+(cesta.fora.length?'<button class="btn ghost" data-act="cestadesfaz">Desfazer trocas</button>':'');
   if(acts)h+='<div class="row">'+acts+'</div>';
   return h+'</div>';}
-/* Enviar e Copiar (pedido enviado): Task 5. */
-function cestaAcoesHtml(plan){return '';}
-function enviadosHtml(){return '';}
+/* Enviar (folha de compartilhamento, que abre o WhatsApp) e Copiar. Os dois guardam o pedido enviado. */
+function cestaAcoesHtml(plan){var dis=plan.list.length?'':' disabled';
+  return (navigator.share?'<button class="btn primary" data-act="cestaenviar"'+dis+'>Enviar pedido (WhatsApp…)</button>':'')+'<button class="btn" data-act="cestacopiar"'+dis+'>Copiar</button>';}
+function cestaRegistrar(plan){var p=novoPedido(plan,cesta.seg,new Date().toISOString(),uid());cesta.enviados.push(p);cesta.fora=[];state.pedOpen=p.id;cestaPersist();render();return p;}
+/* Copia o texto; sem a API ou com falha, seleciona o campo (se houver) para copiar à mão, e não chama ok. */
+function copyPedido(text,ok,fbId){var fb=function(){if(fbId)selectInput(fbId,'Selecione e copie o texto do pedido.');else toast('Não foi possível copiar o pedido.');};
+  try{navigator.clipboard.writeText(text).then(ok,fb);}catch(e){fb();}}
+function pedById(id){for(var i=0;i<cesta.enviados.length;i++)if(cesta.enviados[i].id===id)return cesta.enviados[i];return null;}
+function enviadosHtml(){if(!cesta.enviados.length)return '';
+  var h='<div class="panel" id="enviados"><h2>Pedidos enviados</h2><p class="muted" style="font-size:14px">Quando chegar, marque o que veio e guarde no estoque.</p>';
+  cesta.enviados.slice().reverse().forEach(function(p){var id=esc(p.id),conf=state.confirm==='ped:'+p.id;
+    h+='<details class="ped" data-ped="'+id+'"'+(state.pedOpen===p.id?' open':'')+'><summary>'+esc(pedidoResumo(p))+'</summary><div class="pedbody">';
+    h+='<ul class="pedlist">'+p.itens.map(function(x,i){return '<li><span>'+esc(x.name)+(x.bitola?' <span class="faint">('+esc(x.bitola)+')</span>':'')+'</span><button class="opt" data-act="pedveio" data-id="'+id+'" data-val="'+i+'" aria-pressed="'+(x.veio!==false)+'">Chegou</button></li>';}).join('')+'</ul>';
+    if(conf)h+='<div class="alert err"><b>Descartar o pedido de '+esc(pedidoData(p.em))+'?</b><span>Os charutos voltam para a montagem da cesta.</span><div class="row" style="margin-top:8px"><button class="btn danger" data-act="pedconfirm" data-id="'+id+'">Descartar</button><button class="btn ghost" data-act="cancelconfirm">Manter</button></div></div>';
+    h+='<div class="row"><button class="btn primary" data-act="pedguardar" data-id="'+id+'">Guardar no estoque</button><button class="btn" data-act="pedreenviar" data-id="'+id+'">Reenviar</button>'+(conf?'':'<button class="btn ghost" data-act="peddescartar" data-id="'+id+'">Descartar</button>')+'</div></div></details>';});
+  return h+'</div>';}
+/* Chegou: o que veio vai para o Estoque (pelos dados guardados no envio, nunca pela cesta remontada). */
+function pedGuardar(id){var p=pedById(id);if(!p)return;var cp=chegadaPlan(p.itens,state.cigars);
+  if(!cp.chegou){toast('Marque o que chegou, ou use Descartar.');return;}
+  cp.update.forEach(function(u){var c=cigarById(u.id);if(!c)return;var x=clone(c);x.status=u.status;put('cigars',x);});
+  cp.create.forEach(function(n){put('cigars',Object.assign({id:uid(),order:100+state.cigars.length,expected:'',pairing:''},n));});
+  cesta.enviados=cesta.enviados.filter(function(q){return q.id!==id;});cestaPersist();render();
+  toast(cp.chegou===1?'1 charuto foi para o Estoque, no Acervo.':cp.chegou+' charutos foram para o Estoque, no Acervo.');}
 function viewCesta(){var plan=cestaAtual();return enviadosHtml()+cestaPanelHtml(plan)+viewCatalogo(cestaMarks(plan));}
 /* ---- Curadoria: Catálogo da aba Cesta ---- */
 var SEG_LABEL={c:'Cuba',f:'Fora de Cuba',n:'Nacional'};
@@ -1904,7 +1930,9 @@ function handleBandFile(file){
 function copyText(id,text){
   try{navigator.clipboard.writeText(text).then(function(){toast('Link copiado');},function(){selectInput(id);});}catch(e){selectInput(id);}
 }
-function selectInput(id){var el=document.getElementById(id);if(el){el.focus();el.select();toast('Selecione e copie o link.');}}
+function selectInput(id,msg){var el=document.getElementById(id);if(el){el.focus();el.select();toast(msg||'Selecione e copie o link.');}}
+/* Bloco aberto de pedido enviado sobrevive aos redesenhos. */
+document.addEventListener('toggle',function(ev){var d=ev.target,pid=d&&d.getAttribute&&d.getAttribute('data-ped');if(!pid)return;if(d.open)state.pedOpen=pid;else if(state.pedOpen===pid)state.pedOpen=null;},true);
 
 /* ---------- eventos ---------- */
 document.addEventListener('click',function(ev){
@@ -1954,6 +1982,15 @@ document.addEventListener('click',function(ev){
     case 'cestasize': cesta.size=parseInt(id,10)||5; cestaPersist(); render(); break;
     case 'cestatroca': if(id&&cesta.fora.indexOf(id)<0)cesta.fora.push(id); cestaPersist(); render(); break;
     case 'cestadesfaz': cesta.fora=[]; cestaPersist(); render(); break;
+    case 'cestaenviar': {var pe=cestaAtual();if(!pe.list.length||!navigator.share)break;
+      navigator.share({text:pedidoTexto(pe.list)}).then(function(){cestaRegistrar(pe);toast('Pedido enviado. Ele fica em Pedidos enviados até chegar.');},
+        function(e){if(e&&e.name==='AbortError')return;toast('Não foi possível abrir o compartilhamento. Use Copiar.');});break;}
+    case 'cestacopiar': {var pc=cestaAtual();if(!pc.list.length)break;copyPedido(pedidoTexto(pc.list),function(){cestaRegistrar(pc);toast('Pedido copiado. Cole na conversa com a loja.');},'cesta-texto');break;}
+    case 'pedveio': {var pv=pedById(id),iv=parseInt(val,10);if(!pv||!pv.itens[iv])break;pv.itens[iv].veio=pv.itens[iv].veio===false;state.pedOpen=id;cestaPersist();render();break;}
+    case 'pedguardar': pedGuardar(id); break;
+    case 'pedreenviar': {var pr=pedById(id);if(!pr)break;if(navigator.share)navigator.share({text:pr.texto}).catch(function(){});else copyPedido(pr.texto,function(){toast('Pedido copiado.');},null);break;}
+    case 'peddescartar': state.confirm='ped:'+id; state.pedOpen=id; render(); break;
+    case 'pedconfirm': cesta.enviados=cesta.enviados.filter(function(p){return p.id!==id;}); state.confirm=''; cestaPersist(); render(); toast('Pedido descartado. Os charutos voltaram para a montagem.'); break;
     case 'catmore': state.catN=(state.catN||12)+12; var cl=document.getElementById('cat-list'); if(cl)cl.innerHTML=catListHtml(); break;
     case 'catcesta': addFromCatalog(id); break;
     case 'novo-charuto': state.tab='acervo'; state.view='home'; state.acvFilter='todos'; state.addOpen=true; state.editCigar=null; state.confirm=''; render(); var nf=document.getElementById('nc-name'); if(nf)nf.focus(); break;
