@@ -200,5 +200,34 @@ test('similarTo: parecidos com uma sessão saem da mesma linha, sem o próprio c
   assert.ok(S[0].why.some(w => /mesma linha/.test(w)), S[0].why.join(' | '));
 });
 
+// ---- Reforço do Acervo (2.10.0) ----
+test('tasteProfile: charuto do Acervo sem nota entra no reforço; com nota, não', () => {
+  const P = X.tasteProfile(CIG, SES);
+  assert.ok(P.acv && P.acv.brand, 'acv ausente no perfil');
+  assert.strictEqual(P.acv.brand['Oliva'], 1);
+  const C2 = CIG.map(c => c.id === 'c1' ? Object.assign({}, c, { status: 'estoque' }) : c);
+  assert.strictEqual(X.tasteProfile(C2, SES).acv.brand['Montecristo'], undefined, 'charuto já avaliado reforçou');
+});
+test('curate sem notas: um Hoyo no Estoque leva a marca ao topo, com o motivo', () => {
+  const P = X.tasteProfile([{ id: 'h', name: 'Hoyo de Monterrey Epicure Nº 2', origin: 'Cuba', vitola: '124 x 50', strength: 2, status: 'estoque' }], []);
+  const R = X.curate(X.catalogItems(), P, {});
+  assert.strictEqual(R[0].it.brand, 'Hoyo de Monterrey', 'primeiro: ' + R[0].it.name);
+  assert.ok(R[0].why.some(w => /Parecido com o que você tem no Acervo: marca Hoyo de Monterrey/.test(w)), R[0].why.join(' | '));
+});
+test('reforço do Acervo tem teto de 0,6', () => {
+  const mk = (id, name) => ({ id, name, origin: 'Nicarágua', vitola: '5 x 52', strength: 4, status: 'estoque' });
+  const PA = X.tasteProfile([mk('o1', 'Oliva Serie V Melanio Robusto'), mk('o2', 'Oliva Serie V Melanio Nº 4'), mk('o3', 'Oliva Serie V Melanio Double Toro')], []);
+  const it = X.catalogItems().find(i => i.name === 'Oliva Serie V Melanio Maduro Robusto');
+  assert.ok(it, 'Oliva Serie V Melanio Maduro Robusto não está no catálogo');
+  const d = X.scoreItem(it, PA).score - X.scoreItem(it, X.tasteProfile([], [])).score;
+  assert.ok(Math.abs(d - 0.6) < 1e-9, 'reforço ' + d);
+});
+test('com notas, a marca bem avaliada continua à frente do reforço', () => {
+  const P = X.tasteProfile(CIG, SES), R = X.curate(X.catalogItems(), P, {});
+  assert.strictEqual(R[0].it.brand, 'Montecristo', 'primeiro: ' + R[0].it.name);
+  const ol = R.filter(r => r.it.brand === 'Oliva' && !r.owned);
+  assert.ok(ol.length && ol.some(r => r.why.some(w => /Parecido com o que você tem no Acervo/.test(w))), 'nenhum Oliva traz o motivo do Acervo');
+});
+
 console.log(`\n${pass} ok, ${fail} falha(s)`);
 process.exit(fail ? 1 : 0);

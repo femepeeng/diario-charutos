@@ -600,7 +600,12 @@ function tasteProfile(cigars,sessions){var byId={},owned={},tasted={},tr={};
     Object.keys(by).forEach(function(k){if(a[k])(by[k][a[k]]=by[k][a[k]]||[]).push(s.rating);});
     if(s.strength>=1&&s.strength<=5)(lv[s.strength]=lv[s.strength]||[]).push(s.rating);});
   var range=null;if(R.length>=3){var good=Object.keys(lv).map(Number).filter(function(v){return cAvg(lv[v])>=mean;});if(good.length)range=[Math.min.apply(null,good),Math.max.apply(null,good)];}
-  return {n:R.length,mean:mean,by:by,range:range,tasted:tasted,owned:owned};}
+  /* Reforço do Acervo: o que está na Cesta ou no Estoque e ainda não tem nota conta como interesse, por atributo. */
+  var acv={brand:{},line:{},country:{},wrapper:{},fmt:{}},seenA={};
+  (cigars||[]).forEach(function(c){var st=String(c.status||''),k=normName(c.name);if(!k||seenA[k]||(st.indexOf('cesta')<0&&st.indexOf('estoque')<0)||(tr[k]&&tr[k].length))return;
+    seenA[k]=1;var a=cigarAttrs(c);Object.keys(acv).forEach(function(f){if(a[f])acv[f][a[f]]=(acv[f][a[f]]||0)+1;});});
+  return {n:R.length,mean:mean,by:by,range:range,tasted:tasted,owned:owned,acv:acv};}
+var ACV_W={brand:0.2,line:0.15,wrapper:0.15,country:0.1,fmt:0.1};
 /* Pontuação de um item: diferença entre a sua média em cada atributo e a média geral, encolhida quando há poucas sessões; força fora da faixa pesa contra. */
 function scoreItem(it,P){var sc=0,why=[],warn=[];
   function feat(k,val,w,label){var arr=val?P.by[k][val]:null;if(!arr||P.mean==null)return;var a=cAvg(arr),d=(a-P.mean)*arr.length/(arr.length+1),c=w*d;sc+=c;
@@ -614,6 +619,10 @@ function scoreItem(it,P){var sc=0,why=[],warn=[];
     if(s>=rg[0]&&s<=rg[1]){sc+=1.2+(P.range?0:(3-s)*0.15);why.push([1.2,'Força de referência '+s+'/5, '+(P.range?'na faixa das suas notas mais altas ('+faixa+')':'suave a média, boa para começar')]);}
     else if(s>rg[1]){var c2=-(s-rg[1]);sc+=c2;warn.push([c2,'Força de referência '+s+'/5, acima da sua faixa ('+faixa+'): coma antes e vá com calma']);}
     else sc-=0.3;}
+  var ab=0,top=null;
+  if(P.acv)Object.keys(ACV_W).forEach(function(k){var v=it[k],n=v?P.acv[k][v]:0;if(!n)return;var x=ACV_W[k]*Math.min(n,2);ab+=x;if(!top||x>top[0])top=[x,k];});
+  if(ab>0){ab=Math.min(ab,0.6);sc+=ab;var k3=top[1];
+    why.push([ab,'Parecido com o que você tem no Acervo: '+(k3==='brand'?'marca '+it.brand:k3==='line'?'linha '+it.lineLabel:k3==='wrapper'?capaLabel(it.wrapper):k3==='country'?it.country:'formato '+it.fmt)]);}
   why.sort(function(a,b){return b[0]-a[0];});warn.sort(function(a,b){return a[0]-b[0];});
   return {it:it,score:sc,why:why.slice(0,3).map(function(x){return x[1];}),warn:warn.slice(0,2).map(function(x){return x[1];})};}
 function byScore(a,b){return b.score-a.score||(a.it.strength?0:1)-(b.it.strength?0:1)||(a.it.name<b.it.name?-1:a.it.name>b.it.name?1:0);}
