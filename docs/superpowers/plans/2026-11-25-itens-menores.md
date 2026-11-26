@@ -21,15 +21,15 @@
 
 ## Foco da revisão
 
-1. O administrador lê as conversas em outro aparelho (as não lidas caem) e depois chega mensagem nova: a Conta tem de voltar a abrir em Mensagens. Teste na Tarefa 1 (queda e subida).
+1. O administrador lê as conversas em outro aparelho (as não lidas caem) e depois chega mensagem nova: a Conta tem de voltar a abrir em Mensagens. Teste na Task 1 (queda e subida).
 2. Sair e entrar com outra conta na mesma sessão do app: o `msgVisto` da conta anterior não pode esconder a mensagem nova da seguinte. Sem login, `viewHome` baixa `msgVisto` a 0; o mesmo teste de queda cobre a regra.
 3. Dois toques seguidos em "Guardar no estoque": o segundo não pode tirar o pedido antes de as gravações do primeiro confirmarem. Teste em `tests/app.test.js`.
 4. "Guardar no estoque" com tudo já em Estoque (nada a gravar): o pedido sai na hora. Teste em `tests/app.test.js`.
-5. Texto do sistema em 130% a 360 px: o rótulo da sub-aba é cortado com reticências e não passa da borda. Conferência visual na Tarefa 3.
+5. Texto do sistema em 130% a 360 px: o rótulo da sub-aba é cortado com reticências e não passa da borda. Conferência visual na Task 3.
 
 ---
 
-### Tarefa 1: navegação e acessibilidade (itens 1 a 6)
+### Task 1: navegação e acessibilidade (itens 1 a 6)
 
 **Arquivos:**
 - Modificar: `index.html`: CSS `.minitabs button` (l. 159); `novaMsg`, `contaTabs` e `viewHome` (l. 1390-1421); `case 'tab'` (l. 1965); comentários que chamam o Perfil de Conta (l. 1049, 1064, 1122, 1150).
@@ -59,7 +59,7 @@
 - [ ] **Passo 7: testes em Node.** `node tests/guia.test.js`, `node tests/curadoria.test.js`, `node tests/clube.test.js` e `node tests/cesta.test.js`, todos com 0 falhas.
 - [ ] **Passo 8: commit** `fix: Conta abre Mensagens para o administrador só com mensagem nova; barra parada e acessível`.
 
-### Tarefa 2: Cesta (itens 7 a 14)
+### Task 2: Cesta (itens 7 a 14)
 
 **Arquivos:**
 - Modificar: `index.html`: `cestaRepor`, `cestaPlan` (vagas de Repor) e `pedidoItem` (bloco `@pure:cesta`, l. 671-710); `put` (l. 957); `wipeLocalForAccount` (l. 1322); campos preservados em `render` (l. 1367); `cestaAcoesHtml`, `cestaRegistrar`, `copyPedido`, `enviadosHtml` e `pedGuardar` (l. 1644-1665); `case 'cestacopiar'`, `case 'pedreenviar'` e o novo `case 'cestajaenviei'` (l. 2006-2009).
@@ -97,7 +97,7 @@
 - [ ] **Passo 7: rodar e ver passar.** Os cinco testes em Node e os quatro `ui-*.js` a 360 px, sem FAIL. Conferir o `finally` quebrando de propósito, só na memória: `__t.cesta` lançando erro na 6ª chamada durante o `ui-cesta`, e `__t.render` na 3ª durante o `ui-curadoria`. O resultado tem de trazer `sem exceção no teste` como FAIL, e `__t.state.cigars` tem de voltar a ser o original.
 - [ ] **Passo 8: commit** `fix: Cesta espera a gravação, ganha Já enviei e não perde a seleção`.
 
-### Tarefa 3: fechamento (item 15)
+### Task 3: fechamento (item 15)
 
 **Arquivos:**
 - Modificar: `index.html` (`APP_VERSION` e `APP_BUILD`, l. 315) e `CLAUDE.md`.
