@@ -87,6 +87,17 @@ test('Repor usa nome e bitola do catálogo', () => {
   assert.ok(/sua média 8,8 em 2 sessões$/.test(m.why[0]), m.why[0]);
   assert.strictEqual(L.filter(e => e.key === m.key).length, 1, 'Montecristo apareceu duas vezes');
 });
+test('Repor de sessão avulsa: força da sessão mais recente; origem e capa pela marca', () => {
+  need('pedidoItem');
+  const av = (nome, st, rb, dia) => ({ cigarId: '', cigarName: nome, status: 'concluida', rating: 8, rebuy: rb, strength: st, endedAt: '2026-' + dia + 'T21:00:00Z' });
+  const AV = [av('Romeo y Julieta Edição Rara', 5, 'Sim', '11-02'), av('Romeo y Julieta Edição Rara', 3, 'Sim', '11-11'),
+    av('Charuto da feira', 4, 'Sim', '11-10'), av('Charuto da feira', undefined, '', '11-12')];
+  const L = X.cestaPlan(ITEMS, [], AV, { size: 6, seg: 'todos', fora: [], enviados: [] }).list.filter(e => e.kind === 'repor');
+  const it = n => { const e = L.find(x => x.name === n); assert.ok(e, n + ' não entrou como Repor'); return X.pedidoItem(e); };
+  const rj = it('Romeo y Julieta Edição Rara'), fe = it('Charuto da feira');
+  assert.deepStrictEqual([rj.origin, rj.strength, rj.wrapper], ['Cuba', 3, 'cubana']);
+  assert.deepStrictEqual([fe.origin, fe.strength, fe.wrapper], ['', 4, '']);
+});
 test('Novos não repetem linha e nenhuma marca passa de 2', () => {
   const L = plan({ size: 8 }).list, marcas = {};
   assert.strictEqual(L.length, 8);
