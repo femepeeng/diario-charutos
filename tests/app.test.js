@@ -36,11 +36,11 @@ function sync() {}
 function ls(k, v) { if (v === undefined) return k in T.lsMap ? T.lsMap[k] : null; if (v === null) { delete T.lsMap[k]; return null; } T.lsMap[k] = String(v); }
 function putRec(col, o) { T.writes.push(o); return OPT.putRec(o); }
 function clearStore() { return Promise.resolve(); }
-function loadAll() { T.loads++; return Promise.resolve(); }
+function loadAll() { T.loads++; return OPT.loadAll ? OPT.loadAll() : Promise.resolve(); }
 `;
-/* Um app novo por teste; putRec decide se cada gravação confirma, falha ou fica pendente. */
-function app(putRec) {
-  const sb = { OPT: { putRec } };
+/* Um app novo por teste; putRec decide se cada gravação confirma, falha ou fica pendente, e loadAll (opcional) se a leitura funciona. */
+function app(putRec, loadAll) {
+  const sb = { OPT: { putRec, loadAll } };
   vm.createContext(sb);
   vm.runInContext(pick('curadoria').concat(pick('cesta')).join('\n') + '\n' + APP + '\n' + DUBLES, sb);
   return sb;
@@ -78,6 +78,18 @@ test('uma gravação que falha mantém o pedido, recarrega o estado e pede para 
   assert.strictEqual(sb.T.loads, 1, 'o estado não foi recarregado do armazenamento');
   assert.ok(/Tente de novo/.test(sb.T.toasts[sb.T.toasts.length - 1] || ''), sb.T.toasts.join(' | '));
   assert.ok(!sb.T.toasts.some(t => /foram para o Estoque/.test(t)), 'avisou sucesso: ' + sb.T.toasts.join(' | '));
+});
+test('gravação e leitura falhando: o estado volta ao de antes do toque, e o segundo toque grava de novo e mantém o pedido', async () => {
+  const perdida = () => Promise.reject(new Error('Connection to Indexed Database server lost'));
+  const sb = app(perdida, perdida);
+  montar(sb);
+  assert.strictEqual(await sb.pedGuardar('p1'), false);
+  await flush();
+  assert.deepStrictEqual(plain(sb.state.cigars.map(c => [c.name, c.status])), [['Cohiba Siglo II', 'cesta']], 'a memória ficou com o que não foi gravado');
+  assert.strictEqual(sb.T.writes.length, 2);
+  await sb.pedGuardar('p1'); await flush();
+  assert.strictEqual(sb.T.writes.length, 4, 'o segundo toque não tentou gravar de novo');
+  assert.strictEqual(sb.cesta.enviados.length, 1, 'o pedido saiu sem nada gravado');
 });
 test('dois toques seguidos: o pedido só sai quando as gravações do primeiro confirmam', async () => {
   const pend = [], sb = app(() => new Promise(res => pend.push(res)));

@@ -70,7 +70,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
     - Os dois guardam o **pedido enviado**, apagam as trocas e remontam a cesta sem os nomes enviados, para o pedido da loja seguinte.
   - **Pedidos enviados:** um bloco por pedido, cada charuto com "Chegou".
     - "Guardar no estoque" (`chegadaPlan`, pura) usa os dados do envio: tira Cesta e põe Estoque no que já está no Acervo, cria o que falta e deixa na Cesta o que não chegou.
-    - O pedido só sai depois que todas as gravações confirmam (`put` devolve `true` ou `false`). Se uma falha, o estado volta ao que está gravado (`loadAll`), o pedido fica e o aviso pede para tentar de novo. Um toque por vez (`state.pedGuardando`).
+    - O pedido só sai depois que todas as gravações confirmam (`put` devolve `true` ou `false`). Se uma falha, o estado volta ao que está gravado (`loadAll`; se nem a leitura funcionar, ao que era antes do toque), o pedido fica e o aviso pede para tentar de novo. Um toque por vez (`state.pedGuardando`).
     - Há também "Reenviar" (se o compartilhamento falhar, copia o texto e avisa) e "Descartar", com confirmação. Cada "Chegou" diz o nome do charuto ao leitor de tela.
   - **Catálogo** (ex-Para provar): catálogo de referência (`CAT_LINES`/`CAT_ITEMS`, 475 charutos), ordenado pelo perfil de paladar (`tasteProfile` → `curate`), com busca e "Adicionar à cesta" (cria o charuto no Acervo com status `cesta`, que entra na cesta montada).
     - O que já foi provado sai da lista, mas aparece na busca com a nota.

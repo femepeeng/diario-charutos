@@ -156,7 +156,9 @@ details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 
 .minitabs{display:flex; gap:6px}
 .minitabs button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
 .minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
-.minitabs button{white-space:nowrap; padding:0 6px; min-width:0; overflow:hidden; text-overflow:ellipsis}
+.minitabs button{white-space:nowrap; padding:0 6px; min-width:0}
+/* Sub-abas da Conta com texto grande do sistema: o rótulo é cortado com reticências, sem passar da borda. */
+.minitabs[aria-label="Conta"] button{overflow:hidden; text-overflow:ellipsis}
 @media (max-width:400px){ .minitabs button{font-size:14px} }
 
 .stats{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
@@ -707,8 +709,9 @@ function pedidoTexto(list){if(!list||!list.length)return '';var n=list.length;
   return ['Olá! Gostaria de fazer um pedido:'].concat(list.map(function(e){return '1 '+e.name+(e.bitola?' ('+e.bitola+')':'');}))
     .concat([(n===1?'É 1 charuto.':'São '+n+' charutos.')+' Pode me confirmar a disponibilidade?']).join('\n');}
 /* Item de pedido enviado: guarda os dados do charuto, não o id do catálogo (que muda quando o catálogo é atualizado).
-   Repor de sessão avulsa (sem catálogo e sem Acervo): força sentida na sessão; origem e capa só o que a marca permite deduzir. */
-function pedidoItem(e){var it=e.it,c=e.c,a=!it&&!c?cigarAttrs({name:e.name}):null;
+   Repor de sessão avulsa (sem catálogo e sem Acervo): força sentida na sessão; origem e capa só o que a marca permite deduzir
+   (sem marca conhecida, ficam vazias: nem a capa sai de uma palavra do nome). */
+function pedidoItem(e){var it=e.it,c=e.c,a=!it&&!c?cigarAttrs({name:e.name}):null;if(a&&!a.brand)a={country:'',wrapper:''};
   return {key:e.key,name:e.name,bitola:e.bitola||'',origin:it?(it.country||''):c?(c.origin||''):(a.country||''),strength:it?(it.strength||0):c?(c.strength||0):(e.st||0),
     wrapper:it?(it.wrapper||''):c?(c.wrapper||''):(a.wrapper||''),cigarId:c?c.id:'',veio:true};}
 function novoPedido(plan,seg,iso,id){return {id:id,em:iso,seg:seg||'todos',itens:plan.list.map(pedidoItem),texto:pedidoTexto(plan.list)};}
@@ -1672,14 +1675,15 @@ function enviadosHtml(){if(!cesta.enviados.length)return '';
   return h+'</div>';}
 /* Chegou: o que veio vai para o Estoque (pelos dados guardados no envio, nunca pela cesta remontada).
    O pedido só sai depois que todas as gravações confirmam. Se uma falha, o estado volta ao que está gravado
-   (loadAll), o pedido fica e o aviso de saveErr pede para tentar de novo. Um toque por vez (state.pedGuardando). */
+   (loadAll) ou, se nem a leitura funcionar, ao que era antes do toque; o pedido fica e o aviso de saveErr pede
+   para tentar de novo. Um toque por vez (state.pedGuardando). */
 function pedGuardar(id){var p=pedById(id);if(!p||state.pedGuardando)return Promise.resolve(false);var cp=chegadaPlan(p.itens,state.cigars);
   if(!cp.chegou){toast('Marque o que chegou, ou use Descartar.');return Promise.resolve(false);}
-  var ws=[];state.pedGuardando=id;
+  var ws=[],antes=state.cigars.slice();state.pedGuardando=id;
   cp.update.forEach(function(u){var c=cigarById(u.id);if(!c)return;var x=clone(c);x.status=u.status;ws.push(put('cigars',x));});
   cp.create.forEach(function(n){ws.push(put('cigars',Object.assign({id:uid(),order:100+state.cigars.length,expected:'',pairing:''},n)));});
   return Promise.all(ws).then(function(r){
-    if(r.indexOf(false)>=0)return loadAll().catch(function(){}).then(function(){state.pedGuardando=null;render();return false;});
+    if(r.indexOf(false)>=0)return loadAll().catch(function(){state.cigars=antes;sortAll();}).then(function(){state.pedGuardando=null;render();return false;});
     state.pedGuardando=null;cesta.enviados=cesta.enviados.filter(function(q){return q.id!==id;});cestaPersist();render();
     toast(cp.chegou===1?'1 charuto foi para o Estoque, no Acervo.':cp.chegou+' charutos foram para o Estoque, no Acervo.');return true;});}
 function viewCesta(){var P=tasteProfile(state.cigars,state.sessions),plan=cestaAtual(P);cestaPerfil=P;cestaSelos=cestaMarks(plan);

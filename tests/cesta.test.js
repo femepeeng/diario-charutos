@@ -97,6 +97,11 @@ test('Repor de sessão avulsa: força da sessão mais recente; origem e capa pel
   const rj = it('Romeo y Julieta Edição Rara'), fe = it('Charuto da feira');
   assert.deepStrictEqual([rj.origin, rj.strength, rj.wrapper], ['Cuba', 3, 'cubana']);
   assert.deepStrictEqual([fe.origin, fe.strength, fe.wrapper], ['', 4, '']);
+  // Sem marca conhecida, nem a capa sai de uma palavra do nome.
+  const hb = X.cestaPlan(ITEMS, [], [av('Habano do tio', 2, 'Sim', '11-13')], { size: 3, seg: 'todos', fora: [], enviados: [] }).list.find(e => e.kind === 'repor');
+  assert.ok(hb, 'Habano do tio não entrou como Repor');
+  const hi = X.pedidoItem(hb);
+  assert.deepStrictEqual([hi.origin, hi.strength, hi.wrapper], ['', 2, '']);
 });
 test('Novos não repetem linha e nenhuma marca passa de 2', () => {
   const L = plan({ size: 8 }).list, marcas = {};

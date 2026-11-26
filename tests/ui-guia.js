@@ -183,6 +183,15 @@
       check('Conta tem as sub-abas Histórico, Paladar, Cesta e Perfil', subs.map(function (b) { return b.innerText.trim(); }).join(',') === 'Histórico,Paladar,Cesta,Perfil');
       check('sub-abas com 44 px', subs.length === 4 && subs.every(function (b) { return b.getBoundingClientRect().height >= 44; }));
       check('as sub-abas cortam o rótulo com reticências quando ele não cabe', subs.length === 4 && subs.every(function (b) { var cs = getComputedStyle(b); return cs.textOverflow === 'ellipsis' && cs.overflowX === 'hidden'; }));
+      // A reticência é só da fileira da Conta: com 12 em Estoque e 12 no Arquivo, os filtros do Acervo mostram
+      // rótulo e contagem inteiros, dentro da borda (a largura do texto cabe no botão, sem contar a borda).
+      var umC = S.cigars, muitos = [];
+      for (var mi = 0; mi < 24; mi++) muitos.push({ id: 'ui-nav-m' + mi, name: 'Teste ' + mi, status: mi < 12 ? 'estoque' : '', strength: 3, updatedAt: 1, syncedAt: 1 });
+      S.cigars = muitos; S.tab = 'acervo'; __t.render(); await wait(100);
+      var inteiro = function (b) { var rg = document.createRange(); rg.selectNodeContents(b); return getComputedStyle(b).textOverflow !== 'ellipsis' && rg.getBoundingClientRect().width <= b.clientWidth; };
+      var filtros = qa('.minitabs[aria-label="Filtrar acervo"] button');
+      check('os filtros do Acervo mostram rótulo e contagem inteiros, sem reticências', filtros.length === 4 && filtros.every(inteiro));
+      S.cigars = umC;
       // Barra parada (2.11.1): com o resumo do diário (há sessão com nota) e a faixa de backup ligada, a barra
       // e as sub-abas da Conta ficam no mesmo lugar em todas as abas.
       setLS('diario-dirty', '2'); setLS('diario-last-backup', '1');
