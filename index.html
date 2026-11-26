@@ -156,7 +156,7 @@ details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 
 .minitabs{display:flex; gap:6px}
 .minitabs button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:transparent; font-weight:600}
 .minitabs button[aria-selected="true"]{background:var(--surface2); border-color:var(--ember)}
-.minitabs button{white-space:nowrap; padding:0 6px; min-width:0}
+.minitabs button{white-space:nowrap; padding:0 6px; min-width:0; overflow:hidden; text-overflow:ellipsis}
 @media (max-width:400px){ .minitabs button{font-size:14px} }
 
 .stats{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
@@ -1046,7 +1046,7 @@ var clubApi={
 };
 function newClub(){return {thread:[],avisos:[],members:[],invites:[],sec:'inscritos',open:null,at:0,sending:false,drafts:{}};}
 cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();
-/* Busca o estado do clube. Sem force, no máximo uma vez por minuto. Com a Conta aberta, carrega também a conversa e os avisos. */
+/* Busca o estado do clube. Sem force, no máximo uma vez por minuto. Com o Perfil aberto, carrega também a conversa e os avisos. */
 function refreshClub(force){
   if(!isMember())return Promise.resolve();
   var c=cloud.club;if(!force&&Date.now()-c.at<60000)return Promise.resolve();c.at=Date.now();
@@ -1061,7 +1061,7 @@ function loadMemberClub(){var me=cloud.me,uid=cloud.user.id,c=cloud.club;
   var ps=[clubApi.thread(uid).then(function(r){if(!r.error)c.thread=(r.data||[]).slice().reverse();})];
   if(!me.suspended)ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
   return Promise.all(ps).then(function(){if(me.unread_msgs>0)return clubApi.markRead(uid).then(function(r){if(!r.error)me.unread_msgs=0;});});}
-/* Administrador com a Conta aberta: inscritos sempre; convites, avisos e conversa conforme a seção. */
+/* Administrador com o Perfil aberto: inscritos sempre; convites, avisos e conversa conforme a seção. */
 function loadAdminClub(){var c=cloud.club,open=c.open,ps=[clubApi.members().then(function(r){if(!r.error)c.members=r.data||[];})];
   if(c.sec==='convites')ps.push(clubApi.invites().then(function(r){if(!r.error)c.invites=r.data||[];}));
   if(c.sec==='avisos')ps.push(clubApi.avisos().then(function(r){if(!r.error)c.avisos=r.data||[];}));
@@ -1119,7 +1119,7 @@ function admConvites(){var c=cloud.club;
   return h+c.invites.map(function(v){var s=inviteStatus(v),d=Date.parse(v.created_at);
     return '<div class="inv-row" data-code="'+esc(v.code)+'"><div style="min-width:0"><b class="num">'+esc(v.code)+'</b><div class="meta">'+esc(s.label)+(isNaN(d)?'':' · criado em '+dmy(new Date(d)))+'</div></div>'+
       (s.canOff?'<button class="btn ghost" data-act="invoff" data-id="'+esc(v.code)+'">Desativar</button>':'')+'</div>';}).join('');}
-/* Painel do administrador na Conta. */
+/* Painel do administrador no Perfil. */
 function adminPanel(){var c=cloud.club,unread=cloud.me.unread_msgs||0;
   var h='<div class="panel" id="admin"><div class="row" style="justify-content:space-between"><h2>Administração</h2><button class="btn ghost" data-act="clubrefresh">Atualizar</button></div>';
   h+='<div class="row admsecs" role="group" aria-label="Seções da administração">'+[['inscritos','Inscritos '+c.members.length],['mensagens','Mensagens'+(unread?' '+unread:'')],['avisos','Avisos'],['convites','Convites']].map(function(t){
@@ -1147,7 +1147,7 @@ function threadHtml(list,adminView,memberName){
 function composerHtml(memberId){var c=cloud.club,k='msg:'+memberId;
   return '<label class="f" for="msg-body">Sua mensagem<textarea id="msg-body" data-cin="'+esc(k)+'" maxlength="1000" rows="3" placeholder="Escreva aqui">'+esc(c.drafts[k]||'')+'</textarea></label>'+
     '<div class="row"><button class="btn primary" data-act="msgsend" data-id="'+esc(memberId)+'"'+(c.sending?' disabled':'')+'>'+(c.sending?'Enviando…':'Enviar')+'</button></div>';}
-/* Painel do inscrito na Conta: conversa com a administração e avisos. */
+/* Painel do inscrito no Perfil: conversa com a administração e avisos. */
 function memberMsgsPanel(){var me=cloud.me,c=cloud.club;if(cloud.clubMissing||!me||me.is_admin)return '';
   var h='<div class="panel" id="msgs"><div class="row" style="justify-content:space-between"><h3>Mensagens</h3><button class="btn ghost" data-act="clubrefresh">Atualizar</button></div>';
   h+=me.suspended?'<div class="alert err"><b>Sua participação no clube está suspensa.</b><span>O feed e a sincronização ficam pausados, e o diário deste celular continua funcionando. Você pode falar com a administração aqui.</span></div>'
@@ -1391,25 +1391,31 @@ function viewHeader(){var j=state.loaded&&done().length?journey():null;return '<
    'conta' é o Perfil. state.contaSec guarda a última sub-aba aberta nesta sessão do app, só na memória. */
 var CONTA_SECS=[['historico','Histórico'],['paladar','Paladar'],['cesta','Cesta'],['conta','Perfil']];
 function isContaSec(t){for(var i=0;i<CONTA_SECS.length;i++)if(CONTA_SECS[i][0]===t)return true;return false;}
-function novaMsg(){return !!(isMember()&&cloud.me&&cloud.me.unread_msgs>0);}
+function unreadMsgs(){return isMember()&&cloud.me?(cloud.me.unread_msgs||0):0;}
+function novaMsg(){return unreadMsgs()>0;}
+/* Desvio para o Perfil: só com mais mensagens não lidas do que as já vistas no Perfil (state.msgVisto, gravado em viewHome). */
+function msgNaoVista(){return unreadMsgs()>(state.msgVisto||0);}
 function contaTabs(){var nm=novaMsg();
   return '<div class="minitabs" role="tablist" aria-label="Conta">'+CONTA_SECS.map(function(t){var dot=nm&&t[0]==='conta';
     return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(dot?' aria-label="Perfil, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';}
 function viewHome(){
   if(isContaSec(state.tab))state.contaSec=state.tab;
+  /* Mensagens vistas: o Perfil aberto vale como visto; se as não lidas caem (lidas em outro aparelho, outra conta), o visto acompanha. */
+  var un=unreadMsgs();if(state.tab==='conta')state.msgVisto=un;else if((state.msgVisto||0)>un)state.msgVisto=un;
   var h=viewHeader();
   var live=openSession();
   if(live){h+='<div class="card live"><div class="head"><div><div class="eyebrow">Sessão em andamento</div><h3>'+esc(live.cigarName)+'</h3><div class="meta num">'+fmtClock(elapsed(live))+' · '+esc(live.moment||'momento não marcado')+'</div></div><button class="btn primary" data-act="resume" data-id="'+esc(live.id)+'">Retomar</button></div></div>';}
+  var nm=novaMsg(),naConta=isContaSec(state.tab);
+  h+='<div class="tabs" role="tablist" aria-label="Seções">'+[['inicio','Início'],['acervo','Acervo'],['conta','Conta']].map(function(t){var hub=t[0]==='conta',dot=hub&&nm;
+    return '<button role="tab" aria-selected="'+(hub?naConta:state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(hub?' data-hub="1"':'')+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
+  if(naConta)h+=contaTabs();
+  /* A faixa de backup e o resumo do diário ficam abaixo das abas: a barra e as sub-abas não mudam de lugar entre as abas. */
   if(needsBackup()&&state.tab!=='conta')h+='<div class="banner"><span>Há registros novos sem backup.</span><button class="btn small" data-act="tab" data-id="conta">Fazer backup</button></div>';
   if(state.tab==='acervo'||state.tab==='historico'){var ds=done();
     if(ds.length){var rated=ds.filter(function(s){return typeof s.rating==='number';});
       var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
       var best=rated.slice().sort(function(a,b){return b.rating-a.rating;})[0];
       h+='<div class="stats"><div class="stat"><b class="num">'+ds.length+'</b><span>sessões</span></div><div class="stat"><b class="num">'+(mean==null?'—':numStr(mean.toFixed(1)))+'</b><span>nota média</span></div><div class="stat"><b>'+esc(best?best.cigarName.split(' (')[0]:'—')+'</b><span>favorito</span></div></div>';}}
-  var nm=novaMsg(),naConta=isContaSec(state.tab);
-  h+='<div class="tabs" role="tablist">'+[['inicio','Início'],['acervo','Acervo'],['conta','Conta']].map(function(t){var hub=t[0]==='conta',dot=hub&&nm;
-    return '<button role="tab" aria-selected="'+(hub?naConta:state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(hub?' data-hub="1"':'')+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
-  if(naConta)h+=contaTabs();
   if(state.tab==='inicio')h+=viewInicio();
   else if(state.tab==='acervo')h+=viewAcervo();
   else if(state.tab==='historico')h+=viewHistorico();
@@ -1962,7 +1968,7 @@ document.addEventListener('click',function(ev){
     case 'corte': state.corteVit=id; render(); break;
     case 'ritmo-per': ritmo.periodo=parseInt(id,10)||45; if(ritmo.on){ritmo.inicio=Date.now();ritmo.ciclo=0;} render(); break;
     case 'ritmo-toggle': if(ritmo.on)ritmoStop();else ritmoStart(); render(); break;
-    case 'tab': if(b.hasAttribute('data-hub'))id=novaMsg()?'conta':(state.contaSec||'historico'); state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); if(id==='conta'&&isMember())refreshClub(true); break;
+    case 'tab': if(b.hasAttribute('data-hub')){if(msgNaoVista()){id='conta';if(cloud.me.is_admin){cloud.club.sec='mensagens';cloud.club.open=null;}}else id=state.contaSec||'historico';} state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); if(id==='conta'&&isMember())refreshClub(true); break;
     case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;

@@ -26,7 +26,7 @@
   var LS = ['clube-owner', 'clube-feed', 'clube-profile'], lsBk = {};
   LS.forEach(function (k) { lsBk[k] = localStorage.getItem(k); });
   var bk = { sb: C.sb, user: C.user, profile: C.profile, checked: C.profileChecked, me: C.me, missing: C.clubMissing, club: C.club,
-    feed: C.feed, feedAt: C.feedAt, mismatch: C.ownerMismatch, tab: S.tab, view: S.view, confirm: S.confirm, sec: S.contaSec };
+    feed: C.feed, feedAt: C.feedAt, mismatch: C.ownerMismatch, tab: S.tab, view: S.view, confirm: S.confirm, sec: S.contaSec, visto: S.msgVisto };
 
   // Cliente Supabase falso: qualquer cadeia de métodos termina em erro. Uma sincronização acidental durante o teste
   // falha em vez de receber listas vazias (que fariam o app apagar registros locais).
@@ -82,7 +82,7 @@
     });
     login('M', 'Membro Teste', false);
     prevApi = T.setClubApi(apiM);
-    S.view = 'home'; S.tab = 'inicio'; S.confirm = '';
+    S.view = 'home'; S.tab = 'inicio'; S.confirm = ''; S.msgVisto = 0;
     C.me = null; C.clubMissing = false;
     check('sem o estado do clube confirmado, o app não sincroniza', T.canSync() === false);
     await T.refreshClub(true); T.render(); await wait(80);
@@ -107,13 +107,13 @@
 
     tab('conta'); await wait(150);
     var box = q('#msgs');
-    check('Conta mostra o painel Mensagens com a conversa', !!box && /Mensagens/.test((box.querySelector('h3') || {}).textContent || '') && box.querySelectorAll('.msg').length === 2);
+    check('Perfil mostra o painel Mensagens com a conversa', !!box && /Mensagens/.test((box.querySelector('h3') || {}).textContent || '') && box.querySelectorAll('.msg').length === 2);
     check('mensagem da administração tem o rótulo Administração', !!box && qa('#msgs .msg.theirs').length === 1 && /Administração/.test(q('#msgs .msg.theirs').textContent));
-    check('abrir a Conta marca a conversa como lida', !!last(apiM, 'markRead') && last(apiM, 'markRead')[1] === 'M');
+    check('abrir o Perfil marca a conversa como lida', !!last(apiM, 'markRead') && last(apiM, 'markRead')[1] === 'M');
     var adm = q('#msgs .msg.theirs');
     check('texto da mensagem não vira HTML nem link', !!adm && /<b>x<\/b>/.test(adm.textContent) && !adm.querySelector('b,a'));
-    check('avisos aparecem na Conta', /Nova versão no ar/.test((q('#avisos') || {}).textContent || ''));
-    check('quem já é membro consegue abrir as regras do clube na Conta', !!q('#regras summary'));
+    check('avisos aparecem no Perfil', /Nova versão no ar/.test((q('#avisos') || {}).textContent || ''));
+    check('quem já é membro consegue abrir as regras do clube no Perfil', !!q('#regras summary'));
     check('regras levam a Conta › Perfil › Excluir minha conta', /em Conta › Perfil › Excluir minha conta\./.test((q('#regras') || {}).textContent || ''));
 
     var nThread = count(apiM, 'thread');
@@ -145,13 +145,28 @@
     var mb2 = q('#msg-body');
     check('redesenho no meio da digitação mantém foco, texto e cursor', !!mb2 && document.activeElement === mb2 && mb2.value === 'Olá mund' && mb2.selectionStart === 8);
     check('botões da conversa com 44px', qa('#msgs .btn').length >= 2 && qa('#msgs .btn').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
-    check('Conta do inscrito sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
+    check('Perfil do inscrito sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
     type(mb2, ''); mb2.blur();
+
+    // ---- "Ver" do aviso e volta do Clube (2.11.1) ----
+    C.me.aviso = { id: 'a2', body: 'Outro aviso', created_at: iso(5) };
+    S.tab = 'inicio'; T.render(); await wait(60);
+    var nAv = count(apiM, 'markAvisosRead');
+    click(act('avisover')); await wait(150);
+    var pf = q('.minitabs [data-act="tab"][data-id="conta"]'), hb = q('.tabs [data-act="tab"][data-hub]');
+    check('"Ver" do aviso abre o Perfil com a Conta marcada e marca o aviso como lido', S.tab === 'conta' && !!pf && pf.getAttribute('aria-selected') === 'true' &&
+      !!hb && hb.getAttribute('aria-selected') === 'true' && count(apiM, 'markAvisosRead') === nAv + 1);
+    S.contaSec = 'paladar';
+    click(q('header .crown')); await wait(120);
+    check('a coroa abre o Clube sem nenhuma aba da barra marcada', S.tab === 'clube' && qa('.tabs [role=tab][aria-selected="true"]').length === 0);
+    click(q('.tabs [data-act="tab"][data-hub]')); await wait(150);
+    check('do Clube, a aba Conta abre a última sub-aba', S.tab === 'paladar');
+    tab('conta'); await wait(150);
 
     // ---- Suspenso ----
     apiM.opt.me = { is_admin: false, suspended: true, unread_msgs: 0, aviso: null };
     await T.refreshClub(true); T.render(); await wait(120);
-    check('suspenso: Conta explica a suspensão e mantém a conversa', /suspensa/.test((q('#msgs') || {}).textContent || '') && qa('#msgs .msg').length === 2);
+    check('suspenso: Perfil explica a suspensão e mantém a conversa', /suspensa/.test((q('#msgs') || {}).textContent || '') && qa('#msgs .msg').length === 2);
     check('suspenso: avisos não aparecem', !q('#avisos'));
     check('suspenso: app não sincroniza', T.canSync() === false);
     click(q('[data-act="tab"][data-id="clube"]')); await wait(120);
@@ -197,7 +212,7 @@
     function sec(id) { return q('[data-act="admsec"][data-id="' + id + '"]'); }
     function card(id) { return q('.mcard[data-member="' + id + '"]'); }
 
-    check('Conta do administrador mostra o painel Administração', /Administração/.test((q('#admin h2') || {}).textContent || ''));
+    check('Perfil do administrador mostra o painel Administração', /Administração/.test((q('#admin h2') || {}).textContent || ''));
     check('quatro seções com 44px', qa('[data-act="admsec"]').length === 4 && qa('[data-act="admsec"]').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
     check('seção Inscritos mostra 4 e Mensagens mostra 2 não lidas', /4/.test((sec('inscritos') || {}).textContent || '') && /2/.test((sec('mensagens') || {}).textContent || ''));
     check('administrador não vê o painel de mensagens do inscrito', !q('#msgs'));
@@ -270,6 +285,27 @@
     check('Gerar link de convite continua na seção Convites', !!q('#admin [data-act="newinvite"]'));
     check('Administração sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
 
+    // ---- Administrador com mensagem nova (2.11.1) ----
+    // Tocar em Conta abre o Perfil já em Mensagens; o desvio só se repete quando chega mensagem nova.
+    var hubA = function () { return q('.tabs [data-act="tab"][data-hub]'); };
+    var meA = function (n) { apiA.opt.me = { is_admin: true, suspended: false, unread_msgs: n, aviso: null }; };
+    meA(2); S.tab = 'inicio'; S.msgVisto = 0; S.contaSec = 'cesta'; C.club.sec = 'inscritos'; C.club.open = null;
+    await T.refreshClub(true); T.render(); await wait(80);
+    click(hubA()); await wait(200);
+    check('administrador com mensagem nova: a Conta abre o Perfil em Mensagens', S.tab === 'conta' && C.club.sec === 'mensagens' && !!q('.inbox-row[data-member="M"]'));
+    click(q('.minitabs [data-act="tab"][data-id="cesta"]')); await wait(120);
+    tab('inicio'); await wait(80); C.club.sec = 'inscritos';
+    click(hubA()); await wait(150);
+    check('sem mensagem nova desde o desvio, a Conta abre a última sub-aba e o ponto continua', S.tab === 'cesta' && C.club.sec === 'inscritos' && !!(hubA() && hubA().querySelector('.tdot')));
+    meA(3); tab('inicio'); await T.refreshClub(true); T.render(); await wait(80);
+    click(hubA()); await wait(200);
+    check('mensagem nova depois do desvio: a Conta volta a abrir em Mensagens', S.tab === 'conta' && C.club.sec === 'mensagens');
+    click(q('.minitabs [data-act="tab"][data-id="cesta"]')); await wait(80); tab('inicio');
+    meA(0); await T.refreshClub(true); T.render(); await wait(80);
+    meA(1); await T.refreshClub(true); T.render(); await wait(80); C.club.sec = 'inscritos';
+    click(hubA()); await wait(200);
+    check('não lidas caem e depois chega uma nova: a Conta volta a abrir em Mensagens', S.tab === 'conta' && C.club.sec === 'mensagens');
+
     apiA.opt.meErr = { code: 'PGRST202', message: 'Could not find the function public.club_me without parameters in the schema cache' };
     await T.refreshClub(true); T.render(); await wait(120);
     var app = document.getElementById('app').textContent;
@@ -281,7 +317,7 @@
   } finally {
     if (prevApi) T.setClubApi(prevApi);
     C.sb = bk.sb; C.user = bk.user; C.profile = bk.profile; C.profileChecked = bk.checked; C.me = bk.me; C.clubMissing = bk.missing; C.club = bk.club;
-    C.feed = bk.feed; C.feedAt = bk.feedAt; C.ownerMismatch = bk.mismatch; S.tab = bk.tab; S.view = bk.view; S.confirm = bk.confirm; S.contaSec = bk.sec;
+    C.feed = bk.feed; C.feedAt = bk.feedAt; C.ownerMismatch = bk.mismatch; S.tab = bk.tab; S.view = bk.view; S.confirm = bk.confirm; S.contaSec = bk.sec; S.msgVisto = bk.visto;
     LS.forEach(function (k) { if (lsBk[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, lsBk[k]); });
     hideToast(); T.render();
   }

@@ -145,19 +145,26 @@
     S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.addOpen = bk.add; __t.render(); await wait(120);
   }
 
-  // ---- Navegação da Conta (2.11.0) ----
+  // ---- Navegação da Conta (2.11.0 e 2.11.1) ----
   // Histórico, Paladar, Cesta e Perfil são sub-abas da Conta. O teste tira o login só na memória (cloud.user):
   // assim vale a regra sem mensagem nova e nenhum toque chama o clube. Charutos e sessões falsos ficam só na
-  // memória (syncedAt = updatedAt). No fim restaura tudo, inclusive a última sub-aba (contaSec).
+  // memória (syncedAt = updatedAt). A faixa de backup é ligada pelas chaves diario-dirty e diario-last-backup do
+  // localStorage. No fim restaura tudo, inclusive a última sub-aba (contaSec) e as duas chaves.
+  // Três verificações dependem do clube configurado (config.js preenchido); sem ele, entram como "pula".
   if (S && __t.render) {
-    var C = __t.cloud || null;
-    var nb = { c: S.cigars, s: S.sessions, tab: S.tab, sec: S.contaSec, hist: S.histMode, view: S.view, user: C ? C.user : null };
+    var C = __t.cloud || null, comClube = !!(C && C.configured);
+    var nb = { c: S.cigars, s: S.sessions, tab: S.tab, sec: S.contaSec, hist: S.histMode, view: S.view, user: C ? C.user : null,
+      dirty: localStorage.getItem('diario-dirty'), lastBk: localStorage.getItem('diario-last-backup') };
     var CT = '.minitabs[aria-label="Conta"]';
     var hub = function () { return q('.tabs [data-act="tab"][data-hub]'); };
     var hubOn = function () { var b = hub(); return !!b && b.getAttribute('aria-selected') === 'true'; };
     var subSel = function () { var b = q(CT + ' [role=tab][aria-selected="true"]'); return b ? b.getAttribute('data-id') : ''; };
     var sub = async function (id) { click(q(CT + ' [data-act="tab"][data-id="' + id + '"]')); await wait(150); };
     var appText = function () { return document.getElementById('app').textContent; };
+    var pula = function (nome) { R.push('pula ' + nome + ' (clube desativado)'); };
+    var setLS = function (k, v) { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); };
+    var topo = function (s) { var el = q(s); return el ? Math.round(el.getBoundingClientRect().top + scrollY) : -1; };
+    var depois = function (a, b) { var x = q(a), y = q(b); return !!x && !!y && !!(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING); };
     try {
       if (C) C.user = null;
       S.cigars = [{ id: 'ui-nav-c', name: 'Teste Nav', status: 'estoque', strength: 3, updatedAt: 1, syncedAt: 1 }];
@@ -167,12 +174,31 @@
       var barra = q('.tabs');
       check('barra cabe inteira', !!barra && barra.scrollWidth <= barra.clientWidth);
       check('botões da barra com 44 px', qa('.tabs [role=tab]').length === 3 && qa('.tabs [role=tab]').every(function (b) { return b.getBoundingClientRect().height >= 44; }));
-      check('fora do clube, a linha de estado aponta para Conta › Perfil', /Entre no clube em Conta › Perfil para sincronizar\./.test((q('header.top .mode') || {}).textContent || ''));
+      check('a barra se chama Seções para o leitor de tela', !!barra && barra.getAttribute('aria-label') === 'Seções');
+      if (comClube) check('fora do clube, a linha de estado aponta para Conta › Perfil', /Entre no clube em Conta › Perfil para sincronizar\./.test((q('header.top .mode') || {}).textContent || ''));
+      else pula('fora do clube, a linha de estado aponta para Conta › Perfil');
       click(hub()); await wait(150);
       check('Conta abre o Histórico na primeira vez', S.tab === 'historico' && subSel() === 'historico' && hubOn());
       var subs = qa(CT + ' [role=tab]');
       check('Conta tem as sub-abas Histórico, Paladar, Cesta e Perfil', subs.map(function (b) { return b.innerText.trim(); }).join(',') === 'Histórico,Paladar,Cesta,Perfil');
       check('sub-abas com 44 px', subs.length === 4 && subs.every(function (b) { return b.getBoundingClientRect().height >= 44; }));
+      check('as sub-abas cortam o rótulo com reticências quando ele não cabe', subs.length === 4 && subs.every(function (b) { var cs = getComputedStyle(b); return cs.textOverflow === 'ellipsis' && cs.overflowX === 'hidden'; }));
+      // Barra parada (2.11.1): com o resumo do diário (há sessão com nota) e a faixa de backup ligada, a barra
+      // e as sub-abas da Conta ficam no mesmo lugar em todas as abas.
+      setLS('diario-dirty', '2'); setLS('diario-last-backup', '1');
+      var tops = [], subTops = [], ids = ['inicio', 'acervo', 'historico', 'paladar', 'cesta', 'conta'];
+      for (var ti = 0; ti < ids.length; ti++) { S.tab = ids[ti]; __t.render(); await wait(100); tops.push(topo('.tabs')); if (ti >= 2) subTops.push(topo(CT)); }
+      check('a barra fica no mesmo lugar em Início, Acervo e nas quatro sub-abas', tops.length === 6 && tops.every(function (t) { return t >= 0 && t === tops[0]; }));
+      check('as sub-abas da Conta ficam no mesmo lugar nas quatro', subTops.length === 4 && subTops.every(function (t) { return t >= 0 && t === subTops[0]; }));
+      S.tab = 'acervo'; __t.render(); await wait(100);
+      var noAcervo = depois('.tabs', '.banner') && depois('.tabs', '.stats');
+      S.tab = 'historico'; __t.render(); await wait(100);
+      check('o resumo e a faixa de backup vêm abaixo das abas', noAcervo && depois(CT, '.banner') && depois(CT, '.stats'));
+      S.tab = 'acervo'; __t.render(); await wait(100);
+      var fb = q('.banner [data-act="tab"][data-id="conta"]'); click(fb); await wait(150);
+      check('Fazer backup abre o Perfil com a Conta marcada', !!fb && S.tab === 'conta' && subSel() === 'conta' && hubOn());
+      setLS('diario-dirty', nb.dirty); setLS('diario-last-backup', nb.lastBk);
+      S.tab = 'historico'; __t.render(); await wait(100);
       var marcada = true, ordem = ['paladar', 'cesta', 'conta', 'historico'];
       for (var oi = 0; oi < ordem.length; oi++) { await sub(ordem[oi]); marcada = marcada && S.tab === ordem[oi] && subSel() === ordem[oi] && hubOn(); }
       check('a aba Conta fica marcada em todas as sub-abas', marcada);
@@ -188,13 +214,16 @@
         filas.every(function (b) { return b.getBoundingClientRect().height >= 44; }) && document.documentElement.scrollWidth <= innerWidth);
       check('Lado a lado vazio aponta o catálogo em Conta › Cesta', /veja o catálogo em Conta › Cesta\./.test(appText()));
       S.tab = 'clube'; __t.render(); await wait(120);
-      check('fora do clube, o Clube aponta para Conta › Perfil', /Se já tem conta, entre em Conta › Perfil\./.test(appText()));
-      click(q('.empty [data-act="tab"][data-id="conta"]')); await wait(150);
-      check('Ir para Conta abre o Perfil com a Conta marcada', S.tab === 'conta' && subSel() === 'conta' && hubOn());
+      if (comClube) {
+        check('fora do clube, o Clube aponta para Conta › Perfil', /Se já tem conta, entre em Conta › Perfil\./.test(appText()));
+        click(q('.empty [data-act="tab"][data-id="conta"]')); await wait(150);
+        check('Ir para Conta abre o Perfil com a Conta marcada', S.tab === 'conta' && subSel() === 'conta' && hubOn());
+      } else { pula('fora do clube, o Clube aponta para Conta › Perfil'); pula('Ir para Conta abre o Perfil com a Conta marcada'); }
     } catch (e) {
       check('sem exceção na navegação da Conta: ' + e.message, false);
     } finally {
       if (C) C.user = nb.user;
+      setLS('diario-dirty', nb.dirty); setLS('diario-last-backup', nb.lastBk);
       S.cigars = nb.c; S.sessions = nb.s; S.tab = nb.tab; S.contaSec = nb.sec; S.histMode = nb.hist; S.view = nb.view; __t.render(); await wait(120);
     }
   }
