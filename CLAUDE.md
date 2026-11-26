@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.11.0 (25/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.11.1 (25/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -26,7 +26,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Render.** Função `render()` com `innerHTML` a partir de `state`. Eventos são delegados por `data-act` (click), `data-input` (input) e `data-change`/ids (change). Na tela de sessão, a edição fica em `draft` e é salva com debounce (`scheduleSave` → `flush` → `put`).
 - **Sincronização** (`sync()`, só se `config.js` estiver preenchido e o usuário for membro): sobe fotos ainda não enviadas, aplica tombstones, faz upsert por `(owner_id, local_id)`, puxa os registros próprios e mescla por `client_updated_at` (last-writer-wins). A chave localStorage `clube-owner` impede misturar diários de contas diferentes no mesmo aparelho.
 - **Clube:** login por e-mail e senha (o SMTP padrão do Supabase só envia para a equipe do projeto, por isso "Confirm email" fica desligado), convite por código (`join_club`, `create_invite`), feed de sessões com `visibility='club'` e `status='concluida'`, curtidas, comentários e `delete_my_account` (LGPD). As regras de acesso foram testadas em Postgres (36 casos).
-- **Administração do clube (fase 2):** `club_me()` devolve o estado de quem chama (administrador, suspenso, mensagens não lidas, aviso não lido mais recente) e registra o último acesso a cada 10 min. Conversa por inscrito em `messages` (escrita só por `send_message`), avisos em `announcements`, funções `admin_*` que checam `is_admin()`. Membros só leem `id, display_name, is_admin, created_at` dos perfis; o resto sai pelas funções. Suspenso deixa de ser membro (`is_member()`), perde feed e sincronização, e as sessões dele somem do feed, mas a conversa continua. **O dono sempre lê e apaga os próprios registros** (políticas `cigars_owner_read`/`_delete` e `sessions_owner_read`/`_delete`): se a nuvem devolver lista vazia ao dono, a `mergeRemote` apaga do celular tudo o que já tinha subido. Pelo mesmo motivo, `canSync()` só libera com o estado do clube confirmado nesta sessão (`cloud.me` ou `cloud.clubMissing`). No app, a camada `clubApi` faz as chamadas e `refreshClub()` atualiza ao abrir, ao voltar para o app (no máximo 1x/min) e ao abrir a Conta.
+- **Administração do clube (fase 2):** `club_me()` devolve o estado de quem chama (administrador, suspenso, mensagens não lidas, aviso não lido mais recente) e registra o último acesso a cada 10 min. Conversa por inscrito em `messages` (escrita só por `send_message`), avisos em `announcements`, funções `admin_*` que checam `is_admin()`. Membros só leem `id, display_name, is_admin, created_at` dos perfis; o resto sai pelas funções. Suspenso deixa de ser membro (`is_member()`), perde feed e sincronização, e as sessões dele somem do feed, mas a conversa continua. **O dono sempre lê e apaga os próprios registros** (políticas `cigars_owner_read`/`_delete` e `sessions_owner_read`/`_delete`): se a nuvem devolver lista vazia ao dono, a `mergeRemote` apaga do celular tudo o que já tinha subido. Pelo mesmo motivo, `canSync()` só libera com o estado do clube confirmado nesta sessão (`cloud.me` ou `cloud.clubMissing`). No app, a camada `clubApi` faz as chamadas e `refreshClub()` atualiza ao abrir, ao voltar para o app (no máximo 1x/min) e ao abrir o Perfil.
 - **Backup:** exporta e importa JSON `{app:'diario-degustacao', version:1, cigars, sessions, photos:[{id, dataUrl}]}`.
 
 ## Modelo de dados (local)
@@ -39,12 +39,14 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **cesta** (`localStorage diario-cesta`, lido por `cestaLoad` e gravado por `cestaPersist`): `{v:1, size(3-8), seg('todos'|'c'|'f'|'n'), fora[], enviados[]}`.
   - `fora` guarda as trocas (nomes normalizados, até 200).
   - `enviados` guarda até 20 pedidos `{id, em, seg, itens[{key, name, bitola, origin, strength, wrapper, cigarId, veio}], texto}`. Cada item guarda os dados do charuto, e não o id do catálogo (`linha-índice`), que muda quando o catálogo é atualizado.
-  - Fica só no aparelho: fora do backup e do clube. Valor ausente ou inválido volta ao padrão (tamanho 5, Todos).
+  - Fica só no aparelho: fora do backup e do clube. Valor ausente ou inválido volta ao padrão (tamanho 5, Todos). Apagar os registros do aparelho (troca de conta, `wipeLocalForAccount`) também a zera.
 
 ## Funcionalidades por área
 
 - **Navegação** (2.11.0): a barra tem Início, Acervo e Conta e cabe inteira a 360 px. A Conta tem as sub-abas Histórico, Paladar, Cesta e Perfil, para todos, com ou sem login no clube.
-  - Tocar em Conta abre o Perfil quando há mensagem não lida (`novaMsg()`). Sem ela, abre a última sub-aba usada nesta sessão do app (`state.contaSec`, só na memória) ou, na primeira vez, o Histórico.
+  - Tocar em Conta abre o Perfil quando chegou mensagem desde a última vez que o Perfil foi desenhado (`msgNaoVista()`: não lidas acima de `state.msgVisto`, só na memória). `viewHome` grava o visto ao desenhar o Perfil e o baixa quando as não lidas caem (lidas em outro aparelho, saída da conta). Para o administrador, o desvio abre o painel já em Mensagens. O ponto na Conta e no Perfil continua aceso enquanto houver mensagem não lida (`novaMsg()`).
+  - Sem mensagem nova, a Conta abre a última sub-aba usada nesta sessão do app (`state.contaSec`, só na memória) ou, na primeira vez, o Histórico.
+  - A faixa "Há registros novos sem backup" e o resumo do diário (no Acervo e no Histórico) ficam abaixo das abas, para a barra e as sub-abas não mudarem de lugar. A barra tem `aria-label="Seções"`; as sub-abas cortam o rótulo com reticências quando o texto do sistema está grande.
   - Os valores de `state.tab` não mudaram (`historico`, `paladar`, `cesta` e `conta`, que é o Perfil). O botão da Conta na barra leva `data-hub` e fica marcado em qualquer sub-aba (`CONTA_SECS`, `isContaSec`). Os atalhos que apontam para uma sub-aba abrem direto nela: o nível do cabeçalho abre o Paladar, e "Fazer backup", "Ir para Conta" e o aviso do Início abrem o Perfil.
   - `viewHome` grava `state.contaSec` sempre que desenha uma sub-aba da Conta, inclusive quando o código muda `state.tab` direto (por exemplo, ao apagar uma sessão).
 - **Acervo:** filtros Todos/Cesta/Estoque/Arquivo, botões Cesta e Estoque, editar e remover charuto, ficha do charuto (formato pela bitola, capa, terroir, corte) e sugestão da próxima degustação.
@@ -57,18 +59,19 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Cesta** (Conta › Cesta; entrou na 2.10.0 no lugar da aba Comparar): monta um pedido de 3 a 8 charutos para o Felipe mandar à loja pelo WhatsApp. O app só escreve a lista, sem preço, loja nem link.
   - **Montagem** (`cestaPlan`, pura):
     - Primeiro entram os charutos do Acervo com Cesta.
-    - Depois, até ⌊N/3⌋ de **Repor**: provados cuja resposta mais recente de "Recompraria" é Sim, fora o que está em Estoque.
+    - Depois, até ⌊N/3⌋ de **Repor**: provados cuja resposta mais recente de "Recompraria" é Sim, fora o que está em Estoque. O Repor de sessão avulsa (sem Acervo e sem catálogo) leva ao pedido a força sentida na sessão mais recente que a registrou e, quando a marca é conhecida, a origem e a capa que `cigarAttrs` deduz dela; sem marca conhecida, ficam vazias.
     - O resto são **Novos** do catálogo, pela afinidade (`curate`). De preferência sem repetir linha e com no máximo 2 da mesma marca; se faltar candidato no filtro (Nacionais têm só 3 linhas), a cesta repete linha e depois marca.
     - O filtro de origem (Todos/Cubanos/Fora de Cuba/Nacionais) vale para a cesta e para o Catálogo.
     - "Trocar" passa a vaga ao próximo candidato; "Desfazer trocas" esvazia a lista de trocas.
     - Charuto do Acervo sem origem conhecida só entra no filtro Todos.
   - **Pedido:** o texto (`pedidoTexto`) sai em "Olá! Gostaria de fazer um pedido:", com uma linha "1 Nome (bitola)" por charuto, usando o nome e a bitola do catálogo.
     - "Enviar pedido (WhatsApp…)" usa `navigator.share` e só aparece quando ele existe.
-    - "Copiar" usa `navigator.clipboard`; quando falha, seleciona o texto e não guarda o pedido.
+    - "Copiar" usa `navigator.clipboard`. Quando falha, seleciona o texto (a seleção sobrevive ao redesenho), não guarda o pedido e mostra "Já enviei", que o guarda enquanto a cesta mostrar o mesmo texto (`state.cestaCopia`).
     - Os dois guardam o **pedido enviado**, apagam as trocas e remontam a cesta sem os nomes enviados, para o pedido da loja seguinte.
   - **Pedidos enviados:** um bloco por pedido, cada charuto com "Chegou".
     - "Guardar no estoque" (`chegadaPlan`, pura) usa os dados do envio: tira Cesta e põe Estoque no que já está no Acervo, cria o que falta e deixa na Cesta o que não chegou.
-    - Há também "Reenviar" e "Descartar", com confirmação.
+    - O pedido só sai depois que todas as gravações confirmam (`put` devolve `true` ou `false`). Se uma falha, o estado volta ao que está gravado (`loadAll`), o pedido fica e o aviso pede para tentar de novo. Um toque por vez (`state.pedGuardando`).
+    - Há também "Reenviar" (se o compartilhamento falhar, copia o texto e avisa) e "Descartar", com confirmação. Cada "Chegou" diz o nome do charuto ao leitor de tela.
   - **Catálogo** (ex-Para provar): catálogo de referência (`CAT_LINES`/`CAT_ITEMS`, 475 charutos), ordenado pelo perfil de paladar (`tasteProfile` → `curate`), com busca e "Adicionar à cesta" (cria o charuto no Acervo com status `cesta`, que entra na cesta montada).
     - O que já foi provado sai da lista, mas aparece na busca com a nota.
     - Com menos de 3 sessões com nota, a ordem segue a força de referência, de suave a média.
@@ -97,12 +100,13 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **UI:** mobile-first (testar em 360 a 390 px, sem rolagem horizontal), tema escuro por padrão com tema claro via tokens CSS, fontes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono, alvos de toque de pelo menos 44 px, sem emoji como ícone.
 - **Testes:**
   - **Funções puras:** `node tests/guia.test.js`, `node tests/curadoria.test.js`, `node tests/clube.test.js` e `node tests/cesta.test.js` testam o que fica entre os marcadores `/* @pure:guia */`, `/* @pure:curadoria */`, `/* @pure:clube */` e `/* @pure:cesta */` (fecham com `/* @end:... */`). O teste da Cesta carrega a curadoria junto.
+  - **Funções que gravam:** `node tests/app.test.js` roda `put`, `pedGuardar` e `wipeLocalForAccount` (extraídas de `index.html` pelo nome, casando as chaves) num `vm` com o armazenamento trocado por dublês: gravação pendente, que falha, dois toques e troca de conta.
   - **SQL:** `node supabase/tests/fase2.test.mjs` testa o SQL do clube no PGlite.
   - **Interface:** `tests/ui-guia.js`, `tests/ui-curadoria.js`, `tests/ui-clube.js` e `tests/ui-cesta.js` rodam no navegador com o app aberto: `eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`. O `?` evita a cópia do service worker.
     - Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim, inclusive `state.tab` e `state.contaSec`.
-    - O `ui-guia.js` também confere a navegação da Conta. Nessa seção ele tira o login só na memória (`cloud.user`), para valer a regra sem mensagem nova e nenhum toque chamar o clube.
-    - O `ui-clube.js` também troca o cliente Supabase e o `clubApi` por versões falsas em memória (ganchos `__t.cloud`, `__t.setClubApi`, `__t.refreshClub`, `__t.canSync`).
-    - O `ui-cesta.js` e o `ui-curadoria.js` guardam e restauram o estado da Cesta (gancho `__t.cesta` e `localStorage diario-cesta`). O `ui-cesta.js` também troca `navigator.share` e `navigator.clipboard` por versões falsas.
+    - O `ui-guia.js` também confere a navegação da Conta. Nessa seção ele tira o login só na memória (`cloud.user`), para valer a regra sem mensagem nova e nenhum toque chamar o clube, e liga a faixa de backup pelas chaves `diario-dirty` e `diario-last-backup` (restauradas no fim). Com `config.js` vazio, as três verificações que dependem do clube entram como "pula".
+    - O `ui-clube.js` também troca o cliente Supabase e o `clubApi` por versões falsas em memória (ganchos `__t.cloud`, `__t.setClubApi`, `__t.refreshClub`, `__t.canSync`) e restaura `state.msgVisto`.
+    - O `ui-cesta.js` e o `ui-curadoria.js` guardam e restauram o estado da Cesta (gancho `__t.cesta` e `localStorage diario-cesta`), mesmo quando uma verificação quebra no meio (`try/finally`). O `ui-cesta.js` também troca `navigator.share` e `navigator.clipboard` por versões falsas e clica em "Já enviei", que só grava na Cesta.
   - **À mão:** os botões "Adicionar à cesta" e "Guardar no estoque" gravam no diário; confira-os num navegador sem login no clube e apague depois os charutos de teste. No navegador embutido do app desktop, a área de transferência real falha, e o "Copiar" cai na seleção do texto. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
 - **Privacidade:** backups JSON contêm dados pessoais e fotos; não versionar (`*.json` está no `.gitignore`). O `migracao-diario.json` foi removido na 2.6.1 (ainda existe no histórico do Git).
 
