@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), assert = r
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const pick = tag => [...html.matchAll(new RegExp('\\/\\* @pure:' + tag + ' \\*\\/([\\s\\S]*?)\\/\\* @end:' + tag + ' \\*\\/', 'g'))].map(m => m[1]);
-const NOMES = ['inicioCharutos', 'abaInicial', 'nivelProgresso', 'quandoTexto', 'ultimaSessaoTexto'];
+const NOMES = ['inicioCharutos', 'abaInicial', 'nivelProgresso', 'quandoTexto', 'ultimaSessaoTexto', 'relogioTexto'];
 const sb = {};
 vm.createContext(sb);
 vm.runInContext(pick('base').concat(pick('sabores'), pick('inicio')).join('\n') + '\nthis.__x={' + NOMES.map(n => n + ':typeof ' + n + '!=="undefined"?' + n + ':undefined').join(',') + '};', sb);
@@ -61,6 +61,14 @@ test('ultimaSessaoTexto: a concluída mais recente, nota com vírgula', () => {
   assert.strictEqual(X.ultimaSessaoTexto(ss, AGORA), 'Última sessão: Oliva V Melanio · nota 7,5 · há 3 dias');
   assert.strictEqual(X.ultimaSessaoTexto([{ cigarName: 'Sem nota', status: 'concluida', rating: null, endedAt: dia(1) }], AGORA), 'Última sessão: Sem nota · ontem');
   assert.strictEqual(X.ultimaSessaoTexto([{ cigarName: 'Aberta', status: 'aberta' }], AGORA), '');
+});
+test('relogioTexto: hh:mm:ss com zeros, sem negativo', () => {
+  assert.strictEqual(typeof X.relogioTexto, 'function', 'relogioTexto fora do bloco @pure:inicio');
+  assert.strictEqual(X.relogioTexto(0), '00:00:00');
+  assert.strictEqual(X.relogioTexto(65000), '00:01:05');
+  assert.strictEqual(X.relogioTexto(3723999), '01:02:03');
+  assert.strictEqual(X.relogioTexto(-5000), '00:00:00');
+  assert.strictEqual(X.relogioTexto(36 * 3600000), '36:00:00');
 });
 
 console.log(`\n${pass} ok, ${fail} falha(s)`);

@@ -18,6 +18,7 @@
   --fg:#F2E8D8; --muted:#BBA98F; --faint:#93826B;
   --ember:#E58A42; --ember-ink:#1A120C; --sand:#DDB66B;
   --ok:#86B97F; --warn:#E3B84F; --bad:#E8735D;
+  --glow:rgba(229,138,66,.30); --glow2:rgba(229,138,66,.10);
   --f-display:'Bricolage Grotesque', 'Trebuchet MS', sans-serif;
   --f-body:'IBM Plex Sans', 'Segoe UI', Roboto, system-ui, sans-serif;
   --f-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
@@ -27,12 +28,12 @@
   --bg:#F5EFE5; --surface:#FCF8F2; --surface2:#EDE3D3; --line:#DACDB8;
   --fg:#2A1E15; --muted:#6B5945; --faint:#7E6C57;
   --ember:#B4561A; --ember-ink:#FFF8F0; --sand:#8E6A1E;
-  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; color-scheme:light; } }
+  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; --glow:rgba(180,86,26,.22); --glow2:rgba(180,86,26,.07); color-scheme:light; } }
 :root[data-theme="light"]{
   --bg:#F5EFE5; --surface:#FCF8F2; --surface2:#EDE3D3; --line:#DACDB8;
   --fg:#2A1E15; --muted:#6B5945; --faint:#7E6C57;
   --ember:#B4561A; --ember-ink:#FFF8F0; --sand:#8E6A1E;
-  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; color-scheme:light; }
+  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; --glow:rgba(180,86,26,.22); --glow2:rgba(180,86,26,.07); color-scheme:light; }
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -111,7 +112,7 @@ details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 
 .pedlist .faint{white-space:nowrap}
 .catcount{font-size:13px; margin:0 0 8px}
 .cmpsim .list{gap:10px}
-.gwelcome{gap:10px; border:1.5px solid var(--line)}
+.gwelcome{display:flex; flex-direction:column; gap:10px; padding:12px; border-radius:14px; background:var(--bg); border:1px solid var(--line)}
 .gwelcome h3,.gwelcome p{margin:0}
 .gwelcome .row>*{flex:1 1 auto}
 .ghead{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
@@ -271,6 +272,68 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .iftxt span{font-size:13px; color:var(--muted)}
 .iflbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
 .ifin .opt{min-height:44px}
+/* Início (2.13.0): herói, Clube e Seu diário. */
+.sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+.heroi{position:relative; overflow:hidden; border-radius:22px; border:1.5px solid var(--line); padding:20px 18px 18px; min-width:0;
+  background:radial-gradient(130% 90% at 100% 0%, var(--glow), transparent 58%), linear-gradient(180deg, var(--surface2), var(--surface));
+  display:flex; flex-direction:column; gap:14px}
+.heroi.ativa{border-color:var(--ember)}
+.httl{font-size:28px; font-weight:800; line-height:1.08; overflow-wrap:anywhere}
+.heroi .acender{box-shadow:0 10px 28px var(--glow)}
+.sug{display:flex; align-items:center; gap:12px; padding:12px; border-radius:14px; background:var(--bg); border:1px solid var(--line); min-width:0; width:100%; text-align:left; color:var(--fg)}
+.sug .sico{width:40px; height:40px; border-radius:12px; background:var(--surface2); color:var(--ember); display:inline-flex; align-items:center; justify-content:center; flex:none}
+.sug .sgo{width:36px; height:36px; border-radius:50%; border:1.5px solid var(--line); display:inline-flex; align-items:center; justify-content:center; color:var(--ember); flex:none}
+.sug .txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.sug .txt b{overflow-wrap:anywhere}
+.sug .meta{font-size:13px; color:var(--muted)}
+.ultima{font-size:13px; color:var(--faint)}
+.hlive{display:flex; align-items:center; gap:8px}
+.hrelogio{font-family:var(--f-mono); font-size:40px; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-0.02em}
+.pulse{width:10px; height:10px; border-radius:50%; background:var(--ember); box-shadow:0 0 0 0 var(--glow); animation:pulse 1.8s ease-out infinite; flex:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 var(--glow)} 70%{box-shadow:0 0 0 10px transparent} 100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion: reduce){ .pulse{animation:none} }
+.hacts .btn{flex:1 1 auto}
+.isec{display:flex; flex-direction:column; gap:12px; min-width:0}
+.isec-h{display:flex; align-items:center; gap:10px; min-width:0}
+.isec-h .ico{width:36px; height:36px; border-radius:10px; background:var(--surface2); color:var(--ember); display:inline-flex; align-items:center; justify-content:center; flex:none}
+.isec-h .tt{flex:1; min-width:0; display:flex; flex-direction:column}
+.isec-h .tt span{font-size:13px; color:var(--faint)}
+.ilink{background:none; border:0; padding:8px 0; min-height:44px; color:var(--ember); font-weight:600; display:inline-flex; align-items:center; gap:4px; flex:none}
+.iquick{display:flex; gap:8px; flex-wrap:wrap}
+.iqk{min-height:44px; padding:8px 14px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg); display:inline-flex; align-items:center; gap:8px; font-weight:600; font-size:14px}
+.iqk svg{color:var(--ember)}
+.bdg{font-family:var(--f-mono); font-size:12px; padding:1px 7px; border-radius:999px; background:var(--ember); color:var(--ember-ink)}
+.iaviso{padding:12px 14px; border-radius:14px; background:var(--surface); border:1.5px solid var(--ember); display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap}
+.iaviso > svg{color:var(--ember); flex:none; margin-top:2px}
+.ipost{display:flex; flex-direction:column; gap:10px; padding:14px; border-radius:18px; background:var(--surface); border:1px solid var(--line); min-width:0}
+.ipost .ptop{display:flex; align-items:center; gap:10px; min-width:0}
+.ipost .nm{flex:1; min-width:0; display:flex; flex-direction:column}
+.ipost .nm b{overflow-wrap:anywhere}
+.ipost .nm span{font-size:13px; color:var(--faint)}
+.pnota{font-family:var(--f-display); font-weight:800; font-size:22px; color:var(--ember); line-height:1; flex:none}
+.pnota small{font-family:var(--f-mono); font-size:11px; color:var(--faint); font-weight:500}
+.pcig{font-family:var(--f-display); font-weight:700; font-size:17px; line-height:1.2; overflow-wrap:anywhere}
+.iacts{display:flex; gap:8px; flex-wrap:wrap}
+.iact{min-height:44px; padding:8px 14px; border-radius:999px; border:1.5px solid var(--line); background:transparent; color:var(--fg); display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:14px}
+.iact[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
+.iact .n{font-family:var(--f-mono); font-size:13px}
+.ivazio{margin:0; padding:16px; border-radius:16px; border:1.5px dashed var(--line); color:var(--muted); font-size:14px}
+.iconvite{display:flex; flex-direction:column; gap:12px; padding:18px; border-radius:20px; border:1.5px solid var(--line); min-width:0;
+  background:radial-gradient(120% 80% at 0% 0%, var(--glow2), transparent 60%), var(--surface)}
+.iconvite ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
+.iconvite li{display:flex; gap:10px; align-items:center; font-size:15px}
+.iconvite li svg{color:var(--ember); flex:none}
+.diario{display:flex; flex-direction:column; gap:12px; padding:16px; border-radius:18px; background:var(--surface); border:1px solid var(--line); min-width:0}
+.diario h2{font-size:20px}
+.dlv{justify-content:space-between; font-size:14px}
+.diario .xpbar{margin-top:6px}
+.dfalta{font-size:13px; margin-top:6px}
+.imiss{display:flex; align-items:center; gap:10px; font-size:15px}
+.imiss i{width:12px; height:12px; border-radius:50%; flex:none}
+/* Faixa de backup numa linha só: o texto quebra, o botão não. */
+.banner.bk{flex-wrap:nowrap; padding:6px 6px 6px 14px; font-size:14px}
+.banner.bk span{min-width:0}
+.banner.bk .btn{flex:none; white-space:nowrap; padding-left:14px; padding-right:14px}
 .seg{display:flex; gap:6px}
 .seg button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); font-family:var(--f-mono); font-size:16px}
 .seg button[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
@@ -597,6 +660,9 @@ function ultimaSessaoTexto(sessions,agora){var c=(sessions||[]).filter(function(
   c.sort(function(a,b){return (Date.parse(b.endedAt||b.createdAt)||0)-(Date.parse(a.endedAt||a.createdAt)||0);});
   var s=c[0],p=[String(s.cigarName||'Charuto')];if(typeof s.rating==='number')p.push('nota '+String(s.rating).replace('.',','));
   var q=quandoTexto(s.endedAt||s.createdAt,agora);if(q)p.push(q);return 'Última sessão: '+p.join(' · ');}
+/* Relógio do herói: hh:mm:ss, com as horas sempre em dois dígitos (ou mais). */
+function relogioTexto(ms){var s=Math.max(0,Math.floor((ms||0)/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  function p(n){return (n<10?'0':'')+n;}return p(h)+':'+p(m)+':'+p(x);}
 /* @end:inicio */
 /* Conhecimento adaptado de "O Guia Definitivo do Charuto" (Johny Oliveira), com trechos contraditórios ou de risco à saúde deixados de fora. */
 var TERROIR=[
@@ -1122,8 +1188,9 @@ function lessonsHtml(){var r=lessonsRead();
 function sweetSpot(){var R0=rated();if(R0.length<3)return [1,3];var mean=avg(R0.map(function(s){return s.rating;}));var good=[1,2,3,4,5].filter(function(v){var ss=R0.filter(function(s){return s.strength===v;});return ss.length&&avg(ss.map(function(s){return s.rating;}))>=mean;});
   return good.length?[Math.min.apply(null,good),Math.max.apply(null,good)]:[1,3];}
 function pairingFor(c){if(c.pairing)return c.pairing;var st=c.strength||2;if(st<=2)return 'café ou água de coco, de preferência depois de comer';if(st===3)return 'whisky sem turfa, rum ou cachaça envelhecida';return 'rum envelhecido, depois de uma refeição e com água por perto';}
-function suggestion(){
-  var cands=state.cigars.filter(function(c){var f=cflags(c);return f.cesta||f.estoque;});if(!cands.length)return null;
+/* soEstoque: só o que está em Estoque (herói da Início); sem ele, Cesta ou Estoque (Acervo). */
+function suggestion(soEstoque){
+  var cands=state.cigars.filter(function(c){var f=cflags(c);return soEstoque?f.estoque:(f.cesta||f.estoque);});if(!cands.length)return null;
   var sp=sweetSpot(),now=Date.now();
   var scored=cands.map(function(c){var ss=done().filter(function(s){return s.cigarId===c.id;}),why=[],sc=0;
     if(c.strength>=sp[0]&&c.strength<=sp[1]){sc+=3;why.push('força esperada '+c.strength+'/5, dentro da sua faixa ideal ('+sp[0]+' a '+sp[1]+')');}
@@ -1249,9 +1316,9 @@ function loadAll(){return Promise.all([getAll('cigars'),getAll('sessions'),getAl
    ===================================================================== */
 var CFG=window.CLUBE_CONFIG||{};
 var cloud={configured:!!(CFG.url&&CFG.key&&window.supabase&&window.supabase.createClient),sb:null,user:null,profile:null,profileChecked:false,
-  status:'idle',statusDetail:'',lastSync:Number(ls('clube-last-sync')||0),feed:[],likes:{},comments:{},feedAt:0,feedLoading:false,feedError:'',
+  status:'idle',statusDetail:'',lastSync:Number(ls('clube-last-sync')||0),feed:[],likes:{},comments:{},feedAt:0,feedLoading:false,feedError:'',membros:null,
   authMode:'entrar',authBusy:false,authMsg:'',inviteLink:'',ownerMismatch:false,commentBusy:false,_loginFor:null,photoReq:{}};
-(function(){try{var c=JSON.parse(ls('clube-feed')||'null');if(c){cloud.feed=c.items||[];cloud.likes=c.likes||{};cloud.comments=c.comments||{};cloud.feedAt=c.at||0;}}catch(e){}
+(function(){try{var c=JSON.parse(ls('clube-feed')||'null');if(c){cloud.feed=c.items||[];cloud.likes=c.likes||{};cloud.comments=c.comments||{};cloud.feedAt=c.at||0;cloud.membros=typeof c.membros==='number'?c.membros:null;}}catch(e){}
   try{var p=JSON.parse(ls('clube-profile')||'null');if(p)cloud.profile=p;}catch(e){}})();
 var inviteCode=(function(){var q=null;try{q=new URLSearchParams(location.search).get('convite');}catch(e){}
   if(q){ls('clube-convite',q.trim().toUpperCase());try{history.replaceState(null,'',location.pathname);}catch(e){}state.tab='conta';cloud.authMode='criar';}
@@ -1431,9 +1498,6 @@ function memberMsgsPanel(){var me=cloud.me,c=cloud.club;if(cloud.clubMissing||!m
   h+=threadHtml(c.thread,false)+composerHtml(cloud.user.id);
   if(!me.suspended)h+='<div id="avisos"><h3>Avisos</h3>'+(c.avisos.length?c.avisos.map(function(a){return '<div class="aviso-item"><div class="mhead">'+esc(relAgo(a.created_at))+'</div><p>'+esc(a.body)+'</p></div>';}).join(''):'<p class="faint">Nenhum aviso ainda.</p>')+'</div>';
   return h+'</div>';}
-/* Faixa no Início com o aviso não lido mais recente. */
-function avisoBanner(){var me=cloud.me;if(!isMember()||!me||me.suspended||!me.aviso)return '';var b=String(me.aviso.body||''),t=b.length>160?b.slice(0,159)+'…':b;
-  return '<div class="banner aviso" role="status"><div class="abody"><b>Aviso do clube</b><span>'+esc(t)+'</span></div><div class="row"><button class="btn" data-act="avisover">Ver</button><button class="btn ghost" data-act="avisook">Dispensar</button></div></div>';}
 
 /* ---- mapeamento local <-> nuvem ---- */
 function nz(v){return (v===''||v===undefined)?null:v;}
@@ -1509,6 +1573,8 @@ function loadFeed(){
   if(!isMember()||cloud.feedLoading||isSuspended())return Promise.resolve();
   cloud.feedLoading=true;rerender();var sb=cloud.sb;
   return (async function(){
+    /* Número de membros para a Início, em paralelo com o feed. Se falhar, a linha some; o feed segue. */
+    var cnt=Promise.resolve(sb.from('profiles').select('id',{count:'exact',head:true})).then(function(x){return x&&!x.error&&typeof x.count==='number'?x.count:null;},function(){return null;});
     var r=await sb.from('sessions').select(FEED_COLS).eq('visibility','club').eq('status','concluida').order('ended_at',{ascending:false}).limit(60);
     if(r.error)throw r.error;var items=r.data||[],ids=items.map(function(x){return x.uid;}),likes={},comments={};
     if(ids.length){
@@ -1516,8 +1582,9 @@ function loadFeed(){
       (rr.data||[]).forEach(function(x){(likes[x.session_uid]=likes[x.session_uid]||[]).push(x.user_id);});
       var rc=await sb.from('comments').select('id,session_uid,user_id,body,created_at,profiles(display_name)').in('session_uid',ids).order('created_at',{ascending:true});if(rc.error)throw rc.error;
       (rc.data||[]).forEach(function(x){(comments[x.session_uid]=comments[x.session_uid]||[]).push(x);});}
+    var nm=await cnt;if(nm!=null)cloud.membros=nm;
     cloud.feed=items;cloud.likes=likes;cloud.comments=comments;cloud.feedAt=Date.now();cloud.feedError='';
-    ls('clube-feed',JSON.stringify({items:items,likes:likes,comments:comments,at:cloud.feedAt}));
+    ls('clube-feed',JSON.stringify({items:items,likes:likes,comments:comments,at:cloud.feedAt,membros:cloud.membros}));
   })().then(function(){cloud.feedLoading=false;rerender();fetchFeedPhotos();})
     .catch(function(e){cloud.feedLoading=false;cloud.feedError=navigator.onLine===false?'Sem internet. Mostrando o último feed carregado.':authErr(e);rerender();});
 }
@@ -1572,7 +1639,7 @@ async function submitAuth(form){
   }catch(e){cloud.authBusy=false;cloud.authMsg=authErr(e);render();}
 }
 function signOut(){
-  cloud.sb.auth.signOut().catch(function(){}).then(function(){cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.likes={};cloud.comments={};cloud.inviteLink='';cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();
+  cloud.sb.auth.signOut().catch(function(){}).then(function(){cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.likes={};cloud.comments={};cloud.membros=null;cloud.inviteLink='';cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();
     ls('clube-feed',null);ls('clube-profile',null);cloud.status='idle';state.confirm='';render();toast('Você saiu do clube. O diário continua neste celular.');});
 }
 async function deleteAccount(){
@@ -1584,7 +1651,7 @@ async function deleteAccount(){
     await sb.auth.signOut().catch(function(){});
     ls('clube-owner',null);ls('clube-feed',null);ls('clube-profile',null);ls('clube-last-sync',null);
     await resetSyncFlags();
-    cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();cloud.authBusy=false;cloud.status='idle';render();
+    cloud.user=null;cloud.profile=null;cloud._loginFor=null;cloud.feed=[];cloud.membros=null;cloud.me=null;cloud.clubMissing=false;cloud.club=newClub();cloud.authBusy=false;cloud.status='idle';render();
     toast('Conta excluída. Seus dados saíram do clube; o diário continua neste celular.');
   }catch(e){cloud.authBusy=false;render();toast(authErr(e));}
 }
@@ -1632,9 +1699,18 @@ function restoreAuthForm(){
   [['au-name','name'],['au-email','email'],['au-pass','pass'],['au-code','code']].forEach(function(x){var el=document.getElementById(x[0]);if(el&&f[x[1]])el.value=f[x[1]];});
   [['au-adult','adult'],['au-terms','terms']].forEach(function(x){var el=document.getElementById(x[0]);if(el)el.checked=!!f[x[1]];});
 }
+/* Relógio do herói (2.13.0): um intervalo de 1 s só com a Início na tela, a página visível e o cronômetro da sessão aberta correndo. */
+var heroiTimer=null;
+function heroiPinta(){var s=openSession(),el=document.getElementById('heroi-relogio');if(s&&el)el.textContent=relogioTexto(elapsed(s));}
+function inicioTick(){var s=openSession(),on=state.tab==='inicio'&&state.view==='home'&&document.visibilityState!=='hidden'&&!!(s&&s.timer&&s.timer.running);
+  if(on&&!heroiTimer)heroiTimer=setInterval(heroiPinta,1000);else if(!on&&heroiTimer){clearInterval(heroiTimer);heroiTimer=null;}return !!heroiTimer;}
+/* Feed do clube pela Início: carrega se tiver mais de 5 min, só para membro, com a página visível; nova tentativa no máximo a cada 5 min. */
+function inicioFeed(){if(!isMember()||isSuspended()||cloud.feedLoading||document.visibilityState==='hidden')return;var t=Date.now();
+  if(t-cloud.feedAt<300000||t-(cloud.inicioFeedTry||0)<300000)return;cloud.inicioFeedTry=t;setTimeout(loadFeed,0);}
 function render(){
   var app=document.getElementById('app');
   if(ritmo.on&&!(state.view==='guia'&&GUIDE_TOOL[guiaIndex()]==='ritmo'))ritmoStop();
+  inicioTick();
   if(state.view==='session'&&draft){var fz=rodaFocoAntes();app.innerHTML=viewSession();state.rodaAnim='';rodaFit();rodaFocoDepois(fz);
     /* Fonte ainda carregando: os rótulos da roda são medidos de novo quando ela chegar. */
     if(document.fonts&&document.fonts.status==='loading')document.fonts.ready.then(function(){if(state.view==='session')rodaFit();});
@@ -1651,6 +1727,7 @@ function render(){
   var cq=fid?document.getElementById(fid):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
+  if(state.tab==='inicio')inicioFeed();
 }
 function statusLine(){
   if(state.dbError)return '<span class="sdot bad"></span>Este navegador bloqueou o armazenamento. Abra pelo Chrome, fora da aba anônima.';
@@ -1686,13 +1763,14 @@ function viewHome(){
   var un=unreadMsgs();if(state.tab==='conta')state.msgVisto=un;else if((state.msgVisto||0)>un)state.msgVisto=0;
   var h=viewHeader();
   var live=openSession();
-  if(live){h+='<div class="card live"><div class="head"><div><div class="eyebrow">Sessão em andamento</div><h3>'+esc(live.cigarName)+'</h3><div class="meta num">'+fmtClock(elapsed(live))+' · '+esc(live.moment||'momento não marcado')+'</div></div><button class="btn primary" data-act="resume" data-id="'+esc(live.id)+'">Retomar</button></div></div>';}
   var nm=novaMsg(),naConta=isContaSec(state.tab);
   h+='<div class="tabs" role="tablist" aria-label="Seções">'+[['inicio','Início'],['acervo','Acervo'],['conta','Conta']].map(function(t){var hub=t[0]==='conta',dot=hub&&nm;
     return '<button role="tab" aria-selected="'+(hub?naConta:state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(hub?' data-hub="1"':'')+(dot?' aria-label="Conta, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';
   if(naConta)h+=contaTabs();
   /* A faixa de backup e o resumo do diário ficam abaixo das abas: a barra e as sub-abas não mudam de lugar entre as abas. */
-  if(needsBackup()&&state.tab!=='conta')h+='<div class="banner"><span>Há registros novos sem backup.</span><button class="btn small" data-act="tab" data-id="conta">Fazer backup</button></div>';
+  /* Sessão em andamento: na Início, o herói faz esse papel; nas outras abas, o cartão fica abaixo da barra (a barra não muda de lugar). */
+  if(live&&state.tab!=='inicio'){h+='<div class="card live"><div class="head"><div><div class="eyebrow">Sessão em andamento</div><h3>'+esc(live.cigarName)+'</h3><div class="meta num">'+fmtClock(elapsed(live))+' · '+esc(live.moment||'momento não marcado')+'</div></div><button class="btn primary" data-act="resume" data-id="'+esc(live.id)+'">Retomar</button></div></div>';}
+  if(needsBackup()&&state.tab!=='conta')h+='<div class="banner bk"><span>Há registros novos sem backup.</span><button class="btn" data-act="tab" data-id="conta">Fazer backup</button></div>';
   if(state.tab==='acervo'||state.tab==='historico'){var ds=done();
     if(ds.length){var rated=ds.filter(function(s){return typeof s.rating==='number';});
       var mean=rated.length?(rated.reduce(function(a,s){return a+s.rating;},0)/rated.length):null;
@@ -1752,7 +1830,9 @@ window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,state:
   cloud:cloud,setClubApi:function(o){var p=clubApi;clubApi=o;return p;},refreshClub:function(f){return refreshClub(f);},canSync:function(){return canSync();},
   /* Teste da roda: abre (ou fecha, com null) uma sessão só na memória e troca o gravador da sessão. */
   sessao:function(d){if(d!==undefined){draft=d;state.view=d?'session':'home';state.step=0;rodaReset();render();}return draft;},
-  setSessionSaver:function(fn){var p=sessionSaver;sessionSaver=fn;return p;}};
+  setSessionSaver:function(fn){var p=sessionSaver;sessionSaver=fn;return p;},
+  /* Teste da Início: diz se o relógio do herói está correndo (só lê). */
+  inicioTick:function(){return !!heroiTimer;}};
 function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
   if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
@@ -1767,18 +1847,73 @@ function viewGuia(){
   return '<header class="top"><button class="btn ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">Guia de bolso · '+(i+1)+' de '+n+'</div><div class="gdhead"><span class="gico">'+GUIDE_ICONS[i]+'</span><h1 style="font-size:34px">'+esc(g[0])+'</h1></div><p class="gdrule">'+esc(g[2])+'</p></header>'+
     guiaTool(GUIDE_TOOL[i])+'<div class="panel gdtext">'+g[1]+'</div>'+
     '<nav class="row gdnav" aria-label="Tópicos do guia"><button class="btn" data-act="guia-nav" data-id="-1">Anterior</button><button class="btn" data-act="guia-nav" data-id="1">Próximo</button></nav><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p>';}
-/* Boas-vindas só para diário novo (sem charutos e sem sessões): o caminho para começar fica na tela de abertura. */
+/* Boas-vindas só para diário novo (sem charutos e sem sessões): uma linha dentro do herói (2.13.0). */
 function welcomeHtml(){
   if(!state.loaded||state.cigars.length||state.sessions.length)return '';
-  if(isMember()&&cloud.status==='syncing')return '<div class="panel gwelcome" aria-live="polite"><h3>Trazendo seus registros do clube…</h3><p class="muted">Seu acervo aparece aqui assim que a sincronização terminar.</p></div>';
-  return '<div class="panel gwelcome"><h3>Comece seu diário</h3><p class="muted">Cadastre o primeiro charuto do seu acervo ou importe um backup de outro aparelho.'+(cloud.configured&&!isMember()?' Já é do clube? Toque na coroa no alto para entrar e trazer seus registros.':'')+'</p>'+
-    '<div class="row"><button class="btn primary" data-act="novo-charuto">Adicionar primeiro charuto</button>'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';}
+  if(isMember()&&cloud.status==='syncing')return '<div class="gwelcome" aria-live="polite"><b>Trazendo seus registros do clube…</b><span class="muted">Seu acervo aparece aqui assim que a sincronização terminar.</span></div>';
+  return '<div class="gwelcome"><p>Seu diário está vazio. Adicione o primeiro charuto ou importe um backup.</p>'+
+    '<div class="row"><button type="button" class="btn" data-act="novo-charuto">Adicionar primeiro charuto</button>'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';}
+/* ---------- Início (2.13.0): herói, Clube e Seu diário ---------- */
+var CHARUTO_ICON='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="9.5" width="17" height="5" rx="2.5"></rect><path d="M13 9.5v5M15.5 9.5v5M19.5 12h2"></path></svg>';
+var SETA_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>';
+var CARTA_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"></rect><path d="m3.5 7 8.5 6 8.5-6"></path></svg>';
+var AVISO_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h3l8 4.5v-13L7 10z"></path><path d="M18 9.2a4 4 0 0 1 0 5.6"></path></svg>';
+var PESSOAS_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"></path><circle cx="17.2" cy="9" r="2.5"></circle><path d="M15.6 14.2c2.9.2 5.4 2.3 5.4 5.8"></path></svg>';
+var FUMACA_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 20c-2-2 2-4 0-6s2-4 0-6 1-4 0-5"></path><path d="M14 20c-2-2 2-4 0-6s2-4 0-6"></path><path d="M19 20c-1.5-1.5 1.5-3 0-4.5"></path></svg>';
+/* Herói: sem sessão, o botão de acender, a sugestão do estoque e a última sessão; com sessão aberta, o cartão dela com o relógio. */
+function heroiHtml(){var s=openSession();
+  if(s)return '<section class="heroi ativa" aria-labelledby="heroi-t"><span class="eyebrow hlive"><span class="pulse" aria-hidden="true"></span>Sessão em andamento</span>'+
+    '<h2 class="httl" id="heroi-t">'+esc(s.cigarName||'Charuto')+'</h2>'+
+    '<div class="hrelogio" id="heroi-relogio" role="timer" aria-label="Tempo da sessão">'+relogioTexto(elapsed(s))+'</div>'+
+    '<div class="row"><span class="chip">'+esc(s.moment||'Momento não marcado')+'</span></div>'+
+    '<div class="row hacts"><button type="button" class="btn primary" data-act="resume" data-id="'+esc(s.id)+'">Retomar sessão</button><button type="button" class="btn ghost" data-act="inicio-encerrar" data-id="'+esc(s.id)+'">Encerrar</button></div></section>';
+  var h='<section class="heroi" aria-labelledby="heroi-t"><div class="eyebrow">Pronto para acender?</div><h2 class="httl" id="heroi-t">Escolha o charuto e comece a sessão</h2>'+
+    '<button type="button" class="acender" data-act="inicio-abrir">'+CHAMA_ICON+'Iniciar sessão</button>';
+  var sg=suggestion(true);
+  if(sg)h+='<button type="button" class="sug" data-act="inicio-abrir" data-id="'+esc(sg.c.id)+'"><span class="sico">'+CHARUTO_ICON+'</span><span class="txt"><span class="meta">Sugestão do seu estoque</span><b>'+esc(sg.c.name)+'</b>'+
+    (sg.why.length?'<span class="meta">'+esc(sg.why.slice(0,2).join(' · '))+'</span>':'')+'</span><span class="sgo">'+SETA_ICON+'</span></button>';
+  var ul=ultimaSessaoTexto(state.sessions,Date.now());if(ul)h+='<p class="ultima">'+esc(ul)+'</p>';
+  return h+welcomeHtml()+'</section>';}
+/* Degustação compacta do feed na Início: avatar, nome, quando, nota, charuto, até 3 sabores, Brindar e Comentários. */
+function inicioPostHtml(it){var name=(it.profiles&&it.profiles.display_name)||'Membro',likes=cloud.likes[it.uid]||[],cms=cloud.comments[it.uid]||[],mine=!!(cloud.user&&likes.indexOf(cloud.user.id)>=0),notes=topNotes(it.thirds,3);
+  return '<article class="ipost"><div class="ptop"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="nm"><b>'+esc(name)+'</b><span>'+esc(relTime(it.ended_at||it.started_at))+'</span></div>'+
+    (it.rating!=null?'<span class="pnota"><span class="sr">Nota </span>'+numStr(Number(it.rating))+'<small>/10</small></span>':'')+'</div>'+
+    '<div class="pcig">'+esc(it.cigar_name)+'</div>'+(notes.length?'<div class="tags">'+notes.map(noteChip).join('')+'</div>':'')+
+    '<div class="iacts"><button type="button" class="iact" data-act="like" data-id="'+esc(it.uid)+'" aria-pressed="'+mine+'" aria-label="'+(mine?'Remover brinde':'Brindar')+' ('+likes.length+')">'+HEART_ICON+'Brindar <span class="n">'+likes.length+'</span></button>'+
+    '<button type="button" class="iact" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'Comentários <span class="n">'+cms.length+'</span></button></div></article>';}
+/* Clube na Início: só com o clube configurado. Convite sem login; uma linha para suspenso; para membro, atalhos, aviso e as 2 últimas degustações. */
+function clubeInicioHtml(){if(!cloud.configured)return '';
+  if(!isMember())return '<section class="iconvite" aria-labelledby="cv-t"><div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cv-t">Clube do Diário</h2><span>Grupo fechado, por convite, para maiores de 18 anos</span></div></div>'+
+    '<ul><li>'+PESSOAS_ICON+'Compartilhe suas degustações com os amigos</li><li>'+FUMACA_ICON+'Veja quem está fumando agora</li><li>'+HEART_ICON+'Brinde, comente e troque mensagens</li></ul>'+
+    '<div class="row"><button type="button" class="btn primary" data-act="inicio-clube" data-v="criar">Entrar com convite</button><button type="button" class="btn ghost" data-act="inicio-clube" data-v="entrar">Já tenho conta</button></div></section>';
+  function cab(sub,verTudo){return '<div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cl-t">Clube</h2>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>'+
+    (verTudo?'<button type="button" class="ilink" data-act="tab" data-id="clube">Ver tudo'+SETA_ICON+'</button>':'')+'</div>';}
+  if(isSuspended())return '<section class="isec iclube" aria-labelledby="cl-t">'+cab('',false)+'<p class="ivazio">Sua participação no clube está suspensa. O diário deste celular continua funcionando.</p></section>';
+  var nm=cloud.membros,un=unreadMsgs(),me=cloud.me;
+  var h='<section class="isec iclube" aria-labelledby="cl-t">'+cab(typeof nm==='number'&&nm>0?nm+(nm===1?' membro':' membros'):'',true)+
+    '<div class="iquick"><button type="button" class="iqk" data-act="inicio-msgs"'+(un?' aria-label="Mensagens, '+un+(un===1?' não lida':' não lidas')+'"':'')+'>'+CARTA_ICON+'Mensagens'+(un?' <span class="bdg">'+un+'</span>':'')+'</button>'+
+    '<button type="button" class="iqk" data-act="inicio-avisos">'+AVISO_ICON+'Avisos</button></div>';
+  if(me&&me.aviso){var b=String(me.aviso.body||''),t=b.length>160?b.slice(0,159)+'…':b;
+    h+='<div class="aviso iaviso">'+AVISO_ICON+'<div class="abody"><b>Aviso do clube</b><span>'+esc(t)+'</span></div><div class="row"><button type="button" class="btn" data-act="avisover">Ver</button><button type="button" class="btn ghost" data-act="avisook">Dispensar</button></div></div>';}
+  var fd=cloud.feed.slice(0,2);
+  h+=fd.length?fd.map(inicioPostHtml).join(''):'<p class="ivazio">'+(cloud.feedLoading?'Carregando as degustações…':'Nenhuma degustação compartilhada ainda.')+'</p>';
+  return h+'</section>';}
+/* Seu diário: nível e pontos (journey), conquistas e a missão da próxima sessão, sorteada uma vez por abertura do app. */
+function diarioInicioHtml(){if(!state.loaded)return '';
+  var j=journey(),p=nivelProgresso(j);if(!state.proximaMissao)state.proximaMissao=pickMission();
+  var f=famById(state.proximaMissao),falta=p.faltam===1?'Falta 1 ponto.':'Faltam '+p.faltam+' pontos.';
+  return '<section class="diario" aria-labelledby="sd-t"><div class="row" style="justify-content:space-between"><h2 id="sd-t">Seu diário</h2><button type="button" class="ilink" data-act="tab" data-id="paladar">Paladar'+SETA_ICON+'</button></div>'+
+    '<div><div class="row dlv"><span><b>'+esc(p.atual)+'</b>'+(p.max?'':' → '+esc(p.proximo))+'</span><span class="num faint">'+(p.max?p.pts+' pts':p.pts+'/'+p.alvo+' pts')+'</span></div>'+
+    '<div class="xpbar" role="img" aria-label="'+(p.max?'Nível máximo':p.pts+' de '+p.alvo+' pontos')+'"><i style="width:'+p.pct+'%"></i></div>'+
+    '<p class="faint dfalta">'+(p.max?'Nível máximo.':falta)+'</p></div>'+
+    '<p>'+j.on.length+' de '+j.badges.length+' conquistas</p>'+
+    (f?'<div class="imiss"><i style="background:'+f.color+'" aria-hidden="true"></i><span><b>'+(done().length?'Missão da próxima sessão:':'Missão da primeira sessão:')+'</b> '+esc(f.label)+'</span></div>':'')+'</section>';}
 function viewInicio(){
-  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=avisoBanner()+welcomeHtml()+'<section class="heroi" aria-label="Sessão"><button type="button" class="acender" data-act="inicio-abrir">'+CHAMA_ICON+'Iniciar sessão</button></section><section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
+  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=heroiHtml()+clubeInicioHtml()+'<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
   for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
     h+='<button class="gcard'+(k===0?' today':'')+'" data-act="guia" data-id="'+i+'"><span class="gtags">'+(k===0?'<span class="gtag hot">Dica do dia</span>':'')+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span><span class="gico">'+GUIDE_ICONS[i]+'</span><span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></button>';
     dots+='<i'+(k===0?' class="on"':'')+'></i>';}
-  return h+'</div><div class="gdots" aria-hidden="true">'+dots+'</div><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p></section>';}
+  return h+'</div><div class="gdots" aria-hidden="true">'+dots+'</div><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p></section>'+diarioInicioHtml();}
 function viewAcervo(){
   var f=state.acvFilter||'todos',h='';
   if(state.cigars.length){
@@ -2252,10 +2387,13 @@ function folhaInicioHtml(){var aba=state.inicioAba||'estoque',nE=inicioCharutos(
 function desenharFolha(foco){var el=document.getElementById('inicio-folha');if(!el)return;el.innerHTML=state.inicioFolha?folhaInicioHtml():'';
   document.body.style.overflow=state.inicioFolha?'hidden':'';if(foco){var f=el.querySelector(foco);if(f)f.focus();}}
 /* Abre a folha; com escolha (a sugestão do herói), o charuto já vem marcado. Ao fechar, o foco volta ao botão do herói. */
-function abrirFolha(escolha){var c=escolha&&cigarById(escolha);state.inicioFolha=true;state.inicioEscolha=c?c.id:null;
+function abrirFolha(escolha){var c=escolha&&cigarById(escolha);state.inicioFolha=true;state.inicioEscolha=c?c.id:null;state.inicioDe=c?c.id:'';
   state.inicioAba=c?(temEstoque(c)?'estoque':'acervo'):abaInicial(state.cigars);state.inicioBusca='';state.inicioAvulso='';state.inicioMomento=lastMoment()||'';
   desenharFolha('[data-act="inicio-aba"]');}
-function fecharFolha(){state.inicioFolha=false;desenharFolha();var b=document.querySelector('[data-act="inicio-abrir"]');if(b)b.focus();}
+/* Ao fechar, o foco volta ao botão que abriu: a sugestão (data-id) ou o Iniciar sessão. */
+function fecharFolha(){state.inicioFolha=false;desenharFolha();
+  var b=state.inicioDe?document.querySelector('.sug[data-act="inicio-abrir"][data-id="'+CSS.escape(state.inicioDe)+'"]'):null;
+  if(!b)b=document.querySelector('[data-act="inicio-abrir"]');if(b)b.focus();}
 function enterSession(s){draft=clone(s);state.cigarCustom=!(draft.cigarId&&cigarById(draft.cigarId));if(!draft.thirds)draft.thirds=newSession({}).thirds;if(!draft.visibility)draft.visibility='club';state.view='session';state.step=0;rodaReset();render();window.scrollTo(0,0);requestWake();}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,600);}
 /* Gravador da sessão: o teste de interface troca por um falso (__t.setSessionSaver) para marcar notas sem gravar no IndexedDB. */
@@ -2333,6 +2471,12 @@ document.addEventListener('click',function(ev){
     case 'inicio-comecar': {if(!inicioPodeComecar())break;var cc=state.inicioAba==='avulso'?{id:'',name:String(state.inicioAvulso).trim()}:cigarById(state.inicioEscolha),mo=state.inicioMomento;
       state.inicioFolha=false;desenharFolha();iniciarSessao(cc,{moment:mo});break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
+    case 'inicio-encerrar': {var s3=sessionById(id)||openSession();if(s3){state.confirmDelete=false;enterSession(s3);state.step=3;rodaReset();render();window.scrollTo(0,0);}break;}
+    /* Atalhos do Clube na Início: abrem o Perfil (o administrador, na seção certa do painel) e rolam até a conversa ou os avisos. */
+    case 'inicio-msgs': case 'inicio-avisos': {var avs=act==='inicio-avisos',alvo=avs?'avisos':'msgs';state.tab='conta';state.view='home';state.confirm='';
+      if(cloud.me&&cloud.me.is_admin){cloud.club.sec=avs?'avisos':'mensagens';cloud.club.open=null;alvo='admin';}
+      render();window.scrollTo(0,0);refreshClub(true).then(function(){var el=document.getElementById(alvo);if(el)el.scrollIntoView({block:'start'});});break;}
+    case 'inicio-clube': cloud.authMode=b.getAttribute('data-v')==='criar'?'criar':'entrar';cloud.authMsg='';state.tab='conta';state.view='home';state.confirm='';render();window.scrollTo(0,0);break;
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
     case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
     case 'step': state.step=Number(id); rodaReset(); render(); window.scrollTo(0,0); break;
@@ -2482,7 +2626,8 @@ document.addEventListener('submit',function(ev){
   put('cigars',c); state.addOpen=false; render(); toast('Charuto adicionado ao acervo');
 });
 document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}
+  inicioTick();heroiPinta();});
 /* Posição do carrossel do guia e ponto ativo; chamada no evento scroll e logo depois do render, sem esperar o próximo quadro. */
 function syncGcar(t){var c=t.querySelectorAll('.gcard');if(c.length<2)return;
   state.gcarX=t.scrollLeft;var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';}
