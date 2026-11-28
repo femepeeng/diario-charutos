@@ -16,11 +16,19 @@
     qa('[role=tab]').map(function (b) { return b.innerText.trim(); }).join(',') === 'Início,Acervo,Conta');
   check('aba aberta ao carregar é Início', (q('[role=tab][aria-selected=true]') || {}).innerText === 'Início');
   await irInicio();
-  check('carrossel tem 7 cartões', qa('.gcard').length === 7);
+  check('a Início mostra 7 cartões do guia', qa('.gcard').length === 7);
   check('primeiro cartão é a Dica do dia', !!q('.gcard') && q('.gcard').textContent.indexOf('Dica do dia') >= 0);
   check('primeiro cartão é o tópico do dia', !!q('.gcard') && q('.gcard').getAttribute('data-id') === String(window.__t && __t.guideOfDay(new Date())));
+  var gc = qa('.gcard');
+  check('a dica do dia vem primeiro e em destaque', gc.length === 7 && gc[0].classList.contains('today') && qa('.gcard.today').length === 1 &&
+    gc[0].getBoundingClientRect().width > gc[1].getBoundingClientRect().width * 1.5);
   check('3 cartões têm o selo Ferramenta', qa('.gcard').filter(function (c) { return c.textContent.indexOf('Ferramenta') >= 0; }).length === 3);
-  check('7 pontos indicadores', qa('.gdots i').length === 7);
+  var box = function (i) { return gc[i].getBoundingClientRect(); };
+  check('a grade tem 2 colunas', gc.length === 7 && Math.round(box(1).top) === Math.round(box(2).top) && box(2).left > box(1).left && box(2).right <= innerWidth &&
+    box(3).top > box(1).bottom - 1 && Math.round(box(3).top) === Math.round(box(4).top) && gc.slice(1).every(function (c) { return c.getBoundingClientRect().height >= 150 - 0.5; }));
+  check('cada cartão tem a sua ilustração', gc.length === 7 && gc.every(function (c) { var s = c.querySelector('svg.ill'); return !!s && s.getAttribute('aria-hidden') === 'true'; }) &&
+    gc[0].querySelector('svg.ill').getBoundingClientRect().width === 76 && gc[1].querySelector('svg.ill').getBoundingClientRect().width === 44);
+  check('sem carrossel nem pontos', !q('.gcar') && !q('.gdots'));
   check('página sem rolagem horizontal', document.documentElement.scrollWidth <= innerWidth);
   check('cartões com alvo de toque >= 44px', qa('.gcard').every(function (c) { return c.getBoundingClientRect().height >= 44; }));
 
@@ -29,6 +37,7 @@
   function act(a, id) { return q('[data-act="' + a + '"]' + (id != null ? '[data-id="' + id + '"]' : '')); }
   click(q('.gcard[data-id="2"]')); await wait(120);
   check('cartão Corte abre o tópico Corte', titulo() === 'Corte');
+  check('o detalhe mostra a ilustração de 72 px', !!q('.gdhead svg.ill') && q('.gdhead svg.ill').getBoundingClientRect().width === 72);
   check('tópico Corte tem 10 botões de vitola', qa('[data-act="corte"]').length === 10);
   click(qa('[data-act="corte"]').filter(function (b) { return b.textContent.trim() === 'Torpedo'; })[0]); await wait(120);
   check('Torpedo mostra corte diagonal', /diagonal/.test((q('#corte-out') || {}).textContent || ''));
@@ -90,18 +99,6 @@
 
   // ---- Revisão final ----
   await irInicio();
-  var car = q('.gcar'), cs = qa('.gcard');
-  if (car && cs.length > 3) {
-    car.scrollLeft = cs[3].offsetLeft - cs[0].offsetLeft;
-    // O evento scroll sai no próximo quadro; com o painel do navegador oculto, os quadros chegam a ~300 ms.
-    for (var tries = 0; tries < 40 && !(window.__t && __t.state.gcarX === car.scrollLeft); tries++) await wait(50);
-    var antes = car.scrollLeft;
-    if (window.__t && __t.render) __t.render(); await wait(250);
-    var car2 = q('.gcar'), dot = qa('.gdots i').findIndex(function (i) { return i.className === 'on'; });
-    check('render mantém a posição do carrossel', !!car2 && Math.abs(car2.scrollLeft - antes) <= 2 && antes > 0);
-    check('render mantém o ponto ativo', dot === 3);
-    car2.scrollLeft = 0; await wait(250);
-  }
   click(q('.gcard[data-id="0"]')); await wait(150);
   var ui = q('[data-gin="umid"]');
   if (ui) {

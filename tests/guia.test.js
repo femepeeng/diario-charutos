@@ -7,7 +7,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const blocks = [...html.matchAll(/\/\* @pure:guia \*\/([\s\S]*?)\/\* @end:guia \*\//g)].map(m => m[1]);
 const sb = {};
 vm.createContext(sb);
-vm.runInContext(blocks.join('\n') + '\nthis.__x={GUIDE:typeof GUIDE!=="undefined"?GUIDE:undefined,GUIDE_ICONS:typeof GUIDE_ICONS!=="undefined"?GUIDE_ICONS:undefined,GUIDE_TOOL:typeof GUIDE_TOOL!=="undefined"?GUIDE_TOOL:undefined,guideOfDay:typeof guideOfDay!=="undefined"?guideOfDay:undefined,humidorStatus:typeof humidorStatus!=="undefined"?humidorStatus:undefined,cutTipOf:typeof cutTipOf!=="undefined"?cutTipOf:undefined,VITOLAS_CORTE:typeof VITOLAS_CORTE!=="undefined"?VITOLAS_CORTE:undefined};', sb);
+vm.runInContext(blocks.join('\n') + '\nthis.__x={GUIDE:typeof GUIDE!=="undefined"?GUIDE:undefined,GUIDE_ILLS:typeof GUIDE_ILLS!=="undefined"?GUIDE_ILLS:undefined,GUIDE_TOOL:typeof GUIDE_TOOL!=="undefined"?GUIDE_TOOL:undefined,guideOfDay:typeof guideOfDay!=="undefined"?guideOfDay:undefined,humidorStatus:typeof humidorStatus!=="undefined"?humidorStatus:undefined,cutTipOf:typeof cutTipOf!=="undefined"?cutTipOf:undefined,VITOLAS_CORTE:typeof VITOLAS_CORTE!=="undefined"?VITOLAS_CORTE:undefined};', sb);
 const X = sb.__x;
 
 let pass = 0, fail = 0;
@@ -37,10 +37,16 @@ test('GUIDE tem 7 tópicos com [titulo, html, regra] e as regras da especificaç
     assert.strictEqual(X.GUIDE[i][2], REGRAS[i * 2 + 1]);
   }
 });
-test('GUIDE_ICONS tem 7 SVGs decorativos', () => {
-  assert.ok(Array.isArray(X.GUIDE_ICONS), 'GUIDE_ICONS não encontrado');
-  assert.strictEqual(X.GUIDE_ICONS.length, 7);
-  X.GUIDE_ICONS.forEach((s, i) => assert.ok(/^<svg[^>]*aria-hidden="true"/.test(s), 'ícone ' + i));
+test('GUIDE_ILLS tem 7 ilustrações SVG decorativas, uma por tópico', () => {
+  assert.ok(Array.isArray(X.GUIDE_ILLS), 'GUIDE_ILLS não encontrado no bloco @pure:guia');
+  assert.strictEqual(X.GUIDE_ILLS.length, 7);
+  X.GUIDE_ILLS.forEach((s, i) => {
+    assert.ok(/^<svg [^>]*class="ill"/.test(s), 'classe ill na ilustração ' + i);
+    assert.ok(/^<svg [^>]*viewBox="0 0 64 64"/.test(s), 'viewBox 64 na ilustração ' + i);
+    assert.ok(/^<svg [^>]*aria-hidden="true"/.test(s), 'aria-hidden na ilustração ' + i);
+    assert.ok(/class="s"/.test(s) && /<\/svg>$/.test(s), 'traço e fechamento na ilustração ' + i);
+  });
+  assert.strictEqual(new Set(X.GUIDE_ILLS).size, 7, 'as 7 ilustrações são diferentes');
 });
 test('GUIDE_TOOL liga Conservação, Corte e Ritmo às ferramentas', () => {
   assert.deepStrictEqual(JSON.parse(JSON.stringify(X.GUIDE_TOOL)), { 0: 'umidor', 2: 'corte', 4: 'ritmo' });

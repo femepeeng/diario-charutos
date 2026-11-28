@@ -18,7 +18,7 @@
   --fg:#F2E8D8; --muted:#BBA98F; --faint:#93826B;
   --ember:#E58A42; --ember-ink:#1A120C; --sand:#DDB66B;
   --ok:#86B97F; --warn:#E3B84F; --bad:#E8735D;
-  --glow:rgba(229,138,66,.30); --glow2:rgba(229,138,66,.10);
+  --glow:rgba(229,138,66,.30); --glow2:rgba(229,138,66,.10); --ill:#3A2B1F;
   --f-display:'Bricolage Grotesque', 'Trebuchet MS', sans-serif;
   --f-body:'IBM Plex Sans', 'Segoe UI', Roboto, system-ui, sans-serif;
   --f-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
@@ -28,12 +28,12 @@
   --bg:#F5EFE5; --surface:#FCF8F2; --surface2:#EDE3D3; --line:#DACDB8;
   --fg:#2A1E15; --muted:#6B5945; --faint:#7E6C57;
   --ember:#B4561A; --ember-ink:#FFF8F0; --sand:#8E6A1E;
-  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; --glow:rgba(180,86,26,.22); --glow2:rgba(180,86,26,.07); color-scheme:light; } }
+  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; --glow:rgba(180,86,26,.22); --glow2:rgba(180,86,26,.07); --ill:#F1E2CC; color-scheme:light; } }
 :root[data-theme="light"]{
   --bg:#F5EFE5; --surface:#FCF8F2; --surface2:#EDE3D3; --line:#DACDB8;
   --fg:#2A1E15; --muted:#6B5945; --faint:#7E6C57;
   --ember:#B4561A; --ember-ink:#FFF8F0; --sand:#8E6A1E;
-  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; --glow:rgba(180,86,26,.22); --glow2:rgba(180,86,26,.07); color-scheme:light; }
+  --ok:#3D7A37; --warn:#8A650C; --bad:#B03A27; --glow:rgba(180,86,26,.22); --glow2:rgba(180,86,26,.07); --ill:#F1E2CC; color-scheme:light; }
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -115,26 +115,31 @@ details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 
 .gwelcome{display:flex; flex-direction:column; gap:10px; padding:12px; border-radius:14px; background:var(--bg); border:1px solid var(--line)}
 .gwelcome h3,.gwelcome p{margin:0}
 .gwelcome .row>*{flex:1 1 auto}
-.ghead{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
-.gcount{font-size:12px; font-family:var(--f-mono)}
-.gcar{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin:0 -16px; padding:2px 16px 6px; scroll-padding-left:16px; overscroll-behavior-x:contain}
-.gcar::-webkit-scrollbar{display:none}
-.gcard{flex:0 0 85%; scroll-snap-align:start; min-height:212px; text-align:left; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:18px; border-radius:18px; border:1.5px solid var(--line); background:var(--surface); color:var(--fg); font:inherit}
-.gcard.today{border-color:var(--ember); background:linear-gradient(160deg, var(--surface2), var(--surface) 70%)}
-.gtags{display:flex; gap:6px; min-height:22px; flex-wrap:wrap}
+/* Guia de bolso (2.13.0): dica do dia em destaque e os outros 6 tópicos em grade de 2 colunas, com ilustrações próprias. */
+.ill{width:64px; height:64px; color:var(--ember); flex:none}
+.ill .f{fill:var(--ill)}
+.ill .s{fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.ill .k{fill:currentColor; stroke:none}
+.gcard{text-align:left; color:var(--fg); border:1.5px solid var(--line); background:var(--surface); min-width:0}
+.gcard.today{display:grid; grid-template-columns:76px minmax(0,1fr); gap:14px; align-items:center; width:100%; padding:16px; border-radius:20px; border-color:var(--ember);
+  background:radial-gradient(120% 120% at 0% 100%, var(--glow2), transparent 60%), var(--surface)}
+.gcard.today .ill{width:76px; height:76px}
+.gbody{display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0}
+.gtags{display:flex; gap:6px; flex-wrap:wrap}
 .gtag{font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
 .gtag.hot{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
-.gico{width:48px; height:48px; border-radius:14px; background:var(--surface2); color:var(--ember); display:inline-flex; align-items:center; justify-content:center}
-.gico svg{width:26px; height:26px}
-.gtitle{font-family:var(--f-display); font-size:24px; font-weight:800; line-height:1.1}
-.grule{font-size:16px; line-height:1.35}
-.gmore{margin-top:auto; font-weight:600; color:var(--ember); font-size:14px}
-.gdots{display:flex; justify-content:center; gap:6px}
-.gdots i{width:6px; height:6px; border-radius:3px; background:var(--line); transition:width .2s}
-.gdots i.on{width:18px; background:var(--ember)}
+.gtitle{font-family:var(--f-display); font-size:22px; font-weight:800; line-height:1.1; overflow-wrap:anywhere}
+.grule{font-size:15px; line-height:1.35}
+.gmore{font-weight:600; color:var(--ember); font-size:14px; padding-top:4px}
+.ggrid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px}
+.ggrid .gcard{display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:14px; border-radius:16px; min-height:150px}
+.ggrid .ill{width:44px; height:44px}
+.ggrid .gtitle{font-size:16px; font-weight:700; line-height:1.15}
+.ggrid .grule{font-size:13px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
 .gsrc{font-size:12px}
 .gdhead{display:flex; align-items:center; gap:12px; min-width:0}
 .gdhead h1{min-width:0; overflow-wrap:anywhere}
+.gdhead .ill{width:72px; height:72px}
 .gdrule{font-size:17px; line-height:1.35}
 .gtool{border:1.5px solid var(--ember); gap:14px}
 .gfields{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px}
@@ -1222,15 +1227,17 @@ var GUIDE=[
   ['Paladar','<p>Os cinco gostos (doce, salgado, ácido, amargo e umami) são sentidos na boca; o restante é aroma, percebido pelo nariz. O retrohale, soltar um pouco de fumaça pelo nariz, revela essas notas. Comece com charutos suaves e pouca fumaça.</p><p>Charuto não se traga. Inalar a fumaça pode causar náusea, queda de pressão e até desmaio.</p><p>Língua limpa percebe mais: escove a língua antes da sessão e tenha água por perto entre as baforadas.</p>','O retrohale revela as notas; charuto não se traga'],
   ['Quando parar','<p>A anilha marca um bom ponto de parada. Depois dela o tabaco já filtrou muita fumaça e o sabor tende a ficar áspero. O momento certo é quando o prazer acaba.</p>','Quando o prazer acaba']
 ];
-var GUIDE_ICONS=[
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5s-6 6.6-6 10.5a6 6 0 0 0 12 0c0-3.9-6-10.5-6-10.5z"></path><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"></path></svg>',
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7.5" width="16" height="12" rx="2"></rect><path d="M9 7.5v-2A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5v2"></path><path d="M4 12.5h16"></path></svg>',
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="7" r="2.5"></circle><circle cx="6" cy="17" r="2.5"></circle><path d="M8.2 8.4 20 17M8.2 15.6 20 7"></path></svg>',
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a6 6 0 0 0 6-6c0-4-3-5.5-4-9-2 1.5-3 3.5-3 5.5-1-.5-1.6-1.5-1.8-2.5C7.5 10.5 6 12.5 6 15a6 6 0 0 0 6 6z"></path></svg>',
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"></circle><path d="M12 9v4l2.5 2M9.5 2.5h5"></path></svg>',
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9c2-2 4 2 6 0s4 2 6 0 2-1 4 0M4 13c2-2 4 2 6 0s4 2 6 0 2-1 4 0M4 17c2-2 4 2 6 0s4 2 6 0 2-1 4 0"></path></svg>',
-  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="1.5"></rect><path d="M9 9v6M15 9v6"></path></svg>'
-];
+/* Ilustrações do Guia de bolso (2.13.0), na ordem do GUIDE: traço na cor de brasa (classe s), fundo suave por token (f) e detalhe cheio (k).
+   O tamanho vem do CSS: 76 px na dica do dia, 44 px na grade e 72 px no detalhe. */
+var GUIDE_ILLS=[
+  '<rect class="f" x="8" y="20" width="48" height="34" rx="5"/><rect class="s" x="8" y="20" width="48" height="34" rx="5"/><path class="s" d="M8 29h48"/><path class="s" d="M27 14h10"/><circle class="f" cx="32" cy="42" r="8"/><circle class="s" cx="32" cy="42" r="8"/><path class="s" d="M32 42l4.5-4"/><circle class="k" cx="32" cy="42" r="1.6"/><path class="s" d="M50 4.5s-4.5 5.2-4.5 8a4.5 4.5 0 0 0 9 0c0-2.8-4.5-8-4.5-8z"/>',
+  '<circle class="f" cx="47" cy="15" r="7"/><circle class="s" cx="47" cy="15" r="7"/><path class="s" d="M47 3.5v2.5M47 24v2.5M35.5 15H38M56 15h2.5M38.9 6.9l1.8 1.8M53.3 21.3l1.8 1.8M38.9 23.1l1.8-1.8M53.3 8.7l1.8-1.8"/><rect class="f" x="6" y="30" width="40" height="14" rx="7"/><rect class="s" x="6" y="30" width="40" height="14" rx="7"/><path class="s" d="M34 30v14"/><path class="s" d="M6 54c4-3.2 8-3.2 12 0s8 3.2 12 0 8-3.2 12 0 8 3.2 12 0"/>',
+  '<rect class="f" x="6" y="21" width="52" height="22" rx="11"/><rect class="s" x="6" y="21" width="52" height="22" rx="11"/><circle class="f" cx="32" cy="32" r="8"/><circle class="s" cx="32" cy="32" r="8"/><path class="s" d="M24 21.5 40 42.5"/><circle class="s" cx="15" cy="32" r="3.5"/><circle class="s" cx="49" cy="32" r="3.5"/><path class="s" d="M28 54h8M32 48v6"/>',
+  '<rect class="f" x="4" y="34" width="36" height="13" rx="4"/><rect class="s" x="4" y="34" width="36" height="13" rx="4"/><path class="s" d="M28 34v13"/><path class="s" d="M40 37.5c2 1.2 2 4.8 0 6"/><path class="f" d="M51 13c-6.5 8-8.5 12-8.5 16.5a8.5 8.5 0 0 0 17 0C59.5 25 57.5 21 51 13z"/><path class="s" d="M51 13c-6.5 8-8.5 12-8.5 16.5a8.5 8.5 0 0 0 17 0C59.5 25 57.5 21 51 13z"/><path class="s" d="M51 24c-2.6 3.4-3.4 5.1-3.4 6.8a3.4 3.4 0 0 0 6.8 0c0-1.7-.8-3.4-3.4-6.8z"/>',
+  '<circle class="f" cx="26" cy="37" r="17"/><circle class="s" cx="26" cy="37" r="17"/><path class="s" d="M26 37V27M26 37l7 4"/><path class="s" d="M21 14h10M26 14v6M40 22l3-3"/><path class="s" d="M50 52c-3.5-3.5 3.5-6.5 0-10s3.5-6.5 0-10 2-6 0-8"/><path class="s" d="M57 52c-2.5-2.5 2.5-4.5 0-7"/>',
+  '<path class="f" d="M30 6c0 11-9 16-9 23 0 4 3.5 6 7.5 6"/><path class="s" d="M30 6c0 11-9 16-9 23 0 4 3.5 6 7.5 6"/><path class="s" d="M27 42c3.5.5 4 3.5.5 4.5M27.5 46.5c3.5.5 3 4-1 4.5"/><path class="s" d="M38 18c3-2.5 6-2.5 9 0s6 2.5 9 0M38 27c3-2.5 6-2.5 9 0s6 2.5 9 0M38 36c3-2.5 6-2.5 9 0s6 2.5 9 0"/><path class="s" d="M14 58h22"/>',
+  '<rect class="f" x="5" y="28" width="46" height="13" rx="6.5"/><rect class="s" x="5" y="28" width="46" height="13" rx="6.5"/><rect class="k" x="32" y="27" width="8" height="15" rx="1.5" opacity=".9"/><path class="s" d="M5 34.5h-1M51 31c2.5 1 2.5 6 0 7"/><circle class="f" cx="50" cy="14" r="9"/><circle class="s" cx="50" cy="14" r="9"/><path class="s" d="m45.5 14 3 3 6-6"/>'
+].map(function(p){return '<svg class="ill" viewBox="0 0 64 64" aria-hidden="true">'+p+'</svg>';});
 var GUIDE_TOOL={0:'umidor',2:'corte',4:'ritmo'};
 /* Tópico do dia: dia do ano (1º de janeiro = 1) mod 7. */
 function guideOfDay(d){var y=d.getFullYear(),n=Math.round((new Date(y,d.getMonth(),d.getDate())-new Date(y,0,0))/86400000);return n%GUIDE.length;}
@@ -1723,7 +1730,6 @@ function render(){
      cesta-texto é o texto do pedido selecionado para copiar à mão quando a cópia falha. */
   var ae=document.activeElement,fid=ae&&['cat-q','msg-body','aviso-body','cesta-texto'].indexOf(ae.id)>=0?ae.id:null,qf=fid?[ae.selectionStart,ae.selectionEnd]:null;
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
-  var gc=state.gcarX?app.querySelector('.gcar'):null;if(gc){gc.scrollLeft=state.gcarX;syncGcar(gc);}
   var cq=fid?document.getElementById(fid):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
@@ -1844,7 +1850,7 @@ function guiaTool(tool){
   return '';}
 function viewGuia(){
   var n=GUIDE.length,i=guiaIndex(),g=GUIDE[i];
-  return '<header class="top"><button class="btn ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">Guia de bolso · '+(i+1)+' de '+n+'</div><div class="gdhead"><span class="gico">'+GUIDE_ICONS[i]+'</span><h1 style="font-size:34px">'+esc(g[0])+'</h1></div><p class="gdrule">'+esc(g[2])+'</p></header>'+
+  return '<header class="top"><button class="btn ghost" style="align-self:flex-start" data-act="home">Voltar</button><div class="eyebrow">Guia de bolso · '+(i+1)+' de '+n+'</div><div class="gdhead">'+GUIDE_ILLS[i]+'<h1 style="font-size:34px">'+esc(g[0])+'</h1></div><p class="gdrule">'+esc(g[2])+'</p></header>'+
     guiaTool(GUIDE_TOOL[i])+'<div class="panel gdtext">'+g[1]+'</div>'+
     '<nav class="row gdnav" aria-label="Tópicos do guia"><button class="btn" data-act="guia-nav" data-id="-1">Anterior</button><button class="btn" data-act="guia-nav" data-id="1">Próximo</button></nav><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p>';}
 /* Boas-vindas só para diário novo (sem charutos e sem sessões): uma linha dentro do herói (2.13.0). */
@@ -1908,12 +1914,16 @@ function diarioInicioHtml(){if(!state.loaded)return '';
     '<p class="faint dfalta">'+(p.max?'Nível máximo.':falta)+'</p></div>'+
     '<p>'+j.on.length+' de '+j.badges.length+' conquistas</p>'+
     (f?'<div class="imiss"><i style="background:'+f.color+'" aria-hidden="true"></i><span><b>'+(done().length?'Missão da próxima sessão:':'Missão da primeira sessão:')+'</b> '+esc(f.label)+'</span></div>':'')+'</section>';}
-function viewInicio(){
-  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=heroiHtml()+clubeInicioHtml()+'<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
-  for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
-    h+='<button class="gcard'+(k===0?' today':'')+'" data-act="guia" data-id="'+i+'"><span class="gtags">'+(k===0?'<span class="gtag hot">Dica do dia</span>':'')+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span><span class="gico">'+GUIDE_ICONS[i]+'</span><span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></button>';
-    dots+='<i'+(k===0?' class="on"':'')+'></i>';}
-  return h+'</div><div class="gdots" aria-hidden="true">'+dots+'</div><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p></section>'+diarioInicioHtml();}
+var LIVRO_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z"></path><path d="M12 6.5v13"></path></svg>';
+/* Guia de bolso na Início: a dica do dia em destaque e os outros 6 tópicos, a partir do dia seguinte, em grade de 2 colunas. */
+function guiaInicioHtml(){var d=guideOfDay(new Date()),n=GUIDE.length,g=GUIDE[d],tool=GUIDE_TOOL[d];
+  var h='<section class="isec ginicio" aria-labelledby="gb-t"><div class="isec-h"><span class="ico">'+LIVRO_ICON+'</span><div class="tt"><h2 id="gb-t">Guia de bolso</h2><span>'+n+' tópicos para antes e durante a sessão</span></div></div>'+
+    '<button type="button" class="gcard today" data-act="guia" data-id="'+d+'">'+GUIDE_ILLS[d]+'<span class="gbody"><span class="gtags"><span class="gtag hot">Dica do dia</span>'+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span>'+
+    '<span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></span></button><div class="ggrid">';
+  for(var k=1;k<n;k++){var i=(d+k)%n,x=GUIDE[i];
+    h+='<button type="button" class="gcard" data-act="guia" data-id="'+i+'">'+GUIDE_ILLS[i]+'<span class="gtitle">'+esc(x[0])+'</span><span class="grule">'+esc(x[2])+'</span>'+(GUIDE_TOOL[i]?'<span class="gtag">Ferramenta</span>':'')+'</button>';}
+  return h+'</div><p class="faint gsrc">Adaptado de O Guia Definitivo do Charuto, de Johny Oliveira.</p></section>';}
+function viewInicio(){return heroiHtml()+clubeInicioHtml()+guiaInicioHtml()+diarioInicioHtml();}
 function viewAcervo(){
   var f=state.acvFilter||'todos',h='';
   if(state.cigars.length){
@@ -2629,9 +2639,6 @@ document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttri
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}
   inicioTick();heroiPinta();});
 /* Posição do carrossel do guia e ponto ativo; chamada no evento scroll e logo depois do render, sem esperar o próximo quadro. */
-function syncGcar(t){var c=t.querySelectorAll('.gcard');if(c.length<2)return;
-  state.gcarX=t.scrollLeft;var w=c[1].offsetLeft-c[0].offsetLeft,idx=Math.round(t.scrollLeft/w),ds=t.parentNode.querySelectorAll('.gdots i');for(var i=0;i<ds.length;i++)ds[i].className=i===idx?'on':'';}
-document.addEventListener('scroll',function(e){var t=e.target;if(!t||!t.classList||!t.classList.contains('gcar'))return;syncGcar(t);},true);
 window.addEventListener('online',function(){if(isMember()){refreshClub(true).then(function(){sync();});if(state.tab==='clube')loadFeed();}});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});
