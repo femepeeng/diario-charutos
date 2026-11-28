@@ -1891,7 +1891,7 @@ function enviadosHtml(){if(!cesta.enviados.length)return '';
     h+='<details class="ped" data-ped="'+id+'"'+(state.pedOpen===p.id?' open':'')+'><summary>'+esc(pedidoResumo(p))+'</summary><div class="pedbody">';
     h+='<ul class="pedlist">'+p.itens.map(function(x,i){return '<li><span>'+esc(x.name)+(x.bitola?' <span class="faint">('+esc(x.bitola)+')</span>':'')+'</span><button class="opt" data-act="pedveio" data-id="'+id+'" data-val="'+i+'" aria-pressed="'+(x.veio!==false)+'" aria-label="Chegou: '+esc(x.name)+'">Chegou</button></li>';}).join('')+'</ul>';
     if(conf)h+='<div class="alert err"><b>Descartar o pedido de '+esc(pedidoData(p.em))+'?</b><span>Os charutos voltam para a montagem da cesta.</span><div class="row" style="margin-top:8px"><button class="btn danger" data-act="pedconfirm" data-id="'+id+'">Descartar</button><button class="btn ghost" data-act="cancelconfirm">Manter</button></div></div>';
-    h+='<div class="row"><button class="btn primary" data-act="pedguardar" data-id="'+id+'">Guardar no estoque</button><button class="btn" data-act="pedreenviar" data-id="'+id+'">Reenviar</button>'+(conf?'':'<button class="btn ghost" data-act="peddescartar" data-id="'+id+'">Descartar</button>')+'</div></div></details>';});
+    h+='<div class="row"><button class="btn primary" data-act="pedguardar" data-id="'+id+'"'+(state.pedGuardando===p.id?' disabled>Guardando…':'>Guardar no estoque')+'</button><button class="btn" data-act="pedreenviar" data-id="'+id+'">Reenviar</button>'+(conf?'':'<button class="btn ghost" data-act="peddescartar" data-id="'+id+'">Descartar</button>')+'</div></div></details>';});
   return h+'</div>';}
 /* Chegou: o que veio vai para o Estoque (pelos dados guardados no envio, nunca pela cesta remontada).
    O pedido só sai depois que todas as gravações confirmam. Se uma falha, o estado volta ao que está gravado
@@ -1899,7 +1899,7 @@ function enviadosHtml(){if(!cesta.enviados.length)return '';
    para tentar de novo. Um toque por vez (state.pedGuardando). */
 function pedGuardar(id){var p=pedById(id);if(!p||state.pedGuardando)return Promise.resolve(false);var cp=chegadaPlan(p.itens,state.cigars);
   if(!cp.chegou){toast('Marque o que chegou, ou use Descartar.');return Promise.resolve(false);}
-  var ws=[],antes=state.cigars.slice();state.pedGuardando=id;
+  var ws=[],antes=state.cigars.slice();state.pedGuardando=id;render(); /* o botão vira "Guardando…" já no toque */
   cp.update.forEach(function(u){var c=cigarById(u.id);if(!c)return;var x=clone(c);x.status=u.status;ws.push(put('cigars',x));});
   cp.create.forEach(function(n){ws.push(put('cigars',Object.assign({id:uid(),order:100+state.cigars.length,expected:'',pairing:''},n)));});
   return Promise.all(ws).then(function(r){
@@ -2176,6 +2176,8 @@ function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,600);
 /* Gravador da sessão: o teste de interface troca por um falso (__t.setSessionSaver) para marcar notas sem gravar no IndexedDB. */
 var sessionSaver=function(d){return put('sessions',d);};
 function flush(){clearTimeout(saveTimer);if(!draft)return Promise.resolve();return sessionSaver(draft);}
+/* Fim da sessão: "salva" só depois que a gravação confirma. Se falhar, fica o aviso do saveErr, sem ser coberto. */
+function finishSaved(wasDone){return flush().then(function(ok){if(ok!==false)toast(wasDone?'Alterações salvas':'Sessão salva no diário');return ok;});}
 /* Roda de sabores na tela do terço: estado só na memória, zerado ao entrar na sessão e ao trocar de terço. */
 function rodaReset(){state.rodaFam=null;state.rodaFoco=null;state.saborQ='';state.rodaAnim='';state.rodaAbertaEm=0;}
 /* Encolhe a fonte do rótulo que não couber na fatia (data-max, em unidades do SVG). */
@@ -2258,7 +2260,7 @@ document.addEventListener('click',function(ev){
       var wasDone=draft.status==='concluida',jBefore=journey();
       draft.status='concluida';if(!wasDone||!draft.endedAt)draft.endedAt=new Date().toISOString();draft.durationMin=Math.max(1,Math.round((tm.acc||0)/60000));
       if(typeof draft.rating!=='number'){var r=document.getElementById('rating');draft.rating=r?Number(r.value):null;}
-      var sid=draft.id;flush().then(function(){toast(wasDone?'Alterações salvas':'Sessão salva no diário');});draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);
+      var sid=draft.id;finishSaved(wasDone);draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);
       if(isMember()){clearTimeout(syncTimer);setTimeout(sync,300);}
       if(!wasDone)announce(jBefore,journey());break;}
     case 'fixstrength': {var fs=sessionById(id),fc=fs&&cigarById(fs.cigarId);if(fc){var x=clone(fc);x.strength=fs.strength;put('cigars',x);toast('Força de '+fc.name+' atualizada para '+fs.strength+'/5');render();}break;}

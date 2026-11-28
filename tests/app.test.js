@@ -22,7 +22,9 @@ function fonte(nome) {
   }
   throw new Error(nome + ': chaves sem par');
 }
-const APP = ['put', 'saveErr', 'pedById', 'pedGuardar', 'wipeLocalForAccount', 'clone', 'cigarById', 'upsertState', 'sortAll', 'uid'].map(fonte).join('\n');
+/* Função que ainda não existe vira um comentário: o teste dela falha sozinho, sem derrubar o arquivo. */
+const APP = ['put', 'saveErr', 'pedById', 'pedGuardar', 'wipeLocalForAccount', 'clone', 'cigarById', 'upsertState', 'sortAll', 'uid',
+  'enviadosHtml', 'flush', 'finishSaved'].map(n => { try { return fonte(n); } catch (e) { return '/* ' + n + ' ausente */'; } }).join('\n');
 const DUBLES = `
 var T = { toasts: [], renders: 0, persisted: 0, loads: 0, writes: [], lsMap: {} };
 var state = { cigars: [], sessions: [], confirm: '', pedOpen: null };
@@ -37,12 +39,14 @@ function ls(k, v) { if (v === undefined) return k in T.lsMap ? T.lsMap[k] : null
 function putRec(col, o) { T.writes.push(o); return OPT.putRec(o); }
 function clearStore() { return Promise.resolve(); }
 function loadAll() { T.loads++; return OPT.loadAll ? OPT.loadAll() : Promise.resolve(); }
+var draft = null, saveTimer = null, sessionSaver = function (d) { return put('sessions', d); };
+function clearTimeout() {}
 `;
 /* Um app novo por teste; putRec decide se cada gravação confirma, falha ou fica pendente, e loadAll (opcional) se a leitura funciona. */
 function app(putRec, loadAll) {
   const sb = { OPT: { putRec, loadAll } };
   vm.createContext(sb);
-  vm.runInContext(pick('curadoria').concat(pick('cesta')).join('\n') + '\n' + APP + '\n' + DUBLES, sb);
+  vm.runInContext(pick('base').concat(pick('curadoria'), pick('cesta')).join('\n') + '\n' + APP + '\n' + DUBLES, sb);
   return sb;
 }
 const plain = v => JSON.parse(JSON.stringify(v));
@@ -107,6 +111,48 @@ test('com tudo já no Estoque, nada a gravar: o pedido sai na hora', async () =>
   await sb.pedGuardar('p1'); await flush();
   assert.strictEqual(sb.T.writes.length, 0);
   assert.strictEqual(sb.cesta.enviados.length, 0);
+});
+
+// ---- 2.12.1: Guardando… e o aviso do fim de sessão ----
+test('Guardar no estoque mostra Guardando… e desativa o botão enquanto grava', async () => {
+  const pend = [], sb = app(() => new Promise(res => pend.push(res)));
+  montar(sb);
+  sb.cesta.enviados.push({ id: 'p2', em: '2026-11-25T15:00:00.000Z', seg: 'todos', texto: 't2',
+    itens: [{ key: 'outro', name: 'Outro', bitola: '', origin: '', strength: 0, wrapper: '', cigarId: '', veio: true }] });
+  assert.strictEqual(typeof sb.enviadosHtml, 'function', 'enviadosHtml não encontrada');
+  const antes = sb.T.renders, r = sb.pedGuardar('p1');
+  assert.ok(sb.T.renders > antes, 'não redesenhou ao travar');
+  const partes = sb.enviadosHtml().split('<details class="ped"').slice(1), parte = id => partes.find(x => x.indexOf('data-ped="' + id + '"') >= 0) || '';
+  assert.ok(/data-act="pedguardar" data-id="p1" disabled>Guardando…</.test(parte('p1')), 'o p1 não mostra Guardando…');
+  assert.ok(/data-act="pedguardar" data-id="p2">Guardar no estoque</.test(parte('p2')), 'o p2 deixou de mostrar Guardar no estoque');
+  pend.forEach(f => f()); await r; await flush();
+  assert.ok(sb.enviadosHtml().indexOf('Guardando…') < 0, 'continuou Guardando… depois de gravar');
+});
+test('fim de sessão com a gravação falhando: fica o aviso de falha, sem "salva"', async () => {
+  const sb = app(() => Promise.reject(new Error('falhou')));
+  sb.draft = { id: 's1', thirds: [] };
+  assert.strictEqual(typeof sb.finishSaved, 'function', 'finishSaved não encontrada');
+  await sb.finishSaved(false); await flush();
+  assert.ok(sb.T.toasts.indexOf('Não foi possível salvar. Tente de novo.') >= 0, sb.T.toasts.join(' | '));
+  assert.ok(sb.T.toasts.indexOf('Sessão salva no diário') < 0, 'avisou "salva" com a gravação falhando');
+});
+test('fim de sessão com a gravação pendente: nada de "salva" antes de confirmar', async () => {
+  const pend = [], sb = app(() => new Promise(res => pend.push(res)));
+  sb.draft = { id: 's1', thirds: [] };
+  assert.strictEqual(typeof sb.finishSaved, 'function', 'finishSaved não encontrada');
+  const r = sb.finishSaved(false); await flush();
+  assert.ok(sb.T.toasts.indexOf('Sessão salva no diário') < 0, 'avisou antes de gravar');
+  pend.forEach(f => f()); await r; await flush();
+  assert.ok(sb.T.toasts.indexOf('Sessão salva no diário') >= 0, 'não avisou depois de gravar');
+});
+test('fim de sessão com a gravação certa: "Sessão salva no diário", ou "Alterações salvas" na edição', async () => {
+  const sb = app(() => Promise.resolve());
+  sb.draft = { id: 's1', thirds: [] };
+  assert.strictEqual(typeof sb.finishSaved, 'function', 'finishSaved não encontrada');
+  await sb.finishSaved(false); await flush();
+  assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Sessão salva no diário');
+  await sb.finishSaved(true); await flush();
+  assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Alterações salvas');
 });
 
 // ---- Troca de conta ----
