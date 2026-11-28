@@ -226,7 +226,6 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .roda-svg .nlab{font-family:var(--f-body); font-weight:600; font-size:12.5px}
 .roda-svg .on .nlab{fill:#1A120C}
 .roda-svg .chk{fill:none; stroke:#1A120C; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; pointer-events:none}
-.roda-svg .tick{pointer-events:none}
 .roda-svg .hub{fill:var(--surface2); stroke:var(--line); stroke-width:1.5}
 .roda-svg .hub-eb{font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; fill:var(--ember); pointer-events:none}
 .roda-svg .hub-num{font-family:var(--f-display); font-weight:800; font-size:30px; fill:var(--fg); pointer-events:none}
@@ -245,6 +244,7 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .rsel{display:flex; flex-direction:column; gap:8px}
 .rsel .lbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
 .opt .x{font-family:var(--f-mono); color:var(--faint); margin-left:2px}
+.rsel .opt, #sabor-res .opt{min-height:44px}
 .seg{display:flex; gap:6px}
 .seg button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); font-family:var(--f-mono); font-size:16px}
 .seg button[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
@@ -542,7 +542,7 @@ function rodaBuscaHtml(q,sel){sel=sel||[];if(!normSabor(q))return '';var r=busca
 function missaoCartao(s){var f=s&&s.mission?famById(s.mission):null;if(!f)return '';var hit=missionHit(s);
   if(hit.length)return '<div class="mission done"><b>Missão cumprida: '+esc(f.label)+'</b><span class="muted">Você marcou '+esc(hit.join(', '))+'. +5 pontos.</span></div>';
   return '<div class="mission"><b>Missão de aroma: '+esc(f.label)+'</b><span class="muted">Uma das famílias que você menos marca. Abra '+esc(f.label)+' na roda e procure as '+f.notes.length+' opções ao longo da sessão.</span>'+
-    '<div class="row"><button type="button" class="btn small" data-act="roda-fam" data-id="'+f.id+'">Abrir na roda</button></div></div>';}
+    '<div class="row"><button type="button" class="btn" data-act="roda-fam" data-id="'+f.id+'">Abrir na roda</button></div></div>';}
 /* @end:sabores */
 /* Conhecimento adaptado de "O Guia Definitivo do Charuto" (Johny Oliveira), com trechos contraditórios ou de risco à saúde deixados de fora. */
 var TERROIR=[
@@ -2235,7 +2235,10 @@ document.addEventListener('click',function(ev){
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
     case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
     case 'step': state.step=Number(id); rodaReset(); render(); window.scrollTo(0,0); break;
-    case 'roda-fam': state.rodaFam=id; state.rodaFoco={t:'fam',id:id}; state.rodaAnim='in'; state.rodaAbertaEm=Date.now(); render(); break;
+    case 'roda-fam': {state.rodaFam=id; state.rodaFoco={t:'fam',id:id}; state.rodaAnim='in'; state.rodaAbertaEm=Date.now(); render();
+      /* "Abrir na roda" (fora da roda) leva a roda para a tela; na própria roda, a página não rola. */
+      var rd=b.closest('#roda')?null:document.getElementById('roda');
+      if(rd)rd.scrollIntoView({block:'center',behavior:window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;}
     case 'roda-volta': {var fechou=state.rodaFam;state.rodaFam=null;if(fechou)state.rodaFoco={t:'fam',id:fechou};state.rodaAnim='out';render();break;}
     case 'set': draft[field]=draft[field]===val?'':val; scheduleSave(); render(); break;
     case 'vis': draft.visibility=val; scheduleSave(); render(); break;

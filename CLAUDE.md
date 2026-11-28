@@ -57,7 +57,8 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
     - A roda fechada mostra as famílias; tocar numa abre a família na roda inteira (`rodaSvg`).
     - Embaixo, o cartão ensina com "Lembra" e "Para treinar" (`rodaCartao`). Seguem os chips do terço (`rodaChips`) e a busca pelo nome, que ignora acento e acha os nomes da imagem, como chumbo e caju (`buscaSabores`).
     - Os 28 nomes de antes não mudaram. Quatro trocaram de família: Doce foi para Boca, Feno para Plantas, Tostado para Tostados e Floral para Flores. A missão da família antiga continua aceitando cada um (`LEGACY_MISSAO`, em `missionHit`).
-    - A missão é sorteada entre as 10 famílias de aroma (`MISSION_FAMS`).
+    - A missão é sorteada entre as 10 famílias de aroma (`MISSION_FAMS`). O botão "Abrir na roda" abre a família e rola até a roda, a única rolagem automática da tela.
+    - O anel fino de fora também abre a família ao toque. Chips, resultados da busca e "Abrir na roda" têm 44 px.
     - O estado da roda fica só na memória (`state.rodaFam`, `rodaFoco` e `saborQ`) e é zerado ao entrar na sessão e ao trocar de terço (`rodaReset`).
     - O redesenho da sessão devolve o foco ao campo de busca ou ao mesmo botão da roda, do cartão, dos chips ou da busca (`rodaFocoAntes`/`rodaFocoDepois`).
     - `rodaFit` encolhe o rótulo que não cabe na fatia.

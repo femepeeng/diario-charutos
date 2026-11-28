@@ -29,6 +29,15 @@
 
     check('a roda fechada mostra 11 famílias', fams().length === 11);
 
+    /* Toque de verdade no anel de fora (raio 156, no meio de Especiarias): o elemento achado no ponto precisa abrir a família. */
+    q('#roda').scrollIntoView({ block: 'center' }); await wait(30);
+    var svg0 = q('#roda svg'), ang = (3 * 360 / 11 - 90) * Math.PI / 180, pt0 = svg0.createSVGPoint();
+    pt0.x = 156 * Math.cos(ang); pt0.y = 156 * Math.sin(ang); pt0 = pt0.matrixTransform(svg0.getScreenCTM());
+    var noAnel = document.elementFromPoint(pt0.x, pt0.y), alvoAnel = noAnel && noAnel.closest ? noAnel.closest('[data-act]') : null;
+    tap(noAnel); await wait(30);
+    check('tocar no anel de fora abre a família', !!alvoAnel && alvoAnel.getAttribute('data-id') === 'especiaria' && notas().length === 12);
+    tap(q('#roda [data-act="roda-volta"]')); await wait(30);
+
     tap(fam('especiaria')); await wait(30);
     check('tocar numa família abre a roda nela', notas().length === 12 && texto('#roda-card').indexOf('Especiarias') >= 0);
 
@@ -54,6 +63,10 @@
     check('a busca acha pelo nome da imagem e marca',
       achou && cur().indexOf('Grafite') >= 0 && notas().length === 6 && (q('#sabor-q') || {}).value === 'chumbo' &&
       !!q('#sabor-res [data-val="Grafite"]') && q('#sabor-res [data-val="Grafite"]').getAttribute('aria-pressed') === 'true');
+
+    function alto(el) { return !!el && el.getBoundingClientRect().height >= 43.5; }
+    check('chips e resultados da busca com pelo menos 44 px de altura',
+      qa('#roda-sel .opt').length > 0 && qa('#roda-sel .opt').every(alto) && qa('#sabor-res .opt').length > 0 && qa('#sabor-res .opt').every(alto));
 
     var inp = q('#sabor-q');
     if (inp) { inp.focus(); buscar('can'); inp.setSelectionRange(3, 3); }
@@ -81,8 +94,13 @@
     check('trocar de terço fecha a roda e mostra as notas do terço',
       fams().length === 11 && texto('#roda-sel').indexOf('Nada marcado ainda.') >= 0 && __t.state.saborQ === '');
 
-    tap(q('.mission [data-act="roda-fam"]')); await wait(30);
+    var abrir = q('.mission [data-act="roda-fam"]');
+    check('"Abrir na roda" tem pelo menos 44 px de altura', alto(abrir));
+    window.scrollTo(0, 0); await wait(60);
+    tap(abrir); await wait(700);
+    var rr = q('#roda') ? q('#roda').getBoundingClientRect() : null;
     check('a missão pendente abre a família na roda', notas().length === 4);
+    check('"Abrir na roda" leva a roda para a tela', !!rr && rr.top + rr.height / 2 > 0 && rr.top + rr.height / 2 < innerHeight);
 
     var svg = q('#roda svg'), k = svg ? svg.getBoundingClientRect().width / 360 : 0;
     function circulo(theta, r0, r1) { var s = Math.sin(theta * Math.PI / 360); return r1 * (1 - s) / (1 + s) >= r0 ? k * 2 * r1 * s / (1 + s) : 0; }

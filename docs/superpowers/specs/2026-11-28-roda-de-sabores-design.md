@@ -143,7 +143,7 @@ SVG com `viewBox="-180 -180 360 360"`, largura de 100% até 420 px, centro em (0
 - Enter e Espaço acionam qualquer elemento com `role="button"` e `data-act` que não seja um `<button>`.
 - Depois de um redesenho da tela de sessão, o foco volta ao elemento com o mesmo `data-act` e `data-val`/`data-id`, se ele ainda existir: na roda, no cartão, nos chips ou nos resultados da busca.
 - Se o elemento sumiu depois de uma ação da roda, o foco vai para a primeira nota da roda aberta ou para a família que acabou de fechar.
-- A página nunca rola sozinha (decisão minha).
+- A página nunca rola sozinha num redesenho (decisão minha). A exceção é o botão "Abrir na roda" da missão: ele leva a roda para a tela, porque, a 360 px, a roda fica abaixo da dobra (decisão minha, depois da revisão final).
 
 ### O cartão
 
