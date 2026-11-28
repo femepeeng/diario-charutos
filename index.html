@@ -159,6 +159,9 @@ details.ped .pedbody{display:flex; flex-direction:column; gap:12px; padding:4px 
 .minitabs button{white-space:nowrap; padding:0 6px; min-width:0}
 /* Sub-abas da Conta com texto grande do sistema: o rótulo é cortado com reticências, sem passar da borda. */
 .minitabs[aria-label="Conta"] button{overflow:hidden; text-overflow:ellipsis}
+/* Ponto de mensagem nova na sub-aba: no canto do botão, fora do alcance da reticência quando o texto é grande. */
+.minitabs button{position:relative}
+.minitabs .tdot{position:absolute; top:7px; right:7px; margin:0}
 @media (max-width:400px){ .minitabs button{font-size:14px} }
 
 .stats{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
@@ -1624,8 +1627,9 @@ function contaTabs(){var nm=novaMsg();
     return '<button role="tab" aria-selected="'+(state.tab===t[0])+'" data-act="tab" data-id="'+t[0]+'"'+(dot?' aria-label="Perfil, nova mensagem"':'')+'>'+t[1]+(dot?'<span class="tdot" aria-hidden="true"></span>':'')+'</button>';}).join('')+'</div>';}
 function viewHome(){
   if(isContaSec(state.tab))state.contaSec=state.tab;
-  /* Mensagens vistas: o Perfil aberto vale como visto; se as não lidas caem (lidas em outro aparelho, outra conta), o visto acompanha. */
-  var un=unreadMsgs();if(state.tab==='conta')state.msgVisto=un;else if((state.msgVisto||0)>un)state.msgVisto=un;
+  /* Mensagens vistas: o Perfil aberto vale como visto. Se as não lidas caem com o Perfil fechado (lidas em outro aparelho, outra conta),
+     o celular não sabe se chegou mensagem nova junto com a queda; as que sobraram contam como não vistas (visto volta a 0). */
+  var un=unreadMsgs();if(state.tab==='conta')state.msgVisto=un;else if((state.msgVisto||0)>un)state.msgVisto=0;
   var h=viewHeader();
   var live=openSession();
   if(live){h+='<div class="card live"><div class="head"><div><div class="eyebrow">Sessão em andamento</div><h3>'+esc(live.cigarName)+'</h3><div class="meta num">'+fmtClock(elapsed(live))+' · '+esc(live.moment||'momento não marcado')+'</div></div><button class="btn primary" data-act="resume" data-id="'+esc(live.id)+'">Retomar</button></div></div>';}

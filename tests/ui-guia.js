@@ -2,6 +2,8 @@
    Uso no console (ou javascript_tool): eval(await (await fetch('/tests/ui-guia.js')).text())
    Devolve {ok, falhas, resultados}. Não altera dados: só navega entre telas. */
 (async function () {
+  /* As mensagens vistas (state.msgVisto) mudam ao passar pelas abas: guarda no começo e devolve no fim. */
+  var vistoAntes = window.__t ? __t.state.msgVisto : undefined;
   var R = [], wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   function check(nome, cond) { R.push((cond ? 'ok   ' : 'FAIL ') + nome); }
   function q(s) { return document.querySelector(s); }
@@ -237,6 +239,7 @@
     }
   }
 
+  if (window.__t) __t.state.msgVisto = vistoAntes;
   var falhas = R.filter(function (s) { return s.indexOf('FAIL') === 0; }).length;
   return { ok: falhas === 0, falhas: falhas, resultados: R };
 })();

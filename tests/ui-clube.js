@@ -306,6 +306,25 @@
     click(hubA()); await wait(200);
     check('não lidas caem e depois chega uma nova: a Conta volta a abrir em Mensagens', S.tab === 'conta' && C.club.sec === 'mensagens');
 
+    // 2.12.1: lida em outro aparelho e chega uma nova antes de o celular atualizar (vê 2 → 1, sem ver o 0).
+    meA(2); await T.refreshClub(true); S.tab = 'conta'; T.render(); await wait(80);
+    click(q('.minitabs [data-act="tab"][data-id="cesta"]')); await wait(80); tab('inicio');
+    meA(1); await T.refreshClub(true); T.render(); await wait(80); C.club.sec = 'inscritos';
+    click(hubA()); await wait(200);
+    check('lida em outro aparelho e chega uma nova sem o celular ver a queda: a Conta abre em Mensagens', S.tab === 'conta' && C.club.sec === 'mensagens');
+    click(q('.minitabs [data-act="tab"][data-id="cesta"]')); await wait(80); tab('inicio'); C.club.sec = 'inscritos';
+    click(hubA()); await wait(150);
+    check('depois desse desvio, sem mensagem nova, a Conta abre a última sub-aba', S.tab === 'cesta' && C.club.sec === 'inscritos');
+
+    var pf = q('.minitabs [data-act="tab"][data-id="conta"]');
+    if (pf) { pf.style.flex = 'none'; pf.style.width = '46px'; }
+    await wait(30);
+    var dotP = pf && pf.querySelector('.tdot'), rb = pf && pf.getBoundingClientRect(), rdt = dotP && dotP.getBoundingClientRect();
+    check('com o rótulo cortado, o ponto da sub-aba Perfil continua à vista',
+      !!rdt && rdt.width > 0 && rdt.left >= rb.left - 0.5 && rdt.right <= rb.right + 0.5 && rdt.top >= rb.top - 0.5 && rdt.bottom <= rb.bottom + 0.5);
+    if (pf) { pf.style.flex = ''; pf.style.width = ''; }
+    S.tab = 'conta'; C.club.sec = 'mensagens'; T.render(); await wait(80);
+
     apiA.opt.meErr = { code: 'PGRST202', message: 'Could not find the function public.club_me without parameters in the schema cache' };
     await T.refreshClub(true); T.render(); await wait(120);
     var app = document.getElementById('app').textContent;
