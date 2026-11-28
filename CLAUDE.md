@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.12.0 (28/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.12.1 (28/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -44,7 +44,10 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 ## Funcionalidades por área
 
 - **Navegação** (2.11.0): a barra tem Início, Acervo e Conta e cabe inteira a 360 px. A Conta tem as sub-abas Histórico, Paladar, Cesta e Perfil, para todos, com ou sem login no clube.
-  - Tocar em Conta abre o Perfil quando chegou mensagem desde a última vez que o Perfil foi desenhado (`msgNaoVista()`: não lidas acima de `state.msgVisto`, só na memória). `viewHome` grava o visto ao desenhar o Perfil e o baixa quando as não lidas caem (lidas em outro aparelho, saída da conta). Para o administrador, o desvio abre o painel já em Mensagens. O ponto na Conta e no Perfil continua aceso enquanto houver mensagem não lida (`novaMsg()`).
+  - Tocar em Conta abre o Perfil quando chegou mensagem desde a última vez que o Perfil foi desenhado (`msgNaoVista()`: não lidas acima de `state.msgVisto`, só na memória). `viewHome` grava o visto ao desenhar o Perfil.
+    - Quando as não lidas caem com o Perfil fechado (lidas em outro aparelho, saída da conta), o visto volta a 0 (2.12.1). O celular não sabe se chegou mensagem nova junto com a queda, então as que sobraram contam como não vistas. Custo aceito: depois de ler só parte das conversas em outro aparelho, a Conta abre uma vez a mais em Mensagens.
+    - Para o administrador, o desvio abre o painel já em Mensagens.
+    - O ponto na Conta e no Perfil continua aceso enquanto houver mensagem não lida (`novaMsg()`). Na sub-aba, ele fica no canto do botão, fora do alcance da reticência.
   - Sem mensagem nova, a Conta abre a última sub-aba usada nesta sessão do app (`state.contaSec`, só na memória) ou, na primeira vez, o Histórico.
   - A faixa "Há registros novos sem backup" e o resumo do diário (no Acervo e no Histórico) ficam abaixo das abas, para a barra e as sub-abas não mudarem de lugar. A barra tem `aria-label="Seções"`; as sub-abas cortam o rótulo com reticências quando o texto do sistema está grande.
   - Os valores de `state.tab` não mudaram (`historico`, `paladar`, `cesta` e `conta`, que é o Perfil). O botão da Conta na barra leva `data-hub` e fica marcado em qualquer sub-aba (`CONTA_SECS`, `isContaSec`). Os atalhos que apontam para uma sub-aba abrem direto nela: o nível do cabeçalho abre o Paladar, e "Fazer backup", "Ir para Conta" e o aviso do Início abrem o Perfil.
@@ -61,7 +64,9 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
     - O anel fino de fora também abre a família ao toque. Chips, resultados da busca e "Abrir na roda" têm 44 px.
     - O estado da roda fica só na memória (`state.rodaFam`, `rodaFoco` e `saborQ`) e é zerado ao entrar na sessão e ao trocar de terço (`rodaReset`).
     - O redesenho da sessão devolve o foco ao campo de busca ou ao mesmo botão da roda, do cartão, dos chips ou da busca (`rodaFocoAntes`/`rodaFocoDepois`).
-    - `rodaFit` encolhe o rótulo que não cabe na fatia.
+    - `rodaFit` encolhe o rótulo que não cabe na fatia. Ele roda de novo quando uma fonte termina de carregar depois do redesenho (2.12.1).
+    - O toque acha a nota pelo texto (`notaIdx`). Assim, uma nota que não é texto, vinda de um backup editado à mão, também sai pelo chip.
+    - Ao tirar o último chip, o foco vai para a roda, nunca para a busca, que abriria o teclado. "Abrir na roda" com o foco passa o foco para a primeira nota.
 - **Histórico** (Conta › Histórico): duas sub-abas.
   - **Sessões:** detalhe, edição com troca de charuto e de duração, ajustar a força no Acervo e adicionar charuto avulso ao Acervo.
   - **Lado a lado** (era a aba Comparar até a 2.9.0): duas sessões em tabela e, embaixo, os 3 charutos do catálogo mais parecidos com o da nota maior (`similarTo`).
@@ -81,7 +86,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
     - Os dois guardam o **pedido enviado**, apagam as trocas e remontam a cesta sem os nomes enviados, para o pedido da loja seguinte.
   - **Pedidos enviados:** um bloco por pedido, cada charuto com "Chegou".
     - "Guardar no estoque" (`chegadaPlan`, pura) usa os dados do envio: tira Cesta e põe Estoque no que já está no Acervo, cria o que falta e deixa na Cesta o que não chegou.
-    - O pedido só sai depois que todas as gravações confirmam (`put` devolve `true` ou `false`). Se uma falha, o estado volta ao que está gravado (`loadAll`; se nem a leitura funcionar, ao que era antes do toque), o pedido fica e o aviso pede para tentar de novo. Um toque por vez (`state.pedGuardando`).
+    - O pedido só sai depois que todas as gravações confirmam (`put` devolve `true` ou `false`). Se uma falha, o estado volta ao que está gravado (`loadAll`; se nem a leitura funcionar, ao que era antes do toque), o pedido fica e o aviso pede para tentar de novo. Um toque por vez (`state.pedGuardando`): enquanto grava, o botão daquele pedido mostra "Guardando…" e fica desativado.
     - Há também "Reenviar" (se o compartilhamento falhar, copia o texto e avisa) e "Descartar", com confirmação. Cada "Chegou" diz o nome do charuto ao leitor de tela.
   - **Catálogo** (ex-Para provar): catálogo de referência (`CAT_LINES`/`CAT_ITEMS`, 475 charutos), ordenado pelo perfil de paladar (`tasteProfile` → `curate`), com busca e "Adicionar à cesta" (cria o charuto no Acervo com status `cesta`, que entra na cesta montada).
     - O que já foi provado sai da lista, mas aparece na busca com a nota.
@@ -111,11 +116,11 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **UI:** mobile-first (testar em 360 a 390 px, sem rolagem horizontal), tema escuro por padrão com tema claro via tokens CSS, fontes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono, alvos de toque de pelo menos 44 px, sem emoji como ícone.
 - **Testes:**
   - **Funções puras:** `node tests/guia.test.js`, `node tests/curadoria.test.js`, `node tests/clube.test.js`, `node tests/cesta.test.js` e `node tests/sabores.test.js` testam o que fica entre os marcadores `/* @pure:guia */`, `/* @pure:curadoria */`, `/* @pure:clube */`, `/* @pure:cesta */` e `/* @pure:sabores */` (fecham com `/* @end:... */`). O teste da Cesta carrega a curadoria junto, e o da roda carrega o `/* @pure:base */` (o `esc`).
-  - **Funções que gravam:** `node tests/app.test.js` roda `put`, `pedGuardar` e `wipeLocalForAccount` (extraídas de `index.html` pelo nome, casando as chaves) num `vm` com o armazenamento trocado por dublês: gravação pendente, que falha, dois toques e troca de conta.
+  - **Funções que gravam:** `node tests/app.test.js` roda `put`, `pedGuardar`, `enviadosHtml`, `wipeLocalForAccount`, `flush` e `finishSaved` (extraídas de `index.html` pelo nome, casando as chaves) num `vm` com o armazenamento trocado por dublês: gravação pendente, que falha, dois toques, "Guardando…", aviso do fim da sessão e troca de conta.
   - **SQL:** `node supabase/tests/fase2.test.mjs` testa o SQL do clube no PGlite.
   - **Interface:** `tests/ui-guia.js`, `tests/ui-curadoria.js`, `tests/ui-clube.js`, `tests/ui-cesta.js` e `tests/ui-sabores.js` rodam no navegador com o app aberto: `eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`. O `?` evita a cópia do service worker.
     - Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim, inclusive `state.tab` e `state.contaSec`.
-    - O `ui-guia.js` também confere a navegação da Conta. Nessa seção ele tira o login só na memória (`cloud.user`), para valer a regra sem mensagem nova e nenhum toque chamar o clube, e liga a faixa de backup pelas chaves `diario-dirty` e `diario-last-backup` (restauradas no fim). Com `config.js` vazio, as três verificações que dependem do clube entram como "pula".
+    - O `ui-guia.js` também confere a navegação da Conta. Nessa seção ele tira o login só na memória (`cloud.user`), para valer a regra sem mensagem nova e nenhum toque chamar o clube, e liga a faixa de backup pelas chaves `diario-dirty` e `diario-last-backup` (restauradas no fim). Guarda `state.msgVisto` no começo e devolve no fim. Com `config.js` vazio, as três verificações que dependem do clube entram como "pula".
     - O `ui-clube.js` também troca o cliente Supabase e o `clubApi` por versões falsas em memória (ganchos `__t.cloud`, `__t.setClubApi`, `__t.refreshClub`, `__t.canSync`) e restaura `state.msgVisto`.
     - O `ui-sabores.js` abre uma sessão falsa só na memória (`__t.sessao`) e troca o gravador da sessão por um falso (`__t.setSessionSaver`). Assim, marcar notas na roda não grava no IndexedDB. Ele também confere a lição "Treinando o paladar" sem abri-la, porque abrir grava a leitura.
     - O `ui-cesta.js` e o `ui-curadoria.js` guardam e restauram o estado da Cesta (gancho `__t.cesta` e `localStorage diario-cesta`), mesmo quando uma verificação quebra no meio (`try/finally`). O `ui-cesta.js` também troca `navigator.share` e `navigator.clipboard` por versões falsas e clica em "Já enviei", que só grava na Cesta.
