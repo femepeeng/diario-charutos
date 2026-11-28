@@ -24,7 +24,7 @@ function fonte(nome) {
 }
 /* Função que ainda não existe vira um comentário: o teste dela falha sozinho, sem derrubar o arquivo. */
 const APP = ['put', 'saveErr', 'pedById', 'pedGuardar', 'wipeLocalForAccount', 'clone', 'cigarById', 'upsertState', 'sortAll', 'uid',
-  'enviadosHtml', 'flush', 'finishSaved', 'newSession', 'iniciarSessao', 'openSession'].map(n => { try { return fonte(n); } catch (e) { return '/* ' + n + ' ausente */'; } }).join('\n');
+  'enviadosHtml', 'flush', 'finishSaved', 'newSession', 'iniciarSessao', 'openSession', 'topNotes'].map(n => { try { return fonte(n); } catch (e) { return '/* ' + n + ' ausente */'; } }).join('\n');
 const DUBLES = `
 var T = { toasts: [], renders: 0, persisted: 0, loads: 0, writes: [], lsMap: {} };
 var state = { cigars: [], sessions: [], confirm: '', pedOpen: null };
@@ -206,6 +206,24 @@ test('com sessão aberta, iniciarSessao avisa e não cria', async () => {
   assert.strictEqual(sb.iniciarSessao({ id: 'k1', name: 'Outro' }, {}), null);
   assert.strictEqual(gravadas.length, 0);
   assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Termine ou retome a sessão em andamento primeiro.');
+});
+test('iniciarSessao: o momento desmarcado na folha fica vazio; sem opção (Acervo), vale o último momento', async () => {
+  const sb = app(() => Promise.resolve());
+  sb.sessionSaver = () => Promise.resolve(true); sb.lastMoment = () => 'Entardecer';
+  const s = sb.iniciarSessao({ id: 'k1', name: 'Cohiba Siglo II' }, { moment: '' });
+  assert.strictEqual(s.moment, '', 'o momento desmarcado voltou: ' + s.moment);
+  const s2 = sb.iniciarSessao({ id: 'k1', name: 'Cohiba Siglo II' });
+  assert.strictEqual(s2.moment, 'Entardecer');
+});
+
+// ---- Revisão final da 2.13.0: registro malformado do clube não derruba a Início ----
+test('topNotes ignora terços, notas e sabores que não são lista ou texto', async () => {
+  const sb = app(() => Promise.resolve());
+  assert.strictEqual(typeof sb.topNotes, 'function', 'topNotes não encontrada');
+  assert.deepStrictEqual(plain(sb.topNotes({ a: 1 }, 3)), []);
+  assert.deepStrictEqual(plain(sb.topNotes('x', 3)), []);
+  assert.deepStrictEqual(plain(sb.topNotes([{ notes: 'Cedro' }, null, { notes: ['Cacau', 'Cacau', { x: 1 }, 5] }, { notes: { x: 1 } }], 3)), ['Cacau']);
+  assert.deepStrictEqual(plain(sb.topNotes([{ notes: ['Cedro', 'Cacau'] }, { notes: ['Cedro'] }], 5)), ['Cedro', 'Cacau']);
 });
 
 // ---- Troca de conta ----

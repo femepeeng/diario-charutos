@@ -37,7 +37,8 @@
       markRead: function () { rec('markRead'); return ok(null); }, markAvisosRead: function () { rec('markAvisosRead'); return ok(null); } };
   }
 
-  var S = __t.state, C = __t.cloud, up = Date.now(), nGrav = 0, gravAntes = null, apiAntes = null, visDef = false;
+  var S = __t.state, C = __t.cloud, up = Date.now(), nGrav = 0, gravAntes = null, apiAntes = null, visDef = false, onDef = false;
+  var lsPerfil = localStorage.getItem('clube-profile');
   var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, step: S.step, missao: S.proximaMissao, sec: S.contaSec, visto: S.msgVisto };
   var bkC = { sb: C.sb, user: C.user, profile: C.profile, checked: C.profileChecked, me: C.me, missing: C.clubMissing, feed: C.feed, likes: C.likes,
     comments: C.comments, feedAt: C.feedAt, membros: C.membros, configured: C.configured, authMode: C.authMode, mismatch: C.ownerMismatch, club: C.club };
@@ -107,6 +108,23 @@
     check('com sessão aberta, Começar avisa e não troca a sessão',
       S.view === 'home' && nGrav === nAntes && /Termine ou retome a sessão em andamento primeiro/.test((q('#toast') || {}).textContent || ''));
     if (folha()) tecla(document, 'Escape');
+
+    // ---- Folha com lista longa (revisão final): escolher não pula a rolagem, e Começar sessão fica à vista ----
+    var MUITOS = [];
+    for (var mi = 0; mi < 14; mi++) MUITOS.push({ id: 'ui-m' + mi, name: 'Charuto de teste ' + mi, status: 'estoque', order: mi, origin: 'Cuba', strength: 3, vitola: '124 x 50', updatedAt: up, syncedAt: up });
+    S.cigars = MUITOS; S.sessions = []; S.tab = 'inicio'; S.view = 'home'; __t.render(); await wait(60);
+    click(q('.heroi .acender')); await wait(80);
+    var visivel = function (el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.height > 0 && r.top >= -0.5 && r.bottom <= innerHeight + 0.5; };
+    var sh = q('#inicio-folha .ifsheet'), comecaVisivel = visivel(q('[data-act="inicio-comecar"]'));
+    if (sh) sh.scrollTop = 300; await wait(60);
+    var alvo = q('[data-act="inicio-escolher"][data-id="ui-m6"]'), topoAlvo = alvo ? alvo.getBoundingClientRect().top : -1, st = sh ? sh.scrollTop : 0;
+    click(alvo); await wait(80);
+    var sh2 = q('#inicio-folha .ifsheet'), alvo2 = q('[data-act="inicio-escolher"][data-id="ui-m6"]');
+    check('folha com lista longa: escolher não pula a rolagem, e Começar sessão fica sempre à vista',
+      comecaVisivel && st > 0 && !!sh2 && Math.abs(sh2.scrollTop - st) <= 2 && !!alvo2 && Math.abs(alvo2.getBoundingClientRect().top - topoAlvo) <= 2 &&
+      alvo2.getAttribute('aria-pressed') === 'true' && document.activeElement === alvo2 &&
+      visivel(q('[data-act="inicio-comecar"]')) && !q('[data-act="inicio-comecar"]').disabled);
+    tecla(document.activeElement, 'Escape'); await wait(60);
 
     // ---- Herói sem sessão (Task 3) ----
     S.cigars = CIG.slice(); S.sessions = [FEITA]; S.tab = 'inicio'; S.view = 'home'; __t.render(); await wait(100);
@@ -209,6 +227,16 @@
     cl = q('.iclube');
     check('membro sem feed e sem contagem: mensagem de vazio e sem linha de membros',
       !!cl && /Nenhuma degustação compartilhada ainda\./.test(txt(cl)) && !/membro/.test(txt(cl.querySelector('.isec-h'))) && !cl.querySelector('.ipost'));
+    // Membro deste aparelho (perfil guardado) ainda sem confirmação: ao abrir o app, ou sem internet com o login vencido.
+    localStorage.setItem('clube-profile', JSON.stringify({ id: 'UI-EU', display_name: 'Eu Teste', is_admin: false }));
+    C.user = null; C.profile = { id: 'UI-EU', display_name: 'Eu Teste', is_admin: false }; C.me = null; C.profileChecked = false; __t.render(); await wait(60);
+    var conectando = !q('.iconvite') && !!q('.iclube') && /Conectando ao clube/.test(txt(q('.iclube')));
+    C.profile = null; C.profileChecked = true;
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: function () { return false; } }); onDef = true;
+    __t.render(); await wait(60);
+    var semRede = !q('.iconvite') && !!q('.iclube') && /Sem conexão com o clube/.test(txt(q('.iclube')));
+    delete navigator.onLine; onDef = false; localStorage.removeItem('clube-profile');
+    check('membro deste aparelho ainda sem confirmação (abrindo o app ou sem internet): sem o convite', conectando && semRede);
     C.user = null; C.profile = null; C.me = null; __t.render(); await wait(60);
     var cv = q('.iconvite');
     check('sem login: cartão de convite com Entrar com convite',
@@ -265,6 +293,8 @@
     check('sem exceção no teste: ' + e.message, false);
   } finally {
     if (visDef) { try { delete document.visibilityState; } catch (e) {} }
+    if (onDef) { try { delete navigator.onLine; } catch (e) {} }
+    if (lsPerfil == null) localStorage.removeItem('clube-profile'); else localStorage.setItem('clube-profile', lsPerfil);
     if (folha()) tecla(document, 'Escape');
     if (__t.sessao && __t.sessao()) __t.sessao(null);
     if (gravAntes && __t.setSessionSaver) __t.setSessionSaver(gravAntes);

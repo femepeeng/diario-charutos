@@ -277,6 +277,9 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .iftxt span{font-size:13px; color:var(--muted)}
 .iflbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
 .ifin .opt{min-height:44px}
+/* Começar sessão fica preso ao pé da folha quando a lista é longa. */
+.ifacao{position:sticky; bottom:calc(-20px - env(safe-area-inset-bottom, 0px)); z-index:1; margin:0 -16px calc(-20px - env(safe-area-inset-bottom, 0px));
+  padding:12px 16px calc(20px + env(safe-area-inset-bottom, 0px)); background:linear-gradient(to top, var(--surface) 85%, transparent)}
 /* Início (2.13.0): herói, Clube e Seu diário. */
 .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
 .heroi{position:relative; overflow:hidden; border-radius:22px; border:1.5px solid var(--line); padding:20px 18px 18px; min-width:0;
@@ -1285,7 +1288,9 @@ function bandImg(id,cls,alt){var u=photoURL[id];if(!u)return '';return '<img cla
 function bandOfCigar(cid){for(var i=0;i<state.sessions.length;i++){var s=state.sessions[i];if(s.cigarId===cid&&s.bandId&&photoURL[s.bandId])return s.bandId;}var c=cigarById(cid);return (c&&c.bandId&&photoURL[c.bandId])?c.bandId:null;}
 function numStr(n){return String(n).replace('.',',');}
 function initials(name){var s=String(name||'?').trim();return esc(s?s.charAt(0).toUpperCase():'?');}
-function topNotes(thirds,max){var c={};(thirds||[]).forEach(function(t){(t&&t.notes||[]).forEach(function(n){c[n]=(c[n]||0)+1;});});return Object.keys(c).sort(function(a,b){return c[b]-c[a];}).slice(0,max||5);}
+/* Sabores mais marcados. Os terços vêm do clube sem checagem: o que não for lista ou texto é ignorado, para um registro malformado não derrubar a tela. */
+function topNotes(thirds,max){var c=Object.create(null);(Array.isArray(thirds)?thirds:[]).forEach(function(t){var ns=t&&t.notes;(Array.isArray(ns)?ns:[]).forEach(function(n){if(typeof n==='string')c[n]=(c[n]||0)+1;});});
+  return Object.keys(c).sort(function(a,b){return c[b]-c[a];}).slice(0,max||5);}
 function noteChip(n){return '<span class="chip"><span class="dot" style="background:'+(NOTE_COLOR[n]||'#999')+'"></span>'+esc(n)+'</span>';}
 
 /* ---------- armazenamento local (IndexedDB) ---------- */
@@ -1890,11 +1895,14 @@ function inicioPostHtml(it){var name=(it.profiles&&it.profiles.display_name)||'M
     '<button type="button" class="iact" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'Comentários <span class="n">'+cms.length+'</span></button></div></article>';}
 /* Clube na Início: só com o clube configurado. Convite sem login; uma linha para suspenso; para membro, atalhos, aviso e as 2 últimas degustações. */
 function clubeInicioHtml(){if(!cloud.configured)return '';
+  function cab(sub,verTudo){return '<div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cl-t">Clube</h2>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>'+
+    (verTudo?'<button type="button" class="ilink" data-act="tab" data-id="clube">Ver tudo'+SETA_ICON+'</button>':'')+'</div>';}
+  /* Membro deste aparelho (perfil guardado) ainda sem confirmação: abrindo o app, ou sem internet com o login vencido. Nem convite, nem seção de membro. */
+  if(!isMember()&&ls('clube-profile')&&(!cloud.profileChecked||navigator.onLine===false))return '<section class="isec iclube" aria-labelledby="cl-t">'+cab('',false)+
+    '<p class="ivazio">'+(navigator.onLine===false?'Sem conexão com o clube. O diário funciona normalmente neste celular.':'Conectando ao clube…')+'</p></section>';
   if(!isMember())return '<section class="iconvite" aria-labelledby="cv-t"><div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cv-t">Clube do Diário</h2><span>Grupo fechado, por convite, para maiores de 18 anos</span></div></div>'+
     '<ul><li>'+PESSOAS_ICON+'Compartilhe suas degustações com os amigos</li><li>'+FUMACA_ICON+'Veja quem está fumando agora</li><li>'+CHEERS_ICON+'Brinde, comente e troque mensagens</li></ul>'+
     '<div class="row"><button type="button" class="btn primary" data-act="inicio-clube" data-v="criar">Entrar com convite</button><button type="button" class="btn ghost" data-act="inicio-clube" data-v="entrar">Já tenho conta</button></div></section>';
-  function cab(sub,verTudo){return '<div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cl-t">Clube</h2>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>'+
-    (verTudo?'<button type="button" class="ilink" data-act="tab" data-id="clube">Ver tudo'+SETA_ICON+'</button>':'')+'</div>';}
   if(isSuspended())return '<section class="isec iclube" aria-labelledby="cl-t">'+cab('',false)+'<p class="ivazio">Sua participação no clube está suspensa. O diário deste celular continua funcionando.</p></section>';
   var nm=cloud.membros,un=unreadMsgs(),me=cloud.me;
   var h='<section class="isec iclube" aria-labelledby="cl-t">'+cab(typeof nm==='number'&&nm>0?nm+(nm===1?' membro':' membros'):'',true)+
@@ -2375,7 +2383,7 @@ function newSession(c){
 /* Começa a sessão (folha da Início e cartão do Acervo). A gravação inicial passa pelo sessionSaver, que o teste de interface troca. */
 function iniciarSessao(c,opts){opts=opts||{};if(!c)return null;
   if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return null;}
-  var s=newSession(c);if(opts.moment)s.moment=opts.moment;sessionSaver(s);enterSession(s);return s;}
+  var s=newSession(c);if(typeof opts.moment==='string')s.moment=opts.moment;sessionSaver(s);enterSession(s);return s;}
 /* ---------- Início: folha "Iniciar sessão" (2.13.0), desenhada em #inicio-folha, fora do #app ---------- */
 var CHAMA_ICON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a6 6 0 0 0 6-6c0-4-3-5.5-4-9-2 1.5-3 3.5-3 5.5-1-.5-1.6-1.5-1.8-2.5C7.5 10.5 6 12.5 6 15a6 6 0 0 0 6 6z"></path></svg>';
 var FECHAR_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>';
@@ -2394,9 +2402,11 @@ function folhaInicioHtml(){var aba=state.inicioAba||'estoque',nE=inicioCharutos(
     h+='<div class="iflista" id="inicio-lista">'+inicioListaHtml(inicioCharutos(state.cigars,aba,state.inicioBusca),aba)+'</div>';}
   h+='<span class="iflbl">Momento</span><div class="opts">'+MOMENTS.map(function(m){
     return '<button type="button" class="opt" data-act="inicio-momento" data-v="'+esc(m)+'" aria-pressed="'+(state.inicioMomento===m)+'">'+esc(m)+'</button>';}).join('')+'</div>';
-  return h+'<button type="button" class="acender" data-act="inicio-comecar"'+(inicioPodeComecar()?'':' disabled')+'>'+CHAMA_ICON+'Começar sessão</button></div></div>';}
-function desenharFolha(foco){var el=document.getElementById('inicio-folha');if(!el)return;el.innerHTML=state.inicioFolha?folhaInicioHtml():'';
-  document.body.style.overflow=state.inicioFolha?'hidden':'';if(foco){var f=el.querySelector(foco);if(f)f.focus();}}
+  return h+'<div class="ifacao"><button type="button" class="acender" data-act="inicio-comecar"'+(inicioPodeComecar()?'':' disabled')+'>'+CHAMA_ICON+'Começar sessão</button></div></div></div>';}
+/* Redesenha a folha mantendo a rolagem; o foco volta ao botão tocado sem rolar a folha. */
+function desenharFolha(foco){var el=document.getElementById('inicio-folha');if(!el)return;var sh=el.querySelector('.ifsheet'),st=sh?sh.scrollTop:0;el.innerHTML=state.inicioFolha?folhaInicioHtml():'';
+  var sh2=el.querySelector('.ifsheet');if(sh2&&st)sh2.scrollTop=st;
+  document.body.style.overflow=state.inicioFolha?'hidden':'';if(foco){var f=el.querySelector(foco);if(f)f.focus({preventScroll:true});}}
 /* Abre a folha; com escolha (a sugestão do herói), o charuto já vem marcado. Ao fechar, o foco volta ao botão do herói. */
 function abrirFolha(escolha){var c=escolha&&cigarById(escolha);state.inicioFolha=true;state.inicioEscolha=c?c.id:null;state.inicioDe=c?c.id:'';
   state.inicioAba=c?(temEstoque(c)?'estoque':'acervo'):abaInicial(state.cigars);state.inicioBusca='';state.inicioAvulso='';state.inicioMomento=lastMoment()||'';
@@ -2641,7 +2651,8 @@ document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttri
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}
   inicioTick();heroiPinta();});
 /* Posição do carrossel do guia e ponto ativo; chamada no evento scroll e logo depois do render, sem esperar o próximo quadro. */
-window.addEventListener('online',function(){if(isMember()){refreshClub(true).then(function(){sync();});if(state.tab==='clube')loadFeed();}});
+window.addEventListener('online',function(){if(isMember()){refreshClub(true).then(function(){sync();});if(state.tab==='clube')loadFeed();}else rerender();});
+window.addEventListener('offline',function(){if(!isMember())rerender();});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});
 window.addEventListener('appinstalled',function(){installPrompt=null;toast('App instalado na tela inicial');});
