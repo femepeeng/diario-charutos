@@ -214,6 +214,37 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .dot{width:10px; height:10px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1px rgba(0,0,0,.25)}
 .fam{display:flex; flex-direction:column; gap:6px}
 .fam .lbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+/* Roda de sabores (tela do terço): SVG que ocupa a largura do painel. Fatia marcada: cor cheia da família com texto escuro (contraste de 5:1 ou mais). */
+.roda{display:flex; justify-content:center}
+.roda-svg{width:100%; max-width:420px; height:auto; display:block; touch-action:manipulation; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none}
+.roda-svg [role="button"]{cursor:pointer; outline:none}
+.roda-svg .sl{stroke:var(--surface); stroke-width:2}
+.roda-svg g:focus-visible > .sl, .roda-svg .back:focus-visible .hub{stroke:var(--ember); stroke-width:3.5}
+.roda-svg .gen > .sl{stroke:var(--fg); stroke-opacity:.6; stroke-width:1.5; stroke-dasharray:5 4}
+.roda-svg .lab{fill:var(--fg); pointer-events:none}
+.roda-svg .flab{font-family:var(--f-display); font-weight:600; font-size:13.5px}
+.roda-svg .nlab{font-family:var(--f-body); font-weight:600; font-size:12.5px}
+.roda-svg .on .nlab{fill:#1A120C}
+.roda-svg .chk{fill:none; stroke:#1A120C; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; pointer-events:none}
+.roda-svg .tick{pointer-events:none}
+.roda-svg .hub{fill:var(--surface2); stroke:var(--line); stroke-width:1.5}
+.roda-svg .hub-eb{font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; fill:var(--ember); pointer-events:none}
+.roda-svg .hub-num{font-family:var(--f-display); font-weight:800; font-size:30px; fill:var(--fg); pointer-events:none}
+.roda-svg .hub-sub{font-family:var(--f-body); font-size:11px; fill:var(--muted); pointer-events:none}
+.roda-svg .hub-fam{font-family:var(--f-display); font-weight:800; font-size:15px}
+@keyframes rodaIn{from{transform:rotate(var(--from,0deg)) scale(.45); opacity:0} to{transform:none; opacity:1}}
+@keyframes rodaOut{from{transform:scale(1.14); opacity:0} to{transform:none; opacity:1}}
+.roda-svg .anim-in{animation:rodaIn .34s cubic-bezier(.2,.8,.2,1) both; transform-box:view-box; transform-origin:0 0}
+.roda-svg .anim-out{animation:rodaOut .24s ease-out both; transform-box:view-box; transform-origin:0 0}
+@media (prefers-reduced-motion: reduce){ .roda-svg .anim-in, .roda-svg .anim-out{animation:none} }
+.rcard{border-radius:12px; background:var(--surface2); padding:14px 16px; display:flex; flex-direction:column; gap:8px}
+.rcard .meta{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.rcard h3{font-size:22px; font-weight:800}
+.rcard .lembra{font-size:16px}
+.rcard .treino{font-size:14px; color:var(--muted)}
+.rsel{display:flex; flex-direction:column; gap:8px}
+.rsel .lbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.opt .x{font-family:var(--f-mono); color:var(--faint); margin-left:2px}
 .seg{display:flex; gap:6px}
 .seg button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); font-family:var(--f-mono); font-size:16px}
 .seg button[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
@@ -1550,7 +1581,7 @@ function restoreAuthForm(){
 function render(){
   var app=document.getElementById('app');
   if(ritmo.on&&!(state.view==='guia'&&GUIDE_TOOL[guiaIndex()]==='ritmo'))ritmoStop();
-  if(state.view==='session'&&draft){app.innerHTML=viewSession();startTick();return;}
+  if(state.view==='session'&&draft){var fz=rodaFocoAntes();app.innerHTML=viewSession();rodaFit();rodaFocoDepois(fz);startTick();return;}
   stopTick();
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
@@ -1660,7 +1691,10 @@ function ritmoStop(){var era=ritmo.on||ritmo.timer;ritmo.on=false;if(ritmo.timer
 /* Ganchos de teste (tests/ui-guia.js). */
 window.__t={guideOfDay:guideOfDay,humidorStatus:humidorStatus,ritmo:ritmo,state:state,render:function(){render();},rerender:function(){rerender();},
   cesta:function(v){if(v!==undefined)cesta=v;return cesta;},
-  cloud:cloud,setClubApi:function(o){var p=clubApi;clubApi=o;return p;},refreshClub:function(f){return refreshClub(f);},canSync:function(){return canSync();}};
+  cloud:cloud,setClubApi:function(o){var p=clubApi;clubApi=o;return p;},refreshClub:function(f){return refreshClub(f);},canSync:function(){return canSync();},
+  /* Teste da roda: abre (ou fecha, com null) uma sessão só na memória e troca o gravador da sessão. */
+  sessao:function(d){if(d!==undefined){draft=d;state.view=d?'session':'home';state.step=0;rodaReset();render();}return draft;},
+  setSessionSaver:function(fn){var p=sessionSaver;sessionSaver=fn;return p;}};
 function guiaIndex(){var n=GUIDE.length;return (((state.guiaIdx||0)%n)+n)%n;}
 function guiaTool(tool){
   if(tool==='umidor'){var r=humidorStatus(state.umid,state.temp);
@@ -2052,11 +2086,17 @@ function viewSession(){
   h+='<div class="tabs" role="tablist">'+steps.map(function(t,i){return '<button role="tab" aria-selected="'+(state.step===i)+'" data-act="step" data-id="'+i+'">'+t+'</button>';}).join('')+'</div>';
   if(state.step<3){
     var t=s.thirds[state.step];
-    if(s.mission&&famById(s.mission)){var mf=famById(s.mission),md=missionDone(s);h+='<div class="mission'+(md?' done':'')+'"><b>'+(md?'Missão cumprida: ':'Missão de aroma: ')+esc(mf.label)+'</b><span class="muted">'+(md?'Você marcou '+esc(sessNotes(s).filter(function(n){return mf.notes.indexOf(n)>=0;}).join(', '))+'. +5 pontos.':'Uma das famílias que você menos marca. Procure '+esc(mf.notes.join(', '))+' ao longo da sessão e marque se encontrar.')+'</span></div>';}
+    h+=missaoCartao(s);
     if(!editing&&THIRD_TIPS[state.step])h+='<p class="hint">'+THIRD_TIPS[state.step](s)+'</p>';
     if(state.step===0&&!editing)h+='<details class="terms panel"><summary>Ficha deste charuto</summary><div>'+fichaHtml(cigarById(s.cigarId),s.cigarName)+'</div></details>';
-    h+='<div class="panel"><fieldset><legend>O que você sente no '+steps[state.step]+'?</legend>';
-    FAMILIES.forEach(function(f){h+='<div class="fam"><span class="lbl">'+f.label+'</span>'+(f.hint?'<span class="faint" style="font-size:13px">'+esc(f.hint)+'</span>':'')+'<div class="opts">'+f.notes.map(function(n){var on=t.notes.indexOf(n)>=0;return '<button type="button" class="opt" aria-pressed="'+on+'" data-act="note" data-val="'+esc(n)+'"><span class="dot" style="background:'+f.color+'"></span>'+esc(n)+'</button>';}).join('')+'</div></div>';});
+    /* Roda de sabores: roda (fechada ou aberta numa família), cartão que ensina, chips do terço e busca pelo nome. */
+    h+='<div class="panel"><fieldset><legend>O que você sente no '+steps[state.step]+'?</legend>'+
+      '<div class="roda" id="roda">'+rodaSvg({fam:state.rodaFam,sel:t.notes,terco:steps[state.step],anim:state.rodaAnim})+'</div>'+
+      '<div class="rcard" id="roda-card" aria-live="polite">'+rodaCartao({foco:state.rodaFoco,sel:t.notes,terco:steps[state.step]})+'</div>'+
+      '<div class="rsel" id="roda-sel">'+rodaChips(t.notes)+'</div>'+
+      '<label class="f" for="sabor-q">Buscar pelo nome<input type="search" id="sabor-q" data-saborq value="'+esc(state.saborQ||'')+'" placeholder="ex.: canela, cedro, chumbo" autocomplete="off"></label>'+
+      '<div id="sabor-res">'+rodaBuscaHtml(state.saborQ||'',t.notes)+'</div>';
+    state.rodaAnim='';
     h+='</fieldset><fieldset><legend>Intensidade do sabor</legend>'+segBtns('intensity',5,t.intensity,'delicado','intenso')+'</fieldset>';
     h+='<label class="f" for="t-text">Anotações deste terço<textarea id="t-text" data-input="thirdText" placeholder="ex.: começou com feno e mel, retrogosto com pimenta branca">'+esc(t.text)+'</textarea></label>';
     h+='<div class="row"><button class="btn primary" data-act="step" data-id="'+(state.step+1)+'">'+(state.step<2?'Ir para o '+steps[state.step+1]:'Ir para o fechamento')+'</button></div></div>';
@@ -2127,9 +2167,31 @@ function newSession(c){
     thirds:[{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''}],
     strength:0,burn:'',draw:'',feel:'',rating:null,rebuy:'',comment:'',timer:{acc:0,running:true,resumedAt:Date.now()},durationMin:0};
 }
-function enterSession(s){draft=clone(s);state.cigarCustom=!(draft.cigarId&&cigarById(draft.cigarId));if(!draft.thirds)draft.thirds=newSession({}).thirds;if(!draft.visibility)draft.visibility='club';state.view='session';state.step=0;render();window.scrollTo(0,0);requestWake();}
+function enterSession(s){draft=clone(s);state.cigarCustom=!(draft.cigarId&&cigarById(draft.cigarId));if(!draft.thirds)draft.thirds=newSession({}).thirds;if(!draft.visibility)draft.visibility='club';state.view='session';state.step=0;rodaReset();render();window.scrollTo(0,0);requestWake();}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,600);}
-function flush(){clearTimeout(saveTimer);if(!draft)return Promise.resolve();return put('sessions',draft);}
+/* Gravador da sessão: o teste de interface troca por um falso (__t.setSessionSaver) para marcar notas sem gravar no IndexedDB. */
+var sessionSaver=function(d){return put('sessions',d);};
+function flush(){clearTimeout(saveTimer);if(!draft)return Promise.resolve();return sessionSaver(draft);}
+/* Roda de sabores na tela do terço: estado só na memória, zerado ao entrar na sessão e ao trocar de terço. */
+function rodaReset(){state.rodaFam=null;state.rodaFoco=null;state.saborQ='';state.rodaAnim='';state.rodaAbertaEm=0;}
+/* Encolhe a fonte do rótulo que não couber na fatia (data-max, em unidades do SVG). */
+function rodaFit(){var ts=document.querySelectorAll('#roda text[data-max]');
+  for(var i=0;i<ts.length;i++){var t=ts[i],max=+t.getAttribute('data-max'),w;t.style.fontSize='';
+    try{w=t.getBBox().width;}catch(e){continue;}
+    if(w>max){var fs=parseFloat(getComputedStyle(t).fontSize)||12;t.style.fontSize=(fs*max/w).toFixed(2)+'px';}}}
+/* Foco no redesenho da sessão: o campo de busca volta com o cursor; um botão da roda, do cartão, dos chips ou da busca volta ao mesmo
+   data-act e data-id/data-val na mesma área. Se a fatia sumiu, o foco vai para a primeira nota da roda aberta ou para a família que fechou. */
+var RODA_AREAS=['roda','roda-card','roda-sel','sabor-res'];
+function rodaFocoAntes(){var ae=document.activeElement;if(!ae||!ae.getAttribute)return null;
+  if(ae.id==='sabor-q')return {busca:true,s:[ae.selectionStart,ae.selectionEnd]};
+  var act=ae.getAttribute('data-act'),area=act&&ae.closest?ae.closest('#'+RODA_AREAS.join(',#')):null;if(!area)return null;
+  return {area:area.id,act:act,id:ae.getAttribute('data-id'),val:ae.getAttribute('data-val')};}
+function rodaFocoDepois(fz){if(!fz)return;var el;
+  if(fz.busca){el=document.getElementById('sabor-q');if(el){el.focus({preventScroll:true});try{el.setSelectionRange(fz.s[0],fz.s[1]);}catch(e){}}return;}
+  el=document.querySelector('#'+fz.area+' [data-act="'+fz.act+'"]'+(fz.id!=null?'[data-id="'+CSS.escape(fz.id)+'"]':'')+(fz.val!=null?'[data-val="'+CSS.escape(fz.val)+'"]':''));
+  if(!el&&fz.area==='roda')el=state.rodaFam?document.querySelector('#roda [data-act="note"]'):(state.rodaFoco&&state.rodaFoco.t==='fam'?document.querySelector('#roda [data-act="roda-fam"][data-id="'+CSS.escape(state.rodaFoco.id)+'"]'):null);
+  if(!el&&fz.area==='roda-sel')el=document.querySelector('#roda-sel [data-act="note"]');
+  if(el)el.focus({preventScroll:true});}
 function leaveSession(){flush();draft=null;releaseWake();state.view='home';state.tab='acervo';render();window.scrollTo(0,0);}
 function startTick(){stopTick();tick=setInterval(updateClock,1000);updateClock();}
 function stopTick(){if(tick){clearInterval(tick);tick=null;}}
@@ -2172,11 +2234,17 @@ document.addEventListener('click',function(ev){
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
     case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
-    case 'step': state.step=Number(id); render(); window.scrollTo(0,0); break;
+    case 'step': state.step=Number(id); rodaReset(); render(); window.scrollTo(0,0); break;
+    case 'roda-fam': state.rodaFam=id; state.rodaFoco={t:'fam',id:id}; state.rodaAnim='in'; state.rodaAbertaEm=Date.now(); render(); break;
+    case 'roda-volta': {var fechou=state.rodaFam;state.rodaFam=null;if(fechou)state.rodaFoco={t:'fam',id:fechou};state.rodaAnim='out';render();break;}
     case 'set': draft[field]=draft[field]===val?'':val; scheduleSave(); render(); break;
     case 'vis': draft.visibility=val; scheduleSave(); render(); break;
     case 'setnum': {var n=Number(val);if(field==='intensity'){var th=draft.thirds[state.step];th.intensity=th.intensity===n?0:n;}else draft[field]=draft[field]===n?0:n;scheduleSave();render();break;}
-    case 'note': {var tt=draft.thirds[state.step],i=tt.notes.indexOf(val);if(i>=0)tt.notes.splice(i,1);else tt.notes.push(val);scheduleSave();render();break;}
+    case 'note': {if(b.closest('#roda')&&Date.now()-(state.rodaAbertaEm||0)<300)return; /* toque duplo ao abrir a família: o segundo toque não marca */
+      var tt=draft.thirds[state.step],i=tt.notes.indexOf(val);if(i>=0)tt.notes.splice(i,1);else tt.notes.push(val);
+      state.rodaFoco={t:'note',n:val};
+      if(b.hasAttribute('data-abre')){var nf=famOf(val);if(nf&&state.rodaFam!==nf.id){state.rodaFam=nf.id;state.rodaAnim='in';state.rodaAbertaEm=Date.now();}}
+      scheduleSave();render();break;}
     case 'dur': {var nm=setDuration(durMin(draft)+Number(val));var ih=document.getElementById('dur-h'),im=document.getElementById('dur-m');if(ih)ih.value=Math.floor(nm/60);if(im)im.value=nm%60;scheduleSave();break;}
     case 'rmband': {var ob=draft.bandId;draft.bandId=null;flush();removePhoto(ob);render();toast('Foto removida');break;}
     case 'finish': {var tm=draft.timer;if(tm.running){tm.acc=(tm.acc||0)+(Date.now()-tm.resumedAt);tm.running=false;tm.resumedAt=null;}
@@ -2261,6 +2329,13 @@ document.addEventListener('input',function(ev){var el=ev.target,k=el.getAttribut
   var o=document.getElementById('umid-out');if(o){var r=humidorStatus(state.umid,state.temp);o.textContent=r.texto;o.className='gout '+r.nivel;}});
 /* Rascunhos de mensagem e de aviso: sobrevivem aos redesenhos. */
 document.addEventListener('input',function(ev){var el=ev.target,k=el&&el.getAttribute&&el.getAttribute('data-cin');if(k)cloud.club.drafts[k]=el.value;});
+/* Busca da roda de sabores: atualiza só a lista, sem render(), para o campo não perder o foco. */
+document.addEventListener('input',function(ev){var el=ev.target;if(!el||!el.hasAttribute||!el.hasAttribute('data-saborq')||!draft)return;
+  state.saborQ=el.value;var o=document.getElementById('sabor-res');if(o)o.innerHTML=rodaBuscaHtml(state.saborQ,draft.thirds[state.step].notes);});
+/* Enter e Espaço acionam os botões desenhados em SVG (role="button" com data-act, que não são <button>). */
+document.addEventListener('keydown',function(ev){var t=ev.target;
+  if((ev.key!=='Enter'&&ev.key!==' ')||!t||!t.getAttribute||t.getAttribute('role')!=='button'||!t.hasAttribute('data-act')||String(t.tagName).toLowerCase()==='button')return;
+  ev.preventDefault();t.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));});
 /* Busca da curadoria: atualiza só a lista, sem render(), para o campo não perder o foco. */
 document.addEventListener('input',function(ev){var el=ev.target;if(!el||!el.hasAttribute||!el.hasAttribute('data-catq'))return;
   state.catQ=el.value;state.catN=12;var o=document.getElementById('cat-list');if(o)o.innerHTML=catListHtml();});
@@ -2309,6 +2384,8 @@ function init(){
   openDB().then(function(d){idb=d;return loadAll();}).catch(function(){state.dbError=true;state.loaded=true;}).then(function(){render();cloudInit();});
   try{if(navigator.storage&&navigator.storage.persisted){navigator.storage.persisted().then(function(p){busy.persisted=p;if(!p&&navigator.storage.persist)return navigator.storage.persist().then(function(v){busy.persisted=v;});}).then(function(){if(state.tab==='conta'&&state.view==='home')render();}).catch(function(){});}}catch(e){}
   if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){navigator.serviceWorker.register('sw.js').catch(function(){});}
+  /* Os rótulos da roda são medidos com a fonte do app: mede de novo quando as fontes terminam de carregar. */
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(state.view==='session')rodaFit();});
 }
 window.__diario={state:state,cloud:cloud,sync:sync,loadFeed:loadFeed};
 init();
