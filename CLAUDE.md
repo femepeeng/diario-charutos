@@ -54,6 +54,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
   - `viewHome` grava `state.contaSec` sempre que desenha uma sub-aba da Conta, inclusive quando o código muda `state.tab` direto (por exemplo, ao apagar uma sessão).
 - **Acervo:** filtros Todos/Cesta/Estoque/Arquivo, botões Cesta e Estoque, editar e remover charuto, ficha do charuto (formato pela bitola, capa, terroir, corte) e sugestão da próxima degustação.
 - **Sessão:** cronômetro, momento (pré-preenchido com o da última sessão), bebida, foto da anilha (câmera ou galeria), notas por terço na roda de sabores, missão de aroma, dicas do guia por terço e fechamento com força, queima, tiragem, bem-estar (alerta de mal-estar), nota, recompraria, impressão e visibilidade.
+  - **Encerrar** (`finishSaved`, 2.12.1): "Sessão salva no diário" e o anúncio de nível ou conquista só aparecem depois que a gravação confirma. Se falhar, fica o aviso de falha, sem nada por cima.
   - **Roda de sabores** (2.12.0): 80 opções em 11 famílias, no bloco `@pure:sabores`.
     - `FAMILIES` guarda as famílias com os nomes das notas. `NOTA_INFO` guarda, por nome, o que a nota lembra, os sinônimos da busca, a opção geral da família e o tipo (aroma, gosto ou sensação). Boca reúne os 5 gostos e 4 sensações.
     - A base é a roda Cigar Advisor/Famous Smoke, na versão em português do Blog Charutos Online, juntada aos 28 sabores de antes e a 17 termos comuns.

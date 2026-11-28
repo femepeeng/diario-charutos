@@ -41,6 +41,9 @@ function clearStore() { return Promise.resolve(); }
 function loadAll() { T.loads++; return OPT.loadAll ? OPT.loadAll() : Promise.resolve(); }
 var draft = null, saveTimer = null, sessionSaver = function (d) { return put('sessions', d); };
 function clearTimeout() {}
+T.anuncios = [];
+function journey() { return { sessoes: state.sessions.length }; }
+function announce(antes, depois) { T.anuncios.push([antes, depois]); }
 `;
 /* Um app novo por teste; putRec decide se cada gravação confirma, falha ou fica pendente, e loadAll (opcional) se a leitura funciona. */
 function app(putRec, loadAll) {
@@ -153,6 +156,23 @@ test('fim de sessão com a gravação certa: "Sessão salva no diário", ou "Alt
   assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Sessão salva no diário');
   await sb.finishSaved(true); await flush();
   assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Alterações salvas');
+});
+
+test('fim de sessão com a gravação falhando: nem nível nem conquista cobrem o aviso de falha', async () => {
+  const sb = app(() => Promise.reject(new Error('falhou')));
+  sb.draft = { id: 's1', thirds: [] };
+  await sb.finishSaved(false, { sessoes: 0 }); await flush();
+  assert.strictEqual(sb.T.anuncios.length, 0, 'anunciou nível ou conquista de uma sessão que não foi gravada');
+  assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Não foi possível salvar. Tente de novo.');
+});
+test('fim de sessão gravada: anuncia o que a sessão rendeu depois de "salva"; na edição, não anuncia', async () => {
+  const sb = app(() => Promise.resolve());
+  sb.draft = { id: 's1', thirds: [] };
+  await sb.finishSaved(false, { sessoes: 0 }); await flush();
+  assert.strictEqual(sb.T.anuncios.length, 1, 'não anunciou o que a sessão rendeu');
+  assert.deepStrictEqual(plain(sb.T.anuncios[0]), [{ sessoes: 0 }, { sessoes: 1 }]);
+  await sb.finishSaved(true, { sessoes: 1 }); await flush();
+  assert.strictEqual(sb.T.anuncios.length, 1, 'anunciou numa edição');
 });
 
 // ---- Troca de conta ----

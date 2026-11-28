@@ -2179,8 +2179,10 @@ function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,600);
 /* Gravador da sessão: o teste de interface troca por um falso (__t.setSessionSaver) para marcar notas sem gravar no IndexedDB. */
 var sessionSaver=function(d){return put('sessions',d);};
 function flush(){clearTimeout(saveTimer);if(!draft)return Promise.resolve();return sessionSaver(draft);}
-/* Fim da sessão: "salva" só depois que a gravação confirma. Se falhar, fica o aviso do saveErr, sem ser coberto. */
-function finishSaved(wasDone){return flush().then(function(ok){if(ok!==false)toast(wasDone?'Alterações salvas':'Sessão salva no diário');return ok;});}
+/* Fim da sessão: "salva" e o anúncio de nível ou conquista (jBefore, só na primeira vez) só depois que a gravação confirma.
+   Se falhar, fica o aviso do saveErr, sem ser coberto. A jornada de depois é calculada logo após o flush, como antes. */
+function finishSaved(wasDone,jBefore){var p=flush(),jAfter=jBefore&&!wasDone?journey():null;
+  return p.then(function(ok){if(ok!==false){toast(wasDone?'Alterações salvas':'Sessão salva no diário');if(jAfter)announce(jBefore,jAfter);}return ok;});}
 /* Roda de sabores na tela do terço: estado só na memória, zerado ao entrar na sessão e ao trocar de terço. */
 function rodaReset(){state.rodaFam=null;state.rodaFoco=null;state.saborQ='';state.rodaAnim='';state.rodaAbertaEm=0;}
 /* Encolhe a fonte do rótulo que não couber na fatia (data-max, em unidades do SVG). */
@@ -2267,9 +2269,9 @@ document.addEventListener('click',function(ev){
       var wasDone=draft.status==='concluida',jBefore=journey();
       draft.status='concluida';if(!wasDone||!draft.endedAt)draft.endedAt=new Date().toISOString();draft.durationMin=Math.max(1,Math.round((tm.acc||0)/60000));
       if(typeof draft.rating!=='number'){var r=document.getElementById('rating');draft.rating=r?Number(r.value):null;}
-      var sid=draft.id;finishSaved(wasDone);draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);
+      var sid=draft.id;finishSaved(wasDone,jBefore);draft=null;releaseWake();state.view='detail';state.detailId=sid;render();window.scrollTo(0,0);
       if(isMember()){clearTimeout(syncTimer);setTimeout(sync,300);}
-      if(!wasDone)announce(jBefore,journey());break;}
+      break;}
     case 'fixstrength': {var fs=sessionById(id),fc=fs&&cigarById(fs.cigarId);if(fc){var x=clone(fc);x.strength=fs.strength;put('cigars',x);toast('Força de '+fc.name+' atualizada para '+fs.strength+'/5');render();}break;}
     case 'looseadd': {var ls0=sessionById(id);if(!ls0)break;var nc={id:uid(),name:ls0.cigarName,origin:'',vitola:'',strength:ls0.strength||2,status:'historico',order:100+state.cigars.length};put('cigars',nc);
       var y=clone(ls0);y.cigarId=nc.id;put('sessions',y);toast(nc.name+' entrou no Acervo (Arquivo). Complete origem e bitola em Editar.');render();break;}
