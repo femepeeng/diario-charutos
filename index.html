@@ -231,6 +231,7 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .roda-svg .chk{fill:none; stroke:#1A120C; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; pointer-events:none}
 .roda-svg .hub{fill:var(--surface2); stroke:var(--line); stroke-width:1.5}
 .roda-svg .hub-eb{font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; fill:var(--ember); pointer-events:none}
+.roda-svg .hub-back{font-family:var(--f-mono); font-size:12px; letter-spacing:.06em; fill:var(--ember); pointer-events:none}
 .roda-svg .hub-num{font-family:var(--f-display); font-weight:800; font-size:30px; fill:var(--fg); pointer-events:none}
 .roda-svg .hub-sub{font-family:var(--f-body); font-size:11px; fill:var(--muted); pointer-events:none}
 .roda-svg .hub-fam{font-family:var(--f-display); font-weight:800; font-size:15px}
@@ -457,13 +458,15 @@ var FAMILIES=[
 /* Missões: sorteadas entre as famílias de aroma. Quatro sabores mudaram de família na 2.12.0; a missão da família antiga continua aceitando cada um. */
 var MISSION_FAMS=FAMILIES.filter(function(f){return f.id!=='gosto';}).map(function(f){return f.id;});
 var LEGACY_MISSAO={doce:['Doce'],fruta:['Floral'],terra:['Feno'],madeira:['Tostado']};
-function normSabor(s){s=String(s==null?'':s).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[̀-ͯ]/g,'');return s.trim();}
+function normSabor(s){s=String(s==null?'':s).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');return s.replace(/\s+/g,' ').trim();}
 function famOf(n){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].notes.indexOf(n)>=0)return FAMILIES[i];return null;}
 function famById(id){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].id===id)return FAMILIES[i];return null;}
 function sessNotes(s){var u={},out=[];((s&&s.thirds)||[]).forEach(function(t){(t&&t.notes||[]).forEach(function(n){if(!u[n]){u[n]=1;out.push(n);}});});return out;}
 function missionHit(s){var f=s&&s.mission?famById(s.mission):null;if(!f)return [];var old=LEGACY_MISSAO[f.id]||[];
   return sessNotes(s).filter(function(n){return f.notes.indexOf(n)>=0||old.indexOf(n)>=0;});}
 function missionDone(s){return missionHit(s).length>0;}
+/* Índice da nota no terço pelo texto: uma nota que não é texto (número ou null, de backup editado à mão) também sai pelo chip. */
+function notaIdx(arr,val){arr=arr||[];for(var i=0;i<arr.length;i++)if(String(arr[i]==null?'':arr[i])===String(val))return i;return -1;}
 /* Busca pelo nome e pelos sinônimos, sem acento: primeiro quem começa pelo texto, depois quem o contém, na ordem da roda. */
 function buscaSabores(q,max){q=normSabor(q);if(!q)return [];var ini=[],meio=[];
   FAMILIES.forEach(function(f){f.notes.forEach(function(n){var comeca=false,contem=false;
@@ -512,7 +515,7 @@ function rodaSvg(o){var sel=o.sel||[],h='<svg class="roda-svg" viewBox="-180 -18
       if(x){var p=rodaPt(RODA.o-13,c);h+='<path class="chk" d="M-5 0L-1.5 3.5L5 -3.5" transform="translate('+p[0]+' '+p[1]+')"/>';}
       h+='</g>';});
     h+='<g class="back" role="button" tabindex="0" data-act="roda-volta" aria-label="Voltar para as famílias"><circle class="hub" r="'+RODA.hub+'"/>'+
-      '<text class="hub-eb" text-anchor="middle" y="-22">‹ VOLTAR</text>'+
+      '<text class="hub-back" text-anchor="middle" y="-21">‹ VOLTAR</text>'+
       '<text class="lab hub-fam" data-max="84" text-anchor="middle" y="'+(L.length>1?2:6)+'">'+rodaTspans(L)+'</text>'+
       '<text class="hub-sub" text-anchor="middle" y="33">'+k+' de '+m+'</text></g></g>';}
   return h+'</svg>';}
@@ -521,7 +524,7 @@ function rodaTipo(k){return k==='gosto'?'Gosto':k==='sensacao'?'Sensação':'Aro
 function rodaCartao(o){var sel=o.sel||[],t=o.terco||'',fo=o.foco,g=null;
   if(fo&&fo.t==='note'){var n=fo.n,inf=NOTA_INFO[n],f=famOf(n),on=sel.indexOf(n)>=0,
       bt='<div class="row"><button type="button" class="btn'+(on?'':' primary')+'" data-act="note" data-val="'+esc(n)+'">'+(on?'Desmarcar do ':'Marcar no ')+esc(t)+'</button></div>';
-    if(!inf||!f)return '<div class="meta"><span>Fora da roda</span></div><h3>'+esc(n)+'</h3><p class="treino">Nota registrada antes da roda ou em outra versão do app.</p>'+bt;
+    if(!inf||!f)return '<div class="meta"><span>Fora da roda</span></div><h3>'+esc(n)+'</h3><p class="treino">Nota de outra versão do app ou de um backup editado à mão.</p>'+bt;
     return '<div class="meta"><span class="dot" style="background:'+f.color+'"></span><span>'+esc(f.label)+'</span><span aria-hidden="true">·</span><span>'+rodaTipo(inf.k)+'</span></div>'+
       '<h3>'+esc(n)+'</h3><p class="lembra"><b>Lembra:</b> '+esc(inf.l)+'</p>'+
       (inf.g?'<p class="treino">Opção geral: marque quando sentir a família, mas não souber a nota.</p>':'')+
@@ -781,7 +784,7 @@ var BRAND_ALIAS={'A. Fuente':['arturo fuente','a fuente','fuente','opus x','opus
   'Drew Estate':['drew estate','liga privada','undercrown','factory smoke','nica rustica'],'Steve Saka':['steve saka','dunbarton','mi querida','sobremesa','muestra de saka','sin compromiso'],
   'Joya de Nicaragua':['joya de nicaragua','antano','cabinetta'],'Don Pepín García':['don pepin garcia','don pepin','pepin garcia'],'My Father':['my father','flor de las antillas'],
   'E.P. Carrillo':['e p carrillo','ep carrillo'],'AJ Fernandez':['aj fernandez','a j fernandez']};
-function normName(s){s=String(s==null?'':s).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[̀-ͯ]/g,'');
+function normName(s){s=String(s==null?'':s).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return s.replace(/\bn\s*[º°o]\s*\.?\s*(?=\d)/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
 function countryOf(t){t=normName(t);if(!t)return '';
   if(/\b(cuba|cubano|havana|habana|vuelta abajo)\b/.test(t))return 'Cuba';if(/nicar|esteli/.test(t))return 'Nicarágua';
@@ -1584,7 +1587,10 @@ function restoreAuthForm(){
 function render(){
   var app=document.getElementById('app');
   if(ritmo.on&&!(state.view==='guia'&&GUIDE_TOOL[guiaIndex()]==='ritmo'))ritmoStop();
-  if(state.view==='session'&&draft){var fz=rodaFocoAntes();app.innerHTML=viewSession();rodaFit();rodaFocoDepois(fz);startTick();return;}
+  if(state.view==='session'&&draft){var fz=rodaFocoAntes();app.innerHTML=viewSession();state.rodaAnim='';rodaFit();rodaFocoDepois(fz);
+    /* Fonte ainda carregando: os rótulos da roda são medidos de novo quando ela chegar. */
+    if(document.fonts&&document.fonts.status==='loading')document.fonts.ready.then(function(){if(state.view==='session')rodaFit();});
+    startTick();return;}
   stopTick();
   if(state.view==='detail'){app.innerHTML=viewDetail();return;}
   if(state.view==='post'){app.innerHTML=viewPost();return;}
@@ -2100,7 +2106,6 @@ function viewSession(){
       '<div class="rsel" id="roda-sel">'+rodaChips(t.notes)+'</div>'+
       '<label class="f" for="sabor-q">Buscar pelo nome<input type="search" id="sabor-q" data-saborq value="'+esc(state.saborQ||'')+'" placeholder="ex.: canela, cedro, chumbo" autocomplete="off"></label>'+
       '<div id="sabor-res">'+rodaBuscaHtml(state.saborQ||'',t.notes)+'</div>';
-    state.rodaAnim='';
     h+='</fieldset><fieldset><legend>Intensidade do sabor</legend>'+segBtns('intensity',5,t.intensity,'delicado','intenso')+'</fieldset>';
     h+='<label class="f" for="t-text">Anotações deste terço<textarea id="t-text" data-input="thirdText" placeholder="ex.: começou com feno e mel, retrogosto com pimenta branca">'+esc(t.text)+'</textarea></label>';
     h+='<div class="row"><button class="btn primary" data-act="step" data-id="'+(state.step+1)+'">'+(state.step<2?'Ir para o '+steps[state.step+1]:'Ir para o fechamento')+'</button></div></div>';
@@ -2196,7 +2201,8 @@ function rodaFocoDepois(fz){if(!fz)return;var el;
   if(fz.busca){el=document.getElementById('sabor-q');if(el){el.focus({preventScroll:true});try{el.setSelectionRange(fz.s[0],fz.s[1]);}catch(e){}}return;}
   el=document.querySelector('#'+fz.area+' [data-act="'+fz.act+'"]'+(fz.id!=null?'[data-id="'+CSS.escape(fz.id)+'"]':'')+(fz.val!=null?'[data-val="'+CSS.escape(fz.val)+'"]':''));
   if(!el&&fz.area==='roda')el=state.rodaFam?document.querySelector('#roda [data-act="note"]'):(state.rodaFoco&&state.rodaFoco.t==='fam'?document.querySelector('#roda [data-act="roda-fam"][data-id="'+CSS.escape(state.rodaFoco.id)+'"]'):null);
-  if(!el&&fz.area==='roda-sel')el=document.querySelector('#roda-sel [data-act="note"]');
+  /* Chip tirado: o próximo chip; sem chip, a roda (nunca a busca, que abriria o teclado do celular). */
+  if(!el&&fz.area==='roda-sel')el=document.querySelector('#roda-sel [data-act="note"]')||document.querySelector('#roda [data-act]');
   if(el)el.focus({preventScroll:true});}
 function leaveSession(){flush();draft=null;releaseWake();state.view='home';state.tab='acervo';render();window.scrollTo(0,0);}
 function startTick(){stopTick();tick=setInterval(updateClock,1000);updateClock();}
@@ -2241,16 +2247,19 @@ document.addEventListener('click',function(ev){
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
     case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
     case 'step': state.step=Number(id); rodaReset(); render(); window.scrollTo(0,0); break;
-    case 'roda-fam': {state.rodaFam=id; state.rodaFoco={t:'fam',id:id}; state.rodaAnim='in'; state.rodaAbertaEm=Date.now(); render();
-      /* "Abrir na roda" (fora da roda) leva a roda para a tela; na própria roda, a página não rola. */
-      var rd=b.closest('#roda')?null:document.getElementById('roda');
-      if(rd)rd.scrollIntoView({block:'center',behavior:window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;}
+    case 'roda-fam': {var deFora=!b.closest('#roda'),tinhaFoco=document.activeElement===b;
+      state.rodaFam=id; state.rodaFoco={t:'fam',id:id}; state.rodaAnim='in'; state.rodaAbertaEm=Date.now(); render();
+      /* "Abrir na roda" (fora da roda) leva a roda para a tela e, se estava com o foco, passa o foco para a primeira nota; na própria roda, a página não rola. */
+      var rd=deFora?document.getElementById('roda'):null;
+      if(rd){rd.scrollIntoView({block:'center',behavior:window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+        var n1=tinhaFoco?rd.querySelector('[data-act="note"]'):null;if(n1)n1.focus({preventScroll:true});}
+      break;}
     case 'roda-volta': {var fechou=state.rodaFam;state.rodaFam=null;if(fechou)state.rodaFoco={t:'fam',id:fechou};state.rodaAnim='out';render();break;}
     case 'set': draft[field]=draft[field]===val?'':val; scheduleSave(); render(); break;
     case 'vis': draft.visibility=val; scheduleSave(); render(); break;
     case 'setnum': {var n=Number(val);if(field==='intensity'){var th=draft.thirds[state.step];th.intensity=th.intensity===n?0:n;}else draft[field]=draft[field]===n?0:n;scheduleSave();render();break;}
     case 'note': {if(b.closest('#roda')&&Date.now()-(state.rodaAbertaEm||0)<300)return; /* toque duplo ao abrir a família: o segundo toque não marca */
-      var tt=draft.thirds[state.step],i=tt.notes.indexOf(val);if(i>=0)tt.notes.splice(i,1);else tt.notes.push(val);
+      var tt=draft.thirds[state.step],i=notaIdx(tt.notes,val);if(i>=0)tt.notes.splice(i,1);else tt.notes.push(val);
       state.rodaFoco={t:'note',n:val};
       if(b.hasAttribute('data-abre')){var nf=famOf(val);if(nf&&state.rodaFam!==nf.id){state.rodaFam=nf.id;state.rodaAnim='in';state.rodaAbertaEm=Date.now();}}
       scheduleSave();render();break;}

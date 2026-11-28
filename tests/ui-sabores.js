@@ -40,6 +40,8 @@
 
     tap(fam('especiaria')); await wait(30);
     check('tocar numa família abre a roda nela', notas().length === 12 && texto('#roda-card').indexOf('Especiarias') >= 0);
+    __t.render(); await wait(10);
+    check('redesenhar sem abrir nem voltar não anima de novo', !q('#roda .anim-in'));
 
     tap(nota('Canela'));
     check('toque logo depois de abrir é ignorado', !!nota('Canela') && nota('Canela').getAttribute('aria-pressed') === 'false' && cur().indexOf('Canela') < 0);
@@ -69,10 +71,11 @@
       qa('#roda-sel .opt').length > 0 && qa('#roda-sel .opt').every(alto) && qa('#sabor-res .opt').length > 0 && qa('#sabor-res .opt').every(alto));
 
     var inp = q('#sabor-q');
-    if (inp) { inp.focus(); buscar('can'); inp.setSelectionRange(3, 3); }
+    /* Cursor no meio do texto: um campo recriado põe o cursor no fim ou no começo, então só passa se o app devolver a posição. */
+    if (inp) { inp.focus(); buscar('canela'); inp.setSelectionRange(2, 2); }
     __t.render(); await wait(30);
     var ae = document.activeElement;
-    check('a busca mantém o foco num redesenho', !!ae && ae.id === 'sabor-q' && ae.value === 'can' && ae.selectionStart === 3);
+    check('a busca mantém o foco num redesenho', !!ae && ae.id === 'sabor-q' && ae.value === 'canela' && ae.selectionStart === 2 && ae.selectionEnd === 2);
     buscar('');
 
     tap(q('#roda [data-act="roda-volta"]')); await wait(30);
@@ -86,9 +89,14 @@
       abriu && !!v && cur().indexOf(v) >= 0 && !!document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-val') === v);
 
     tap(q('#roda [data-act="roda-volta"]')); await wait(30);
-    var fechadaCabe = cabem();
-    tap(fam('especiaria')); await wait(30);
-    check('nenhum rótulo passa do espaço da fatia', fechadaCabe && cabem());
+    var cabeTudo = cabem(), naoCabe = [];
+    var IDS = ['fruta', 'flor', 'planta', 'especiaria', 'terra', 'madeira', 'tostado', 'cacau', 'castanha', 'doce', 'gosto'];
+    for (var fi = 0; fi < IDS.length; fi++) {
+      tap(fam(IDS[fi])); await wait(20);
+      if (!cabem()) { cabeTudo = false; naoCabe.push(IDS[fi]); }
+      tap(q('#roda [data-act="roda-volta"]')); await wait(20);
+    }
+    check('nenhum rótulo passa do espaço da fatia (roda fechada e as 11 famílias abertas)' + (naoCabe.length ? ': ' + naoCabe.join(', ') : ''), cabeTudo && IDS.length === 11);
 
     tap(q('[data-act="step"][data-id="1"]')); await wait(60);
     check('trocar de terço fecha a roda e mostra as notas do terço',
@@ -101,6 +109,29 @@
     var rr = q('#roda') ? q('#roda').getBoundingClientRect() : null;
     check('a missão pendente abre a família na roda', notas().length === 4);
     check('"Abrir na roda" leva a roda para a tela', !!rr && rr.top + rr.height / 2 > 0 && rr.top + rr.height / 2 < innerHeight);
+
+    // ---- 2.12.1 ----
+    tap(q('[data-act="step"][data-id="2"]')); await wait(60);
+    __t.sessao().thirds[2].notes = [5]; __t.render(); await wait(30);
+    tap(q('#roda-sel [data-act="note"][data-val="5"]')); await wait(30);
+    check('nota que não é texto sai pelo chip', __t.sessao().thirds[2].notes.length === 0);
+
+    __t.sessao().thirds[2].notes = ['Cedro']; __t.render(); await wait(30);
+    var ch = q('#roda-sel [data-act="note"][data-val="Cedro"]'); if (ch) { ch.focus(); ch.click(); } await wait(30);
+    var ae3 = document.activeElement;
+    check('tirar o último chip leva o foco à roda, e não à busca',
+      __t.sessao().thirds[2].notes.length === 0 && !!ae3 && !!ae3.closest && !!ae3.closest('#roda') && ae3.id !== 'sabor-q');
+
+    var ab = q('.mission [data-act="roda-fam"]'); if (ab) { ab.focus(); ab.click(); } await wait(700);
+    check('"Abrir na roda" com o foco passa o foco para a primeira nota', !!q('#roda [data-act="note"]') && document.activeElement === q('#roda [data-act="note"]'));
+
+    var soltar, pronta = new Promise(function (r) { soltar = r; });
+    Object.defineProperty(document, 'fonts', { value: { status: 'loading', ready: pronta }, configurable: true });
+    __t.render(); await wait(30);
+    var rot = q('#roda text[data-max]'); if (rot) rot.style.fontSize = '30px';
+    soltar(); await wait(60);
+    delete document.fonts;
+    check('rodaFit roda de novo quando as fontes terminam de carregar', !!rot && rot.style.fontSize !== '30px');
 
     var svg = q('#roda svg'), k = svg ? svg.getBoundingClientRect().width / 360 : 0;
     function circulo(theta, r0, r1) { var s = Math.sin(theta * Math.PI / 360); return r1 * (1 - s) / (1 + s) >= r0 ? k * 2 * r1 * s / (1 + s) : 0; }

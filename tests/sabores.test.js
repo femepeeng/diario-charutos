@@ -6,7 +6,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), assert = r
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const pick = tag => [...html.matchAll(new RegExp('\\/\\* @pure:' + tag + ' \\*\\/([\\s\\S]*?)\\/\\* @end:' + tag + ' \\*\\/', 'g'))].map(m => m[1]);
 const NOMES = ['FAMILIES', 'NOTA_INFO', 'LEGACY_MISSAO', 'MISSION_FAMS', 'normSabor', 'famOf', 'famById', 'sessNotes', 'missionHit', 'missionDone', 'buscaSabores',
-  'RODA', 'rodaPt', 'rodaArc', 'rodaLinhas', 'rodaRot', 'rodaSvg', 'rodaCartao', 'rodaChips', 'rodaBuscaHtml', 'missaoCartao'];
+  'RODA', 'rodaPt', 'rodaArc', 'rodaLinhas', 'rodaRot', 'rodaSvg', 'rodaCartao', 'rodaChips', 'rodaBuscaHtml', 'missaoCartao', 'notaIdx'];
 const sb = {};
 vm.createContext(sb);
 vm.runInContext(pick('base').concat(pick('sabores')).join('\n') + '\nthis.__x={' + NOMES.map(n => n + ':typeof ' + n + '!=="undefined"?' + n + ':undefined').join(',') + '};', sb);
@@ -216,6 +216,32 @@ test('missaoCartao', () => {
     .forEach(t => assert.ok(h.indexOf(t) >= 0, t));
   h = X.missaoCartao(ses('fruta', ['Floral']));
   assert.ok(h.indexOf('Missão cumprida: Frutas') >= 0 && h.indexOf('Você marcou Floral. +5 pontos.') >= 0, 'cumprida');
+});
+
+// ---- 2.12.1 ----
+test('notaIdx acha a nota pelo texto', () => {
+  assert.strictEqual(typeof X.notaIdx, 'function', 'notaIdx fora do bloco @pure:sabores');
+  assert.strictEqual(X.notaIdx(['Cedro', 5, null], '5'), 1);
+  assert.strictEqual(X.notaIdx(['Cedro', 5, null], ''), 2);
+  assert.strictEqual(X.notaIdx(['Cedro'], 'Cedro'), 0);
+  assert.strictEqual(X.notaIdx(['Cedro'], 'Mel'), -1);
+  assert.strictEqual(X.notaIdx([null, ''], ''), 0);
+});
+test('cartão Fora da roda com o texto novo', () => {
+  const h = X.rodaCartao({ foco: { t: 'note', n: 'Inventado' }, sel: [], terco: '1º terço' });
+  assert.ok(h.indexOf('Nota de outra versão do app ou de um backup editado à mão.') >= 0, h);
+});
+test('busca junta espaços repetidos', () => {
+  assert.strictEqual(X.buscaSabores('pimenta  do')[0], 'Pimenta-do-reino');
+});
+test('VOLTAR com classe própria', () => {
+  const s = X.rodaSvg({ fam: 'flor', sel: [], terco: '1º terço', anim: '' });
+  assert.ok(s.indexOf('class="hub-back"') >= 0 && s.indexOf('‹ VOLTAR') >= 0, 'sem hub-back');
+});
+test('bloco sabores sem caracteres combinantes crus (o regex de acento usa escapes)', () => {
+  const combinante = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']');
+  assert.ok(!combinante.test(pick('sabores').join('')), 'há caractere combinante cru no bloco @pure:sabores');
+  assert.strictEqual(X.normSabor('Açúcar'), 'acucar', 'normSabor deixou de tirar acentos');
 });
 
 console.log(`\n${pass} ok, ${fail} falha(s)`);

@@ -229,5 +229,12 @@ test('com notas, a marca bem avaliada continua à frente do reforço', () => {
   assert.ok(ol.length && ol.some(r => r.why.some(w => /Parecido com o que você tem no Acervo/.test(w))), 'nenhum Oliva traz o motivo do Acervo');
 });
 
+// ---- 2.12.1 ----
+test('bloco curadoria sem caracteres combinantes crus (o regex de acento usa escapes)', () => {
+  const combinante = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']');
+  assert.ok(!combinante.test(blocks.join('')), 'há caractere combinante cru no bloco @pure:curadoria');
+  assert.strictEqual(X.normName('Ávila  Sêrie'), X.normName('avila  serie'), 'normName deixou de tirar acentos');
+});
+
 console.log(`\n${pass} ok, ${fail} falha(s)`);
 process.exit(fail ? 1 : 0);
