@@ -315,16 +315,128 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
 var APP_VERSION='2.11.1', APP_BUILD='25/11/2026';
+/* @pure:base */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+/* @end:base */
+/* @pure:sabores */
+/* Roda de sabores (2.12.0). Base: a roda de sabores de charuto da Cigar Advisor/Famous Smoke, na versão em português do Blog Charutos Online,
+   juntada aos 28 sabores que o app já tinha (nenhum nome antigo mudou) e a 17 termos comuns de degustação.
+   f.notes é a lista de nomes, como antes. NOTA_INFO guarda, por nome: l (o que lembra), g (opção geral da família),
+   k (aroma, gosto ou sensação) e a (sinônimos, só para a busca). */
+var NOTA_INFO={};
+function sabNota(n,l,x){x=x||{};return {n:n,l:l,g:!!x.g,k:x.k||'aroma',a:x.a||[]};}
+function sabFam(id,label,short,color,desc,treino,itens){var f={id:id,label:label,short:short||label,color:color,desc:desc,treino:treino,notes:[]};
+  itens.forEach(function(it){f.notes.push(it.n);NOTA_INFO[it.n]=it;});return f;}
 var FAMILIES=[
-  {id:'doce',label:'Doce',color:'#E6C68C',notes:['Doce','Mel','Baunilha','Creme','Caramelo','Coco']},
-  {id:'castanha',label:'Castanhas',color:'#C99A62',notes:['Castanha','Amêndoa','Amendoim']},
-  {id:'madeira',label:'Madeira',color:'#A6713F',notes:['Cedro','Carvalho','Tostado']},
-  {id:'terra',label:'Terra',color:'#7F6B4F',notes:['Terroso','Couro','Feno']},
-  {id:'cacau',label:'Cacau e café',color:'#6A4330',notes:['Cacau','Café','Chocolate amargo']},
-  {id:'especiaria',label:'Especiarias',color:'#CF6339',notes:['Pimenta','Canela','Cravo']},
-  {id:'fruta',label:'Fruta e flor',color:'#B9A646',notes:['Frutas secas','Cítrico','Floral']},
-  {id:'gosto',label:'Gostos na boca',color:'#8C9AA6',notes:['Salgado','Ácido','Amargo','Umami'],hint:'Os cinco gostos básicos (doce, salgado, ácido, amargo e umami) são sentidos na boca; os aromas acima chegam pelo nariz.'}
+  sabFam('fruta','Frutas','','#EE8665','Do cítrico fresco às frutas secas e escuras.','Antes da sessão, cheire uva-passa, ameixa seca e raspas de laranja.',[
+    sabNota('Frutado','Aroma de fruta, sem dar para dizer qual.',{g:1}),
+    sabNota('Frutas secas','Mistura de frutas desidratadas, como as da ceia de Natal.'),
+    sabNota('Uva-passa','Uva-passa escura: doce e concentrada.',{a:['uva passa','passas']}),
+    sabNota('Ameixa','Ameixa seca, escura e adocicada.'),
+    sabNota('Figo','Figo seco ou doce de figo em calda.'),
+    sabNota('Cereja','Cereja em calda ou licor de cereja.'),
+    sabNota('Groselha','Groselha e cassis: frutinha vermelha ou preta, entre o doce e o azedo.',{a:['cassis']}),
+    sabNota('Frutas vermelhas','Morango, framboesa e amora.',{a:['morango','framboesa','amora']}),
+    sabNota('Cítrico','Casca de limão ou de laranja: fresco e um pouco ácido.',{a:['limão']}),
+    sabNota('Raspas de laranja','Raspa da casca da laranja, com o óleo perfumado.',{a:['laranja']})]),
+  sabFam('flor','Flores','','#C7A0E2','Perfumes de flor, leves e fáceis de perder.','Cheire uma rosa de verdade e um pouco de água de flor de laranjeira.',[
+    sabNota('Floral','Perfume de flores em geral. Na roda da imagem aparece como flores.',{g:1,a:['flores','flor']}),
+    sabNota('Rosa','Pétala de rosa ou água de rosas.'),
+    sabNota('Violeta','Perfume de violeta: delicado, um pouco atalcado.'),
+    sabNota('Flor de laranjeira','Água de flor de laranjeira, de doces e bolos.')]),
+  sabFam('planta','Plantas','','#93BE6E','Folhas, capim, feno e o próprio tabaco.','Compare grama recém-cortada, palha seca e folhas de chá preto.',[
+    sabNota('Vegetal','Folha verde, horta. Use quando o aroma for de planta, sem saber qual.',{g:1,a:['planta','folha']}),
+    sabNota('Grama','Grama recém-cortada.'),
+    sabNota('Capim','Mato do campo, mais rústico que a grama. Na roda da imagem fica em Terras e minerais.'),
+    sabNota('Feno','Capim seco de fardo, palha.',{a:['palha']}),
+    sabNota('Musgo','Mata úmida, pedra com musgo depois da chuva.'),
+    sabNota('Chá','Folhas secas de chá preto, como as de um sachê aberto.'),
+    sabNota('Tabaco','O próprio fumo: folha de tabaco curada, sem outro aroma por cima.',{a:['fumo']})]),
+  sabFam('especiaria','Especiarias','','#DE6B4F','Temperos quentes e picantes. O cheiro é aroma; a ardência na língua é sensação e fica em Boca.','Cheire canela, cravo e pimenta-do-reino moída na hora, um de cada vez.',[
+    sabNota('Pimenta','Pimenta em geral, quando não dá para dizer qual.',{g:1}),
+    sabNota('Pimenta-do-reino','Pimenta-do-reino moída na hora: picante e um pouco amadeirada.',{a:['pimenta preta','pimenta do reino']}),
+    sabNota('Pimenta-branca','Mais aguda e menos perfumada que a pimenta-do-reino.',{a:['pimenta branca']}),
+    sabNota('Pimenta-verde','Pimenta-verde em conserva: fresca, quase herbácea.',{a:['pimenta verde']}),
+    sabNota('Pimenta-vermelha','Pimenta calabresa ou caiena: calor que fica na boca.',{a:['pimenta vermelha','calabresa','caiena']}),
+    sabNota('Canela','Canela em pau ou em pó: doce e quente.'),
+    sabNota('Cravo','Cravo-da-índia, a especiaria do quentão.',{a:['cravo-da-índia','cravo da índia']}),
+    sabNota('Noz-moscada','Noz-moscada ralada, de purê e molho branco.',{a:['noz moscada']}),
+    sabNota('Cardamomo','Fresco e resinoso, do café árabe e do chai.'),
+    sabNota('Cominho','Tempero quente e terroso, comum na comida árabe.'),
+    sabNota('Alcaçuz','Bala de alcaçuz: adocicada, lembra anis.'),
+    sabNota('Erva-doce','Erva-doce (anis), em chá ou em semente.',{a:['anis','erva doce']})]),
+  sabFam('terra','Terra','','#A08A6C','Terra, couro, minerais e cheiro de guardado.','Cheire terra de vaso molhada, um cinto de couro e a ponta de um lápis.',[
+    sabNota('Terroso','Terra molhada, chão de jardim depois da chuva. Na roda da imagem aparece como terra.',{g:1,a:['terra']}),
+    sabNota('Couro','Cinto, sela ou bolsa de couro.'),
+    sabNota('Curral','Curral, estrebaria: rústico, animal.',{a:['estábulo','estrebaria']}),
+    sabNota('Mineral','Pedra molhada e giz: frio, sem doçura.',{a:['pedra','giz']}),
+    sabNota('Grafite','A ponta do lápis: seco e mineral. Na roda da imagem aparece como chumbo.',{a:['chumbo','lápis']}),
+    sabNota('Mofo','Cheiro de guardado, de porão ou armário fechado.')]),
+  sabFam('madeira','Madeira e fumaça','Madeira','#B07A4C','Madeiras, lenha e fumaça.','Cheire um lápis recém-apontado: é a referência clássica de cedro.',[
+    sabNota('Amadeirado','Madeira em geral, quando não dá para dizer qual.',{g:1,a:['madeira']}),
+    sabNota('Cedro','A madeira do lápis recém-apontado e da caixa de charutos.'),
+    sabNota('Carvalho','Barril de carvalho, de uísque e vinho envelhecidos.'),
+    sabNota('Defumado','Fumaça de lenha, como em alimentos defumados.',{a:['fumaça','lenha']}),
+    sabNota('Carvão','Carvão de churrasqueira, fuligem.')]),
+  sabFam('tostado','Tostados','','#DDB07A','Pão, torrada e grãos assados.','Compare miolo de pão, torrada e biscoito maisena.',[
+    sabNota('Tostado','Algo tostado em geral, como casca de pão ou grão torrado.',{g:1}),
+    sabNota('Pão','Miolo de pão fresco, massa assada.'),
+    sabNota('Torrada','Pão torrado, casca dourada.'),
+    sabNota('Biscoito','Biscoito tipo maisena: assado e levemente doce.',{a:['bolacha']})]),
+  sabFam('cacau','Cacau e café','','#B58266','Do cacau em pó ao café expresso.','Compare cacau em pó, chocolate ao leite e café moído.',[
+    sabNota('Cacau','Cacau em pó, sem açúcar.'),
+    sabNota('Chocolate ao leite','Chocolate cremoso e doce.'),
+    sabNota('Chocolate meio amargo','Cacau com um pouco de açúcar.'),
+    sabNota('Chocolate amargo','Muito cacau e pouco açúcar.'),
+    sabNota('Café','Café em geral, do coado ao expresso.'),
+    sabNota('Café torrado','Grão de café torrado e moído na hora.'),
+    sabNota('Café expresso','Café forte e concentrado.',{a:['expresso']}),
+    sabNota('Café com leite','Café suavizado pelo leite.',{a:['cappuccino']})]),
+  sabFam('castanha','Castanhas','','#D6A35E','Castanhas, nozes e amêndoas, cruas ou torradas.','Prove amêndoa, noz e amendoim torrado lado a lado.',[
+    sabNota('Castanha','Castanhas em geral, quando não dá para dizer qual.',{g:1}),
+    sabNota('Amêndoa','Amêndoa crua ou torrada.'),
+    sabNota('Amendoim','Amendoim torrado, de paçoca.'),
+    sabNota('Noz','Noz, com a pele fina meio amarga.',{a:['nozes']}),
+    sabNota('Castanha de caju','Castanha de caju torrada. Na roda da imagem aparece como caju.',{a:['caju']}),
+    sabNota('Avelã','Avelã torrada, de creme de avelã.'),
+    sabNota('Marzipã','Doce de pasta de amêndoa. Na roda da imagem aparece como maçapão.',{a:['maçapão']})]),
+  sabFam('doce','Doces','','#F1C86E','Aromas que lembram doces. O gosto doce, na língua, fica em Boca.','Cheire mel, baunilha e açúcar mascavo. Repare que cheiro de doce não é gosto doce.',[
+    sabNota('Adocicado','Aroma de doce, sem dar para dizer qual.',{g:1}),
+    sabNota('Mel','Mel de abelha.'),
+    sabNota('Baunilha','Baunilha de sorvete e de bolo.'),
+    sabNota('Caramelo','Açúcar queimado, calda de pudim.'),
+    sabNota('Melaço','Melaço de cana: escuro e denso. Na roda da imagem fica em Frutas.',{a:['melaço de cana']}),
+    sabNota('Açúcar mascavo','Açúcar mascavo ou rapadura.',{a:['rapadura']}),
+    sabNota('Creme','Creme de leite, nata.',{a:['nata']}),
+    sabNota('Coco','Coco ralado, cocada.')]),
+  sabFam('gosto','Boca: gostos e sensações','Boca','#A7B4C2','O que a língua e a boca sentem. Gostos são só cinco; o resto da roda é aroma, que chega ao nariz por dentro da boca.','Prove água com açúcar, água com sal, água com limão e um café sem açúcar.',[
+    sabNota('Doce','Gosto de açúcar.',{k:'gosto'}),
+    sabNota('Salgado','Gosto de sal. Na roda da imagem aparece como sal.',{k:'gosto',a:['sal']}),
+    sabNota('Ácido','Gosto azedo, de limão.',{k:'gosto',a:['azedo']}),
+    sabNota('Amargo','Gosto de café sem açúcar ou de jiló.',{k:'gosto'}),
+    sabNota('Umami','Gosto de caldo, shoyu ou queijo parmesão.',{k:'gosto',a:['saboroso']}),
+    sabNota('Áspero','Arranha a língua ou a garganta. Pode vir de brasa quente demais: espaçar as baforadas ajuda.',{k:'sensacao'}),
+    sabNota('Seco','Deixa a boca seca, pedindo água.',{k:'sensacao'}),
+    sabNota('Picante','Ardência na boca, como a de pimenta.',{k:'sensacao'}),
+    sabNota('Cremoso','Fumaça macia e encorpada, que enche a boca.',{k:'sensacao'})])
 ];
+/* Missões: sorteadas entre as famílias de aroma. Quatro sabores mudaram de família na 2.12.0; a missão da família antiga continua aceitando cada um. */
+var MISSION_FAMS=FAMILIES.filter(function(f){return f.id!=='gosto';}).map(function(f){return f.id;});
+var LEGACY_MISSAO={doce:['Doce'],fruta:['Floral'],terra:['Feno'],madeira:['Tostado']};
+function normSabor(s){s=String(s==null?'':s).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[̀-ͯ]/g,'');return s.trim();}
+function famOf(n){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].notes.indexOf(n)>=0)return FAMILIES[i];return null;}
+function famById(id){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].id===id)return FAMILIES[i];return null;}
+function sessNotes(s){var u={},out=[];((s&&s.thirds)||[]).forEach(function(t){(t&&t.notes||[]).forEach(function(n){if(!u[n]){u[n]=1;out.push(n);}});});return out;}
+function missionHit(s){var f=s&&s.mission?famById(s.mission):null;if(!f)return [];var old=LEGACY_MISSAO[f.id]||[];
+  return sessNotes(s).filter(function(n){return f.notes.indexOf(n)>=0||old.indexOf(n)>=0;});}
+function missionDone(s){return missionHit(s).length>0;}
+/* Busca pelo nome e pelos sinônimos, sem acento: primeiro quem começa pelo texto, depois quem o contém, na ordem da roda. */
+function buscaSabores(q,max){q=normSabor(q);if(!q)return [];var ini=[],meio=[];
+  FAMILIES.forEach(function(f){f.notes.forEach(function(n){var comeca=false,contem=false;
+    [n].concat(NOTA_INFO[n].a).forEach(function(k){var i=normSabor(k).indexOf(q);if(i===0)comeca=true;else if(i>0)contem=true;});
+    if(comeca)ini.push(n);else if(contem)meio.push(n);});});
+  return ini.concat(meio).slice(0,max||16);}
+/* @end:sabores */
 /* Conhecimento adaptado de "O Guia Definitivo do Charuto" (Johny Oliveira), com trechos contraditórios ou de risco à saúde deixados de fora. */
 var TERROIR=[
   {k:/cuba|cuban|havan/i,t:'Cuba: Vuelta Abajo, Partido e Vuelta Arriba. Tabaco criollo, conhecido pela riqueza de sabor e complexidade.'},
@@ -788,11 +900,8 @@ function lessonsRead(){try{return JSON.parse(ls('diario-licoes')||'[]');}catch(e
 function markLesson(id){var r=lessonsRead();if(r.indexOf(id)>=0)return;var before=journey();r.push(id);ls('diario-licoes',JSON.stringify(r));var after=journey();announce(before,after);
   var hc=document.querySelector('header.top .lvl');if(hc)hc.innerHTML='<b>'+esc(after.name)+'</b><span class="num faint">'+after.xp+' pts · '+after.on.length+' conquistas</span>';}
 /* ===== Missões de aroma ===== */
-var MISSION_FAMS=['doce','castanha','madeira','terra','cacau','especiaria','fruta'];
 function pickMission(){var c={};MISSION_FAMS.forEach(function(f){c[f]=0;});done().forEach(function(s){sessNotes(s).forEach(function(n){var f=famOf(n);if(f&&c[f.id]!=null)c[f.id]++;});});
   var arr=MISSION_FAMS.slice().sort(function(a,b){return c[a]-c[b];});var low=arr.slice(0,3);return low[Math.floor(Math.random()*low.length)];}
-function famById(id){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].id===id)return FAMILIES[i];return null;}
-function missionDone(s){var f=s&&s.mission&&famById(s.mission);if(!f)return false;return sessNotes(s).some(function(n){return f.notes.indexOf(n)>=0;});}
 /* ===== Jornada: pontos, níveis e conquistas (calculados a partir do diário) ===== */
 var LEVELS=[[0,'Iniciante'],[40,'Apreciador'],[120,'Conhecedor'],[250,'Aficionado'],[450,'Mestre']];
 function weekKey(iso){var d=new Date(iso);if(isNaN(d))return '';var t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));var day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);var y=t.getUTCFullYear();return y+'-'+Math.ceil(((t-Date.UTC(y,0,1))/86400000+1)/7);}
@@ -920,8 +1029,7 @@ function cestaPersist(){ls('diario-cesta',cestaSave(cesta));}
 var draft=null, saveTimer=null, tick=null, wakeLock=null, installPrompt=null;
 var photoURL={}, busy={uploading:false,importing:false,persisted:null};
 
-/* ---------- utilidades ---------- */
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+/* ---------- utilidades (esc fica no bloco @pure:base, no topo do script) ---------- */
 function uid(){try{return crypto.randomUUID().replace(/-/g,'').slice(0,20);}catch(e){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}}
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function toast(msg){var t=document.getElementById('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){t.hidden=true;},3000);}
@@ -1574,8 +1682,6 @@ function cmpRow(label,a,b){return '<tr><th scope="row">'+label+'</th><td>'+a+'</
 function rated(){return done().filter(function(s){return typeof s.rating==='number';});}
 function avg(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
 function fmt1(n){return n==null?'—':numStr((Math.round(n*10)/10).toFixed(1));}
-function sessNotes(s){var u={};(s.thirds||[]).forEach(function(t){(t&&t.notes||[]).forEach(function(n){u[n]=1;});});return Object.keys(u);}
-function famOf(n){for(var i=0;i<FAMILIES.length;i++)if(FAMILIES[i].notes.indexOf(n)>=0)return FAMILIES[i];return null;}
 function hbar(label,value,max,valText,dim){var pct=max?Math.max(2,Math.round(value/max*100)):0;
   return '<div class="hbar'+(dim?' dim':'')+'"><span class="lab">'+label+'</span><span class="val">'+valText+'</span><div class="trk" aria-hidden="true"><i style="width:'+pct+'%"></i></div></div>';}
 function analyze(){
