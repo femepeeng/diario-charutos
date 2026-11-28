@@ -92,6 +92,11 @@
 
     await wait(700);
     check('nada foi gravado no diário', nGrav >= 1 && !__t.state.sessions.some(function (s) { return s.id === 't-roda'; }));
+
+    /* A lição não é aberta: abrir grava a leitura. O texto já está no <details> fechado. */
+    __t.sessao(null); S.tab = 'paladar'; S.view = 'home'; __t.render(); await wait(80);
+    var lic = q('details[data-lesson="paladar"]');
+    check('a lição Treinando o paladar fala da roda', !!lic && lic.innerHTML.indexOf('a roda de sabores ajuda') >= 0);
   } catch (e) {
     check('sem exceção no teste: ' + e.message, false);
   } finally {

@@ -4,7 +4,7 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 
 - **Dono:** Felipe (usuário GitHub `femepeeng`). Responde em português do Brasil.
 - **Produção:** https://femepeeng.github.io/diario-charutos/ (GitHub Pages, branch `main`, raiz).
-- **Versão atual:** 2.11.1 (25/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
+- **Versão atual:** 2.12.0 (28/11/2026). Constantes `APP_VERSION` e `APP_BUILD` no topo do script de `index.html`, exibidas no rodapé da home.
 - **Repositório local:** `C:\Users\femep\Documents\ClaudeDesing\repo-diario` (clone de `femepeeng/diario-charutos`). O Claude faz commit e `git push` direto para a `main`, com o OK do Felipe; o GitHub Pages publica em 1 a 2 minutos.
 
 ## Arquivos
@@ -50,7 +50,17 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
   - Os valores de `state.tab` não mudaram (`historico`, `paladar`, `cesta` e `conta`, que é o Perfil). O botão da Conta na barra leva `data-hub` e fica marcado em qualquer sub-aba (`CONTA_SECS`, `isContaSec`). Os atalhos que apontam para uma sub-aba abrem direto nela: o nível do cabeçalho abre o Paladar, e "Fazer backup", "Ir para Conta" e o aviso do Início abrem o Perfil.
   - `viewHome` grava `state.contaSec` sempre que desenha uma sub-aba da Conta, inclusive quando o código muda `state.tab` direto (por exemplo, ao apagar uma sessão).
 - **Acervo:** filtros Todos/Cesta/Estoque/Arquivo, botões Cesta e Estoque, editar e remover charuto, ficha do charuto (formato pela bitola, capa, terroir, corte) e sugestão da próxima degustação.
-- **Sessão:** cronômetro, momento (pré-preenchido com o da última sessão), bebida, foto da anilha (câmera ou galeria), notas por terço em 8 famílias (incluindo "Gostos na boca"), missão de aroma, dicas do guia por terço e fechamento com força, queima, tiragem, bem-estar (alerta de mal-estar), nota, recompraria, impressão e visibilidade.
+- **Sessão:** cronômetro, momento (pré-preenchido com o da última sessão), bebida, foto da anilha (câmera ou galeria), notas por terço na roda de sabores, missão de aroma, dicas do guia por terço e fechamento com força, queima, tiragem, bem-estar (alerta de mal-estar), nota, recompraria, impressão e visibilidade.
+  - **Roda de sabores** (2.12.0): 80 opções em 11 famílias, no bloco `@pure:sabores`.
+    - `FAMILIES` guarda as famílias com os nomes das notas. `NOTA_INFO` guarda, por nome, o que a nota lembra, os sinônimos da busca, a opção geral da família e o tipo (aroma, gosto ou sensação). Boca reúne os 5 gostos e 4 sensações.
+    - A base é a roda Cigar Advisor/Famous Smoke, na versão em português do Blog Charutos Online, juntada aos 28 sabores de antes e a 17 termos comuns.
+    - A roda fechada mostra as famílias; tocar numa abre a família na roda inteira (`rodaSvg`).
+    - Embaixo, o cartão ensina com "Lembra" e "Para treinar" (`rodaCartao`). Seguem os chips do terço (`rodaChips`) e a busca pelo nome, que ignora acento e acha os nomes da imagem, como chumbo e caju (`buscaSabores`).
+    - Os 28 nomes de antes não mudaram. Quatro trocaram de família: Doce foi para Boca, Feno para Plantas, Tostado para Tostados e Floral para Flores. A missão da família antiga continua aceitando cada um (`LEGACY_MISSAO`, em `missionHit`).
+    - A missão é sorteada entre as 10 famílias de aroma (`MISSION_FAMS`).
+    - O estado da roda fica só na memória (`state.rodaFam`, `rodaFoco` e `saborQ`) e é zerado ao entrar na sessão e ao trocar de terço (`rodaReset`).
+    - O redesenho da sessão devolve o foco ao campo de busca ou ao mesmo botão da roda, do cartão, dos chips ou da busca (`rodaFocoAntes`/`rodaFocoDepois`).
+    - `rodaFit` encolhe o rótulo que não cabe na fatia.
 - **Histórico** (Conta › Histórico): duas sub-abas.
   - **Sessões:** detalhe, edição com troca de charuto e de duração, ajustar a força no Acervo e adicionar charuto avulso ao Acervo.
   - **Lado a lado** (era a aba Comparar até a 2.9.0): duas sessões em tabela e, embaixo, os 3 charutos do catálogo mais parecidos com o da nota maior (`similarTo`).
@@ -99,13 +109,14 @@ PWA para registrar sessões de degustação de charutos por terço, com cronôme
 - **Conteúdo:** sem preços, lojas ou links de compra no app (Lei 9.294/1996, art. 3-A, restringe propaganda de fumígenos por meio eletrônico). Nada que ensine a tragar. Informação técnica deve ser conservadora; onde não há consenso, o texto diz isso.
 - **UI:** mobile-first (testar em 360 a 390 px, sem rolagem horizontal), tema escuro por padrão com tema claro via tokens CSS, fontes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono, alvos de toque de pelo menos 44 px, sem emoji como ícone.
 - **Testes:**
-  - **Funções puras:** `node tests/guia.test.js`, `node tests/curadoria.test.js`, `node tests/clube.test.js` e `node tests/cesta.test.js` testam o que fica entre os marcadores `/* @pure:guia */`, `/* @pure:curadoria */`, `/* @pure:clube */` e `/* @pure:cesta */` (fecham com `/* @end:... */`). O teste da Cesta carrega a curadoria junto.
+  - **Funções puras:** `node tests/guia.test.js`, `node tests/curadoria.test.js`, `node tests/clube.test.js`, `node tests/cesta.test.js` e `node tests/sabores.test.js` testam o que fica entre os marcadores `/* @pure:guia */`, `/* @pure:curadoria */`, `/* @pure:clube */`, `/* @pure:cesta */` e `/* @pure:sabores */` (fecham com `/* @end:... */`). O teste da Cesta carrega a curadoria junto, e o da roda carrega o `/* @pure:base */` (o `esc`).
   - **Funções que gravam:** `node tests/app.test.js` roda `put`, `pedGuardar` e `wipeLocalForAccount` (extraídas de `index.html` pelo nome, casando as chaves) num `vm` com o armazenamento trocado por dublês: gravação pendente, que falha, dois toques e troca de conta.
   - **SQL:** `node supabase/tests/fase2.test.mjs` testa o SQL do clube no PGlite.
-  - **Interface:** `tests/ui-guia.js`, `tests/ui-curadoria.js`, `tests/ui-clube.js` e `tests/ui-cesta.js` rodam no navegador com o app aberto: `eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`. O `?` evita a cópia do service worker.
+  - **Interface:** `tests/ui-guia.js`, `tests/ui-curadoria.js`, `tests/ui-clube.js`, `tests/ui-cesta.js` e `tests/ui-sabores.js` rodam no navegador com o app aberto: `eval(await (await fetch('/tests/ui-guia.js?' + Date.now())).text())`. O `?` evita a cópia do service worker.
     - Eles não gravam nada: trocam charutos e sessões só na memória, com `syncedAt = updatedAt` para nunca subirem ao clube, e restauram no fim, inclusive `state.tab` e `state.contaSec`.
     - O `ui-guia.js` também confere a navegação da Conta. Nessa seção ele tira o login só na memória (`cloud.user`), para valer a regra sem mensagem nova e nenhum toque chamar o clube, e liga a faixa de backup pelas chaves `diario-dirty` e `diario-last-backup` (restauradas no fim). Com `config.js` vazio, as três verificações que dependem do clube entram como "pula".
     - O `ui-clube.js` também troca o cliente Supabase e o `clubApi` por versões falsas em memória (ganchos `__t.cloud`, `__t.setClubApi`, `__t.refreshClub`, `__t.canSync`) e restaura `state.msgVisto`.
+    - O `ui-sabores.js` abre uma sessão falsa só na memória (`__t.sessao`) e troca o gravador da sessão por um falso (`__t.setSessionSaver`). Assim, marcar notas na roda não grava no IndexedDB. Ele também confere a lição "Treinando o paladar" sem abri-la, porque abrir grava a leitura.
     - O `ui-cesta.js` e o `ui-curadoria.js` guardam e restauram o estado da Cesta (gancho `__t.cesta` e `localStorage diario-cesta`), mesmo quando uma verificação quebra no meio (`try/finally`). O `ui-cesta.js` também troca `navigator.share` e `navigator.clipboard` por versões falsas e clica em "Já enviei", que só grava na Cesta.
   - **À mão:** os botões "Adicionar à cesta" e "Guardar no estoque" gravam no diário; confira-os num navegador sem login no clube e apague depois os charutos de teste. No navegador embutido do app desktop, a área de transferência real falha, e o "Copiar" cai na seleção do texto. Python não roda nesta máquina; sirva a pasta com Node (preview `diario` no `.claude/launch.json` da pasta ClaudeDesing). Teste em 360 e 390 px, nos temas claro e escuro.
 - **Privacidade:** backups JSON contêm dados pessoais e fotos; não versionar (`*.json` está no `.gitignore`). O `migracao-diario.json` foi removido na 2.6.1 (ainda existe no histórico do Git).

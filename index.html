@@ -345,7 +345,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
-var APP_VERSION='2.11.1', APP_BUILD='25/11/2026';
+var APP_VERSION='2.12.0', APP_BUILD='28/11/2026';
 /* @pure:base */
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 /* @end:base */
@@ -1001,7 +1001,7 @@ var LESSONS=[
   ['tripa','Tripa longa e tripa curta','<p>Charutos premium usam <b>tripa longa</b>: folhas inteiras, que correm de ponta a ponta. A queima é mais lenta e uniforme, e o sabor evolui ao longo dos terços.</p><p>Na <b>tripa curta</b> (picada), o tabaco é cortado em pedaços. Queima mais rápido e quente, e costuma ter sabor mais linear.</p>'],
   ['construcao','Como avaliar a construção','<p><b>Antes de acender:</b> a capa deve ser íntegra, com brilho natural de óleo e sem rachaduras. Aperte de leve ao longo do corpo: a firmeza deve ser uniforme, sem pontos moles ou duros. Puxe o ar com o charuto apagado (tiragem a frio): deve passar com leve resistência.</p><p><b>Durante:</b> queima reta, cinza firme e compacta, tiragem constante. Por isso o app pede queima e tiragem no fechamento: são o retrato da construção.</p>'],
   ['descanso','Descanso e envelhecimento','<p>Charuto recém-chegado, de viagem ou da loja, melhora depois de alguns dias de descanso no umidor, entre 65% e 70% de umidade. A umidade se equilibra e a queima fica mais uniforme.</p><p>Com meses e anos de guarda bem feita, os sabores tendem a se integrar e ficar mais redondos. Ninguém sabe ao certo o ponto ideal de cada charuto, e por isso vale anotar no diário.</p>'],
-  ['paladar','Treinando o paladar','<p>Na boca sentimos só cinco gostos: doce, salgado, ácido, amargo e umami. Todo o resto (cedro, cacau, castanha) é <b>aroma</b>, percebido pelo nariz. Por isso o retrohale, soltar um pouco de fumaça pelo nariz, revela tanto.</p><p>Para treinar, foque em uma família de cada vez. É o que as missões de aroma do app propõem a cada sessão.</p>']
+  ['paladar','Treinando o paladar','<p>Na boca sentimos só cinco gostos: doce, salgado, ácido, amargo e umami. Todo o resto (cedro, cacau, castanha) é <b>aroma</b>, percebido pelo nariz. Por isso o retrohale, soltar um pouco de fumaça pelo nariz, revela tanto.</p><p>Para treinar, foque em uma família de cada vez. É o que as missões de aroma do app propõem a cada sessão.</p><p>Na sessão, a roda de sabores ajuda: toque na família que o aroma lembra e depois na nota. Cada nota mostra o que ela lembra e como treinar.</p>']
 ];
 function lessonsRead(){try{return JSON.parse(ls('diario-licoes')||'[]');}catch(e){return [];}}
 function markLesson(id){var r=lessonsRead();if(r.indexOf(id)>=0)return;var before=journey();r.push(id);ls('diario-licoes',JSON.stringify(r));var after=journey();announce(before,after);
