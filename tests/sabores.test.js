@@ -120,5 +120,103 @@ test('busca vazia e limite', () => {
   assert.strictEqual(X.buscaSabores('a', 5).length, 5);
 });
 
+// ---- Tarefa 2 ----
+const conta = (s, sub) => s.split(sub).length - 1;
+test('rodaPt: topo, direita e baixo', () => {
+  assert.strictEqual(typeof X.rodaPt, 'function', 'rodaPt fora do bloco @pure:sabores');
+  assert.deepStrictEqual(plain(X.rodaPt(10, 0)), [0, -10]);
+  assert.deepStrictEqual(plain(X.rodaPt(10, 90)), [10, 0]);
+  assert.deepStrictEqual(plain(X.rodaPt(10, 180)), [0, 10]);
+});
+test('rodaArc: fatia de 90 graus', () => {
+  assert.strictEqual(X.rodaArc(10, 20, 0, 90), 'M0 -20A20 20 0 0 1 20 0L10 0A10 10 0 0 0 0 -10Z');
+});
+test('rodaLinhas: quebra no espaço ou no hífen mais perto do meio', () => {
+  assert.deepStrictEqual(plain(X.rodaLinhas('Canela')), ['Canela']);
+  assert.deepStrictEqual(plain(X.rodaLinhas('Chocolate meio amargo')), ['Chocolate', 'meio amargo']);
+  assert.deepStrictEqual(plain(X.rodaLinhas('Raspas de laranja')), ['Raspas de', 'laranja']);
+  assert.deepStrictEqual(plain(X.rodaLinhas('Pimenta-do-reino')), ['Pimenta-', 'do-reino']);
+  assert.deepStrictEqual(plain(X.rodaLinhas('Pimenta-verde')), ['Pimenta-verde']);
+  assert.deepStrictEqual(plain(X.rodaLinhas('Cacau e café')), ['Cacau', 'e café']);
+});
+test('rodaRot: rótulo nunca de cabeça para baixo', () => {
+  assert.deepStrictEqual([0, 90, 180, 270, 330].map(a => X.rodaRot(a)), [-90, 0, 90, 0, 60]);
+});
+test('rodaSvg fechada', () => {
+  const s = X.rodaSvg({ fam: null, sel: ['Cedro', 'Canela'], terco: '1º terço', anim: '' });
+  assert.strictEqual(conta(s, 'data-act="roda-fam"'), 11);
+  assert.ok(s.indexOf('aria-label="Especiarias: 12 opções, 1 marcada"') >= 0, 'rótulo de Especiarias');
+  assert.ok(s.indexOf('aria-label="Frutas: 10 opções"') >= 0, 'rótulo de Frutas');
+  assert.strictEqual(conta(s, 'class="sl tick"'), 80);
+  assert.strictEqual(conta(s, 'A177 177'), 2);
+  ['1º TERÇO', '>2<', 'marcados'].forEach(t => assert.ok(s.indexOf(t) >= 0, 'centro: ' + t));
+  assert.strictEqual(conta(s, 'fcnt'), 0);
+  assert.strictEqual(conta(s, 'anim-'), 0);
+});
+test('rodaSvg aberta', () => {
+  const s = X.rodaSvg({ fam: 'especiaria', sel: ['Canela', 'Cedro'], terco: '2º terço', anim: 'in' });
+  assert.strictEqual(conta(s, 'data-act="note"'), 12);
+  assert.strictEqual(conta(s, 'aria-pressed="true"'), 1);
+  assert.strictEqual(conta(s, 'class="chk"'), 1);
+  assert.ok(s.indexOf('aria-label="Pimenta, opção geral da família"') >= 0, 'opção geral');
+  assert.strictEqual((s.match(/class="[^"]*\bgen\b/g) || []).length, 1);
+  ['data-act="roda-volta"', 'Especiarias', '1 de 12'].forEach(t => assert.ok(s.indexOf(t) >= 0, 'centro: ' + t));
+  assert.ok(/class="[^"]*\banim-in\b/.test(s), 'anim-in');
+});
+test('rodaSvg aberta usa o rótulo curto quando o nome é longo', () => {
+  const s = X.rodaSvg({ fam: 'gosto', sel: [], terco: '1º terço', anim: '' });
+  assert.ok(s.indexOf('>Boca<') >= 0, 'Boca no centro');
+  assert.ok(s.indexOf('Boca: gostos e sensações') < 0);
+});
+test('rodaSvg com nota fora da taxonomia', () => {
+  const s = X.rodaSvg({ fam: null, sel: ['Inventado'], terco: '1º terço', anim: '' });
+  assert.strictEqual(conta(s, 'data-act="roda-fam"'), 11);
+  assert.strictEqual(conta(s, 'A177 177'), 0);
+});
+test('rodaCartao nos três estados', () => {
+  let h = X.rodaCartao({ foco: null, sel: [], terco: '1º terço' });
+  assert.ok(h.indexOf('Como usar a roda') >= 0 && h.indexOf('Boca') >= 0, 'ajuda');
+  h = X.rodaCartao({ foco: { t: 'fam', id: 'flor' }, sel: ['Rosa'], terco: '1º terço' });
+  ['Família · 4 opções', 'Flores', 'Para treinar:', 'Marcado no 1º terço: Rosa.'].forEach(t => assert.ok(h.indexOf(t) >= 0, t));
+  h = X.rodaCartao({ foco: { t: 'fam', id: 'flor' }, sel: [], terco: '1º terço' });
+  assert.ok(h.indexOf('Nada marcado nesta família no 1º terço.') >= 0, 'família sem nada marcado');
+  h = X.rodaCartao({ foco: { t: 'note', n: 'Cedro' }, sel: [], terco: '2º terço' });
+  ['<span>Aroma</span>', 'Lembra:', 'A madeira do lápis recém-apontado e da caixa de charutos.', 'Marcar no 2º terço', 'btn primary'].forEach(t => assert.ok(h.indexOf(t) >= 0, t));
+  h = X.rodaCartao({ foco: { t: 'note', n: 'Cedro' }, sel: ['Cedro'], terco: '2º terço' });
+  assert.ok(h.indexOf('Desmarcar do 2º terço') >= 0 && h.indexOf('btn primary') < 0, 'desmarcar');
+  assert.ok(X.rodaCartao({ foco: { t: 'note', n: 'Frutado' }, sel: [], terco: '1º terço' }).indexOf('Opção geral:') >= 0, 'opção geral');
+  assert.ok(X.rodaCartao({ foco: { t: 'note', n: 'Amargo' }, sel: [], terco: '1º terço' }).indexOf('<span>Gosto</span>') >= 0, 'gosto');
+  assert.ok(X.rodaCartao({ foco: { t: 'note', n: 'Seco' }, sel: [], terco: '1º terço' }).indexOf('<span>Sensação</span>') >= 0, 'sensação');
+});
+test('rodaCartao com nota fora da taxonomia ou família desconhecida', () => {
+  const h = X.rodaCartao({ foco: { t: 'note', n: 'Inventado' }, sel: ['Inventado'], terco: '1º terço' });
+  assert.ok(h.indexOf('Inventado') >= 0 && h.indexOf('Desmarcar do 1º terço') >= 0, 'nota fora da roda');
+  assert.ok(X.rodaCartao({ foco: { t: 'fam', id: 'xyz' }, sel: [], terco: '1º terço' }).indexOf('Como usar a roda') >= 0, 'família desconhecida');
+});
+test('rodaChips', () => {
+  assert.ok(X.rodaChips([]).indexOf('Nada marcado ainda.') >= 0);
+  const h = X.rodaChips(['Cedro', 'Inventado']);
+  assert.ok(h.indexOf('Neste terço · 2') >= 0, 'título');
+  assert.strictEqual(conta(h, 'data-act="note"'), 2);
+  assert.ok(h.indexOf('aria-label="Tirar Cedro"') >= 0, 'rótulo acessível');
+  assert.ok(/background:#999"><\/span>Inventado/.test(h), 'ponto cinza no Inventado');
+});
+test('rodaBuscaHtml', () => {
+  assert.strictEqual(X.rodaBuscaHtml('', []), '');
+  assert.ok(X.rodaBuscaHtml('xyz', []).indexOf('Nenhum sabor com “xyz”.') >= 0, 'sem resultado');
+  const h = X.rodaBuscaHtml('chumbo', ['Grafite']);
+  ['data-val="Grafite"', 'data-abre', 'aria-pressed="true"'].forEach(t => assert.ok(h.indexOf(t) >= 0, t));
+  assert.ok(X.rodaBuscaHtml('<b>', []).indexOf('&lt;b&gt;') >= 0, 'escapa o texto buscado');
+});
+test('missaoCartao', () => {
+  assert.strictEqual(X.missaoCartao({ thirds: [] }), '');
+  assert.strictEqual(X.missaoCartao(ses('xyz', [])), '');
+  let h = X.missaoCartao(ses('flor', []));
+  ['Missão de aroma: Flores', 'Abra Flores na roda e procure as 4 opções ao longo da sessão.', 'data-act="roda-fam" data-id="flor"', 'Abrir na roda']
+    .forEach(t => assert.ok(h.indexOf(t) >= 0, t));
+  h = X.missaoCartao(ses('fruta', ['Floral']));
+  assert.ok(h.indexOf('Missão cumprida: Frutas') >= 0 && h.indexOf('Você marcou Floral. +5 pontos.') >= 0, 'cumprida');
+});
+
 console.log(`\n${pass} ok, ${fail} falha(s)`);
 process.exit(fail ? 1 : 0);
