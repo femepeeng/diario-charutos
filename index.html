@@ -300,6 +300,7 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .pulse{width:10px; height:10px; border-radius:50%; background:var(--ember); box-shadow:0 0 0 0 var(--glow); animation:pulse 1.8s ease-out infinite; flex:none}
 @keyframes pulse{0%{box-shadow:0 0 0 0 var(--glow)} 70%{box-shadow:0 0 0 10px transparent} 100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion: reduce){ .pulse{animation:none} }
+.pulse.parado{animation:none; opacity:.55}
 .hacts .btn{flex:1 1 auto}
 .isec{display:flex; flex-direction:column; gap:12px; min-width:0}
 .isec-h{display:flex; align-items:center; gap:10px; min-width:0}
@@ -421,7 +422,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 .appfoot{margin-top:12px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--faint); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap}
 .kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px}
 .kv dt{color:var(--faint)} .kv dd{margin:0; font-weight:600; overflow-wrap:anywhere}
-.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(20px + env(safe-area-inset-bottom, 0px)); background:var(--fg); color:var(--bg); padding:10px 16px; border-radius:12px; font-weight:600; z-index:20; max-width:calc(100% - 32px)}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(20px + env(safe-area-inset-bottom, 0px)); background:var(--fg); color:var(--bg); padding:10px 16px; border-radius:12px; font-weight:600; z-index:50; max-width:calc(100% - 32px)}
 @media (max-width:420px){ h1{font-size:34px} .stat b{font-size:21px} .timer .clock{font-size:18px} .facts{grid-template-columns:1fr} .tabs button{font-size:14px; padding:0 8px} }
 @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important} }
 </style>
@@ -1735,8 +1736,13 @@ function render(){
   /* Campos que sobrevivem ao redesenho (sincronização, atualização do clube): foco, cursor e seleção voltam ao lugar.
      cesta-texto é o texto do pedido selecionado para copiar à mão quando a cópia falha. */
   var ae=document.activeElement,fid=ae&&['cat-q','msg-body','aviso-body','cesta-texto'].indexOf(ae.id)>=0?ae.id:null,qf=fid?[ae.selectionStart,ae.selectionEnd]:null;
+  /* Botão com foco que o redesenho recria (Brindar, filtros, abas): o foco volta ao mesmo data-act e data-id, na mesma posição entre os iguais. */
+  var fsel=null,fidx=0;if(!fid&&ae&&ae.tagName==='BUTTON'&&app.contains(ae)&&ae.getAttribute('data-act')){fsel='button[data-act="'+CSS.escape(ae.getAttribute('data-act'))+'"]'+(ae.hasAttribute('data-id')?'[data-id="'+CSS.escape(ae.getAttribute('data-id'))+'"]':'');fidx=Array.prototype.indexOf.call(app.querySelectorAll(fsel),ae);}
   app.innerHTML=viewHome()+'<footer class="appfoot"><span>Diário de Degustação</span><span class="num">Versão '+APP_VERSION+' · '+APP_BUILD+'</span></footer>';
   var cq=fid?document.getElementById(fid):null;if(cq){cq.focus({preventScroll:true});try{cq.setSelectionRange(qf[0],qf[1]);}catch(e){}}
+  if(fsel){var nbs=app.querySelectorAll(fsel),nb=nbs[fidx]||nbs[0];if(nb)nb.focus({preventScroll:true});}
+  /* Rolagem pedida por um atalho (Mensagens, Avisos, Ver do aviso): só no Perfil e depois de desenhar o que chegou do clube. */
+  if(state.rolarPara){var rp=state.tab==='conta'?document.getElementById(state.rolarPara):null;state.rolarPara=null;if(rp)rp.scrollIntoView({block:'start'});}
   if(state.tab==='conta')restoreAuthForm();
   if(state.tab==='clube'&&isMember())setTimeout(fetchFeedPhotos,0);
   if(state.tab==='inicio')inicioFeed();
@@ -1874,7 +1880,8 @@ var PESSOAS_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" st
 var FUMACA_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 20c-2-2 2-4 0-6s2-4 0-6 1-4 0-5"></path><path d="M14 20c-2-2 2-4 0-6s2-4 0-6"></path><path d="M19 20c-1.5-1.5 1.5-3 0-4.5"></path></svg>';
 /* Herói: sem sessão, o botão de acender, a sugestão do estoque e a última sessão; com sessão aberta, o cartão dela com o relógio. */
 function heroiHtml(){var s=openSession();
-  if(s)return '<section class="heroi ativa" aria-labelledby="heroi-t"><span class="eyebrow hlive"><span class="pulse" aria-hidden="true"></span>Sessão em andamento</span>'+
+  var corre=!!(s&&s.timer&&s.timer.running);
+  if(s)return '<section class="heroi ativa" aria-labelledby="heroi-t"><span class="eyebrow hlive"><span class="pulse'+(corre?'':' parado')+'" aria-hidden="true"></span>Sessão em andamento'+(corre?'':' · pausada')+'</span>'+
     '<h2 class="httl" id="heroi-t">'+esc(s.cigarName||'Charuto')+'</h2>'+
     '<div class="hrelogio" id="heroi-relogio" role="timer" aria-label="Tempo da sessão">'+relogioTexto(elapsed(s))+'</div>'+
     '<div class="row"><span class="chip">'+esc(s.moment||'Momento não marcado')+'</span></div>'+
@@ -1891,7 +1898,7 @@ function inicioPostHtml(it){var name=(it.profiles&&it.profiles.display_name)||'M
   return '<article class="ipost"><div class="ptop"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="nm"><b>'+esc(name)+'</b><span>'+esc(relTime(it.ended_at||it.started_at))+'</span></div>'+
     (it.rating!=null?'<span class="pnota"><span class="sr">Nota </span>'+numStr(Number(it.rating))+'<small>/10</small></span>':'')+'</div>'+
     '<div class="pcig">'+esc(it.cigar_name)+'</div>'+(notes.length?'<div class="tags">'+notes.map(noteChip).join('')+'</div>':'')+
-    '<div class="iacts"><button type="button" class="iact" data-act="like" data-id="'+esc(it.uid)+'" aria-pressed="'+mine+'" aria-label="'+(mine?'Remover brinde':'Brindar')+' ('+likes.length+')">'+CHEERS_ICON+'Brindar <span class="n">'+likes.length+'</span></button>'+
+    '<div class="iacts"><button type="button" class="iact" data-act="like" data-id="'+esc(it.uid)+'" aria-pressed="'+mine+'" aria-label="Brindar ('+likes.length+')">'+CHEERS_ICON+'Brindar <span class="n">'+likes.length+'</span></button>'+
     '<button type="button" class="iact" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'Comentários <span class="n">'+cms.length+'</span></button></div></article>';}
 /* Clube na Início: só com o clube configurado. Convite sem login; uma linha para suspenso; para membro, atalhos, aviso e as 2 últimas degustações. */
 function clubeInicioHtml(){if(!cloud.configured)return '';
@@ -1906,12 +1913,15 @@ function clubeInicioHtml(){if(!cloud.configured)return '';
   if(isSuspended())return '<section class="isec iclube" aria-labelledby="cl-t">'+cab('',false)+'<p class="ivazio">Sua participação no clube está suspensa. O diário deste celular continua funcionando.</p></section>';
   var nm=cloud.membros,un=unreadMsgs(),me=cloud.me;
   var h='<section class="isec iclube" aria-labelledby="cl-t">'+cab(typeof nm==='number'&&nm>0?nm+(nm===1?' membro':' membros'):'',true)+
-    '<div class="iquick"><button type="button" class="iqk" data-act="inicio-msgs"'+(un?' aria-label="Mensagens, '+un+(un===1?' não lida':' não lidas')+'"':'')+'>'+CARTA_ICON+'Mensagens'+(un?' <span class="bdg">'+un+'</span>':'')+'</button>'+
-    '<button type="button" class="iqk" data-act="inicio-avisos">'+AVISO_ICON+'Avisos</button></div>';
+    (cloud.clubMissing?'':'<div class="iquick"><button type="button" class="iqk" data-act="inicio-msgs"'+(un?' aria-label="Mensagens, '+un+(un===1?' não lida':' não lidas')+'"':'')+'>'+CARTA_ICON+'Mensagens'+(un?' <span class="bdg">'+un+'</span>':'')+'</button>'+
+    '<button type="button" class="iqk" data-act="inicio-avisos">'+AVISO_ICON+'Avisos</button></div>');
   if(me&&me.aviso){var b=String(me.aviso.body||''),t=b.length>160?b.slice(0,159)+'…':b;
     h+='<div class="aviso iaviso">'+AVISO_ICON+'<div class="abody"><b>Aviso do clube</b><span>'+esc(t)+'</span></div><div class="row"><button type="button" class="btn" data-act="avisover">Ver</button><button type="button" class="btn ghost" data-act="avisook">Dispensar</button></div></div>';}
   var fd=cloud.feed.slice(0,2);
-  h+=fd.length?fd.map(inicioPostHtml).join(''):'<p class="ivazio">'+(cloud.feedLoading?'Carregando as degustações…':'Nenhuma degustação compartilhada ainda.')+'</p>';
+  h+=fd.length?fd.map(inicioPostHtml).join(''):cloud.feedLoading?'<p class="ivazio">Carregando as degustações…</p>':
+    cloud.feedError?(navigator.onLine===false?'<p class="ivazio">Sem internet. As degustações aparecem quando a conexão voltar.</p>':
+      '<div class="ivazio"><p>Não foi possível carregar as degustações agora.</p><div class="row" style="margin-top:10px"><button type="button" class="btn" data-act="refreshfeed">Tentar de novo</button></div></div>'):
+    '<p class="ivazio">Nenhuma degustação compartilhada ainda.</p>';
   return h+'</section>';}
 /* Seu diário: nível e pontos (journey), conquistas e a missão da próxima sessão, sorteada uma vez por abertura do app. */
 function diarioInicioHtml(){if(!state.loaded)return '';
@@ -1987,7 +1997,7 @@ function postCard(it){
   if(key&&photoURL[key])h+=bandImg(key,'','Anilha do '+it.cigar_name);
   if(notes.length)h+='<div class="tags">'+notes.map(noteChip).join('')+'</div>';
   if(it.comment)h+='<p class="meta">“'+esc(it.comment.length>180?it.comment.slice(0,180)+'…':it.comment)+'”</p>';
-  h+='<div class="row"><button class="btn small like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'" aria-label="'+(mine?'Remover brinde':'Brindar')+' ('+likes.length+')">'+CHEERS_ICON+'Brindar <span class="num">'+likes.length+'</span></button><button class="btn small ghost" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'<span class="num">'+cms.length+'</span> comentários</button></div></article>';
+  h+='<div class="row"><button class="btn small like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'" aria-label="Brindar ('+likes.length+')">'+CHEERS_ICON+'Brindar <span class="num">'+likes.length+'</span></button><button class="btn small ghost" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'<span class="num">'+cms.length+'</span> comentários</button></div></article>';
   return h;
 }
 function viewClube(){
@@ -2356,10 +2366,11 @@ function viewPost(){
   var it=feedItem(state.postUid);
   if(!it){state.view='home';state.tab='clube';return viewHome();}
   var name=(it.profiles&&it.profiles.display_name)||'Membro',likes=cloud.likes[it.uid]||[],cms=cloud.comments[it.uid]||[],me=cloud.user&&cloud.user.id,mine=likes.indexOf(me)>=0,key=feedPhotoKey(it),own=it.owner_id===me;
-  var h='<header class="top"><button class="btn small ghost" style="align-self:flex-start" data-act="backclube">Voltar ao clube</button><div class="phead"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="who"><b>'+esc(name)+'</b><div class="meta">'+esc(fmtDateTime(it.ended_at||it.started_at))+'</div></div></div><h1 style="font-size:34px">'+esc(it.cigar_name)+'</h1><p class="muted">'+esc([it.moment,it.drink,it.duration_min?it.duration_min+' min':''].filter(Boolean).join(' · '))+'</p></header>';
+  var pd=state.postDe||{},volta=pd.view==='detail'?'Voltar à sessão':(pd.view==='home'&&pd.tab==='inicio'?'Voltar à Início':'Voltar ao clube');
+  var h='<header class="top"><button class="btn small ghost" style="align-self:flex-start" data-act="backclube">'+volta+'</button><div class="phead"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="who"><b>'+esc(name)+'</b><div class="meta">'+esc(fmtDateTime(it.ended_at||it.started_at))+'</div></div></div><h1 style="font-size:34px">'+esc(it.cigar_name)+'</h1><p class="muted">'+esc([it.moment,it.drink,it.duration_min?it.duration_min+' min':''].filter(Boolean).join(' · '))+'</p></header>';
   if(key&&photoURL[key])h+=bandImg(key,'','Anilha do '+it.cigar_name);
   h+='<div class="row" style="justify-content:space-between"><div class="rating"><b class="num">'+(it.rating!=null?numStr(Number(it.rating)):'—')+'</b><span class="muted">de 10</span></div>'+(it.rebuy?'<span class="chip">Recompraria: '+esc(it.rebuy)+'</span>':'')+'</div>';
-  h+='<div class="row"><button class="btn like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'">'+CHEERS_ICON+(mine?'Brindou':'Brindar')+' · <span class="num">'+likes.length+'</span></button></div>';
+  h+='<div class="row"><button class="btn like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'">'+CHEERS_ICON+'Brindar · <span class="num">'+likes.length+'</span></button></div>';
   h+=profileHtml(it.thirds)+factsHtml(it);
   if(it.comment)h+='<div class="panel"><span class="eyebrow">Impressão final</span><p>'+esc(it.comment)+'</p></div>';
   h+='<div><h2 style="margin-bottom:12px">Comentários</h2><div class="comments">';
@@ -2406,7 +2417,7 @@ function folhaInicioHtml(){var aba=state.inicioAba||'estoque',nE=inicioCharutos(
 /* Redesenha a folha mantendo a rolagem; o foco volta ao botão tocado sem rolar a folha. */
 function desenharFolha(foco){var el=document.getElementById('inicio-folha');if(!el)return;var sh=el.querySelector('.ifsheet'),st=sh?sh.scrollTop:0;el.innerHTML=state.inicioFolha?folhaInicioHtml():'';
   var sh2=el.querySelector('.ifsheet');if(sh2&&st)sh2.scrollTop=st;
-  document.body.style.overflow=state.inicioFolha?'hidden':'';if(foco){var f=el.querySelector(foco);if(f)f.focus({preventScroll:true});}}
+  document.body.style.overflow=state.inicioFolha?'hidden':'';var appEl=document.getElementById('app');if(appEl)appEl.inert=!!state.inicioFolha;if(foco){var f=el.querySelector(foco);if(f)f.focus({preventScroll:true});}}
 /* Abre a folha; com escolha (a sugestão do herói), o charuto já vem marcado. Ao fechar, o foco volta ao botão do herói. */
 function abrirFolha(escolha){var c=escolha&&cigarById(escolha);state.inicioFolha=true;state.inicioEscolha=c?c.id:null;state.inicioDe=c?c.id:'';
   state.inicioAba=c?(temEstoque(c)?'estoque':'acervo'):abaInicial(state.cigars);state.inicioBusca='';state.inicioAvulso='';state.inicioMomento=lastMoment()||'';
@@ -2487,7 +2498,7 @@ document.addEventListener('click',function(ev){
     case 'start': {var c=cigarById(id);if(!c)return;iniciarSessao(c);break;}
     case 'inicio-abrir': abrirFolha(id); break;
     case 'inicio-fechar': fecharFolha(); break;
-    case 'inicio-aba': {var ab=b.getAttribute('data-v');state.inicioAba=ab;state.inicioEscolha=null;desenharFolha('[data-act="inicio-aba"][data-v="'+ab+'"]');break;}
+    case 'inicio-aba': {var ab=b.getAttribute('data-v');if(ab!==state.inicioAba){state.inicioAba=ab;state.inicioEscolha=null;}desenharFolha('[data-act="inicio-aba"][data-v="'+ab+'"]');break;}
     case 'inicio-escolher': state.inicioEscolha=id; desenharFolha('[data-act="inicio-escolher"][data-id="'+CSS.escape(id)+'"]'); break;
     case 'inicio-momento': {var mv=b.getAttribute('data-v');state.inicioMomento=state.inicioMomento===mv?'':mv;desenharFolha('[data-act="inicio-momento"][data-v="'+mv+'"]');break;}
     case 'inicio-comecar': {if(!inicioPodeComecar())break;var cc=state.inicioAba==='avulso'?{id:'',name:String(state.inicioAvulso).trim()}:cigarById(state.inicioEscolha),mo=state.inicioMomento;
@@ -2497,7 +2508,7 @@ document.addEventListener('click',function(ev){
     /* Atalhos do Clube na Início: abrem o Perfil (o administrador, na seção certa do painel) e rolam até a conversa ou os avisos. */
     case 'inicio-msgs': case 'inicio-avisos': {var avs=act==='inicio-avisos',alvo=avs?'avisos':'msgs';state.tab='conta';state.view='home';state.confirm='';
       if(cloud.me&&cloud.me.is_admin){cloud.club.sec=avs?'avisos':'mensagens';cloud.club.open=null;alvo='admin';}
-      render();window.scrollTo(0,0);refreshClub(true).then(function(){var el=document.getElementById(alvo);if(el)el.scrollIntoView({block:'start'});});break;}
+      render();window.scrollTo(0,0);refreshClub(true).then(function(){state.rolarPara=alvo;rerender();});break;}
     case 'inicio-clube': cloud.authMode=b.getAttribute('data-v')==='criar'?'criar':'entrar';cloud.authMsg='';state.tab='conta';state.view='home';state.confirm='';render();window.scrollTo(0,0);break;
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
     case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
@@ -2588,10 +2599,10 @@ document.addEventListener('click',function(ev){
     case 'refreshfeed': loadFeed(); break;
     case 'clubrefresh': refreshClub(true); break;
     case 'msgsend': sendMsg(id); break;
-    case 'avisook': dismissAviso(); break;
-    case 'avisover': state.tab='conta'; state.view='home'; dismissAviso(); refreshClub(true).then(function(){var a=document.getElementById('avisos');if(a)a.scrollIntoView({block:'start'});}); break;
-    case 'post': state.view='post'; state.postUid=id; render(); window.scrollTo(0,0); fetchFeedPhotos(); break;
-    case 'backclube': state.view='home'; state.tab='clube'; render(); break;
+    case 'avisook': {dismissAviso();var fa=document.querySelector('#app [data-act="inicio-avisos"]');if(fa)fa.focus({preventScroll:true});break;}
+    case 'avisover': state.tab='conta'; state.view='home'; dismissAviso(); refreshClub(true).then(function(){state.rolarPara='avisos';rerender();}); break;
+    case 'post': state.postDe={view:state.view,tab:state.tab,y:window.scrollY}; state.view='post'; state.postUid=id; render(); window.scrollTo(0,0); fetchFeedPhotos(); break;
+    case 'backclube': {var pd=state.postDe||{view:'home',tab:'clube',y:0};state.postDe=null;state.view=pd.view==='detail'?'detail':'home';state.tab=pd.tab||'clube';render();window.scrollTo(0,pd.y||0);break;}
     case 'like': toggleLike(id); break;
     case 'comment': addComment(id); break;
     case 'delcomment': deleteComment(id,state.postUid); break;
@@ -2650,8 +2661,7 @@ document.addEventListener('submit',function(ev){
 document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.getAttribute&&d.getAttribute('data-lesson')&&d.open){markLesson(d.getAttribute('data-lesson'));var sp=d.querySelector('summary .faint');if(sp)sp.textContent='lida';}},true);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{if((state.view==='session'&&draft)||ritmo.on)requestWake();if(isMember()){scheduleSync();refreshClub();}}
   inicioTick();heroiPinta();});
-/* Posição do carrossel do guia e ponto ativo; chamada no evento scroll e logo depois do render, sem esperar o próximo quadro. */
-window.addEventListener('online',function(){if(isMember()){refreshClub(true).then(function(){sync();});if(state.tab==='clube')loadFeed();}else rerender();});
+window.addEventListener('online',function(){if(isMember()){refreshClub(true).then(function(){sync();});if(state.tab==='clube'||state.tab==='inicio')loadFeed();}else rerender();});
 window.addEventListener('offline',function(){if(!isMember())rerender();});
 window.addEventListener('offline',function(){if(isMember())setStatus('offline');});
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installPrompt=e;if(state.view==='home'&&state.tab==='conta')render();});

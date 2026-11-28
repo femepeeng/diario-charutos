@@ -87,6 +87,9 @@
     check('sem o estado do clube confirmado, o app não sincroniza', T.canSync() === false);
     await T.refreshClub(true); T.render(); await wait(80);
     check('com o estado confirmado e sem suspensão, sincroniza', T.canSync() === true);
+    // Daqui em diante, a sincronização fica pausada (canSync falso): um sync perdido não mexe no navegador de teste com o cliente falso.
+    C.ownerMismatch = true;
+    check('com o membro falso montado, o teste pausa a sincronização', T.canSync() === false);
 
     var tc = q('.tabs [data-act="tab"][data-id="conta"]');
     check('aba Conta avisa nova mensagem sem mudar o nome', !!tc && /nova mensagem/.test(tc.getAttribute('aria-label') || '') && tc.innerText.trim() === 'Conta');
@@ -168,7 +171,8 @@
     await T.refreshClub(true); T.render(); await wait(120);
     check('suspenso: Perfil explica a suspensão e mantém a conversa', /suspensa/.test((q('#msgs') || {}).textContent || '') && qa('#msgs .msg').length === 2);
     check('suspenso: avisos não aparecem', !q('#avisos'));
-    check('suspenso: app não sincroniza', T.canSync() === false);
+    C.ownerMismatch = false; var syncSusp = T.canSync(); C.ownerMismatch = true;
+    check('suspenso: app não sincroniza', syncSusp === false);
     click(q('[data-act="tab"][data-id="clube"]')); await wait(120);
     check('suspenso: Clube explica a suspensão no lugar do feed', /suspensa/.test(document.getElementById('app').textContent) && !q('.list article'));
     check('suspenso: Clube aponta para Conta › Perfil', /use Conta › Perfil\./.test(document.getElementById('app').textContent));
@@ -204,6 +208,7 @@
       avisos: [{ id: 'av1', body: 'Aviso antigo', created_at: iso(600), author_id: 'A' }]
     });
     login('A', 'Admin Teste', true);
+    C.ownerMismatch = true;  // sincronização pausada também com o administrador falso
     T.setClubApi(apiA);
     C.me = null; C.clubMissing = false; C.inviteLink = '';
     C.club = { thread: [], avisos: [], members: [], invites: [], sec: 'inscritos', open: null, at: 0, sending: false, drafts: {} };

@@ -26,13 +26,15 @@
     }, apply: function () { return px; } });
     return px;
   }
-  // clubApi falso: devolve o mesmo "me" do teste e listas vazias; registra as chamadas.
-  function fakeApi(me) {
+  // clubApi falso: devolve o mesmo "me" do teste; conversa e avisos vêm de opt (com atraso opcional, em ms). Registra as chamadas.
+  function fakeApi(me, opt) {
+    opt = opt || {};
     var calls = [], ok = function (d) { return Promise.resolve({ data: d, error: null }); };
+    var tarde = function (d) { return new Promise(function (r) { setTimeout(function () { r({ data: JSON.parse(JSON.stringify(d)), error: null }); }, opt.atraso || 0); }); };
     function rec(n) { calls.push(n); }
-    return { calls: calls,
+    return { calls: calls, opt: opt,
       me: function () { rec('me'); return ok(JSON.parse(JSON.stringify(me()))); },
-      thread: function () { rec('thread'); return ok([]); }, avisos: function () { rec('avisos'); return ok([]); },
+      thread: function () { rec('thread'); return tarde(opt.thread || []); }, avisos: function () { rec('avisos'); return tarde(opt.avisos || []); },
       members: function () { rec('members'); return ok([]); }, invites: function () { rec('invites'); return ok([]); },
       markRead: function () { rec('markRead'); return ok(null); }, markAvisosRead: function () { rec('markAvisosRead'); return ok(null); } };
   }
@@ -41,7 +43,7 @@
   var lsPerfil = localStorage.getItem('clube-profile');
   var bk = { c: S.cigars, s: S.sessions, tab: S.tab, view: S.view, step: S.step, missao: S.proximaMissao, sec: S.contaSec, visto: S.msgVisto };
   var bkC = { sb: C.sb, user: C.user, profile: C.profile, checked: C.profileChecked, me: C.me, missing: C.clubMissing, feed: C.feed, likes: C.likes,
-    comments: C.comments, feedAt: C.feedAt, membros: C.membros, configured: C.configured, authMode: C.authMode, mismatch: C.ownerMismatch, club: C.club };
+    comments: C.comments, feedAt: C.feedAt, membros: C.membros, configured: C.configured, authMode: C.authMode, mismatch: C.ownerMismatch, club: C.club, feedError: C.feedError };
   var CIG = [
     { id: 'ui-a', name: 'Partagás Serie D Nº 4', status: 'estoque', order: 2, origin: 'Cuba', strength: 4, vitola: '124 x 50', updatedAt: up, syncedAt: up },
     { id: 'ui-b', name: 'Bolívar Royal Corona', status: 'cesta', order: 1, origin: 'Cuba', strength: 4, updatedAt: up, syncedAt: up },
@@ -61,7 +63,9 @@
   var ME = null;
   function membro(me) {
     C.sb = fakeSb(); C.user = { id: 'UI-EU', email: 'ui-eu@teste.local' }; C.profile = { id: 'UI-EU', display_name: 'Eu Teste', is_admin: false };
-    C.profileChecked = true; C.ownerMismatch = false; C.clubMissing = false; ME = me; C.me = JSON.parse(JSON.stringify(me)); C.feedAt = Date.now();
+    C.profileChecked = true; C.clubMissing = false; ME = me; C.me = JSON.parse(JSON.stringify(me)); C.feedAt = Date.now(); C.feedError = '';
+    // Pausa a sincronização (canSync falso) enquanto o membro falso está montado: um sync perdido não mexe no navegador de teste.
+    C.ownerMismatch = true;
   }
   try {
     C.user = null;  // sem login de verdade durante o teste: nenhum toque ou desenho chama o clube
@@ -73,6 +77,10 @@
     click(abrir); await wait(80);
     check('Iniciar sessão abre a folha com o foco na primeira aba',
       !!folha() && folha().getAttribute('aria-modal') === 'true' && !!document.activeElement && document.activeElement.getAttribute('data-act') === 'inicio-aba');
+    var appEl = document.getElementById('app'), atras = q('#app button');
+    if (atras) atras.focus();
+    check('com a folha aberta, a tela de trás fica inerte (sem foco nem leitor de tela)', !!appEl && appEl.inert === true && !!atras && document.activeElement !== atras);
+    check('os avisos rápidos aparecem por cima da folha', +getComputedStyle(q('#toast')).zIndex > +getComputedStyle(q('#inicio-folha .ifsheet')).zIndex);
     check('a aba Estoque lista só o estoque, na ordem do Acervo', linhas().join(',') === 'ui-a,ui-c');
     check('Começar fica desativado até escolher', !!q('[data-act="inicio-comecar"]') && q('[data-act="inicio-comecar"]').disabled);
     click(q('[data-act="inicio-aba"][data-v="acervo"]')); await wait(60);
@@ -86,6 +94,7 @@
       qa('#inicio-folha button').filter(function (b) { return b.offsetParent; }).every(function (b) { return alto(b); }) && alto(q('[data-act="inicio-comecar"]'), 56));
     tecla(document.activeElement, 'Escape'); await wait(60);
     check('Esc fecha e devolve o foco ao botão', !folha() && document.activeElement === q('[data-act="inicio-abrir"]'));
+    check('fechada a folha, a tela de trás volta a responder', document.getElementById('app').inert === false);
 
     click(q('[data-act="inicio-abrir"]')); await wait(80);
     click(q('[data-act="inicio-escolher"][data-id="ui-c"]')); await wait(40);
@@ -142,6 +151,8 @@
     check('tocar na sugestão abre a folha com o charuto escolhido',
       !!folha() && !!esc1 && esc1.getAttribute('aria-pressed') === 'true' && !!abaE && abaE.getAttribute('aria-pressed') === 'true' &&
       !!q('[data-act="inicio-comecar"]') && !q('[data-act="inicio-comecar"]').disabled);
+    click(q('[data-act="inicio-aba"][data-v="estoque"]')); await wait(40);
+    check('tocar de novo na aba ativa mantém o charuto escolhido', (q('[data-act="inicio-escolher"][data-id="ui-a"]') || { getAttribute: function () { return ''; } }).getAttribute('aria-pressed') === 'true');
     tecla(document.activeElement, 'Escape'); await wait(60);
     check('fechar a folha aberta pela sugestão devolve o foco à sugestão', !folha() && document.activeElement === q('.heroi .sug'));
 
@@ -169,6 +180,11 @@
     delete document.visibilityState; visDef = false;
     document.dispatchEvent(new Event('visibilitychange')); await wait(30);
     check('com a página escondida o relógio para, e volta quando ela aparece', parado && __t.inicioTick() === true);
+    S.sessions = [FEITA, Object.assign({}, VIVA, { timer: { acc: 125000, running: false } })]; __t.render(); await wait(60);
+    var pu = q('.heroi .pulse');
+    check('sessão pausada: o ponto para de pulsar e o herói diz que está pausada',
+      !!pu && getComputedStyle(pu).animationName === 'none' && /pausada/.test(txt(q('.heroi'))) && txt(q('#heroi-relogio')) === '00:02:05' && __t.inicioTick() === false);
+    S.sessions = [FEITA, VIVA]; __t.render(); await wait(60);
     click(q('.heroi [data-act="inicio-encerrar"]')); await wait(150);
     var de = __t.sessao();
     check('Encerrar entra na sessão no Fechamento', S.view === 'session' && !!de && de.id === 'ui-viva' && S.step === 3);
@@ -203,7 +219,8 @@
       depois('.heroi', '.diario'));
 
     // ---- Clube na Início ----
-    apiAntes = __t.setClubApi(fakeApi(function () { return ME; }));
+    var API = fakeApi(function () { return ME; });
+    apiAntes = __t.setClubApi(API);
     C.club = { thread: [], avisos: [], members: [], invites: [], sec: 'inscritos', open: null, at: 0, sending: false, drafts: {} };
     membro({ is_admin: false, suspended: false, unread_msgs: 2, aviso: { id: 'av-ui', body: 'Encontro no sábado.', created_at: iso(30) } });
     C.membros = 8; C.feed = FEED.slice(); C.likes = { 'ui-p1': ['UI-EU', 'UI-BRU'] }; C.comments = { 'ui-p1': [{ id: 'c1', user_id: 'UI-BRU', body: 'Boa!' }] };
@@ -218,11 +235,48 @@
       !!lk1 && lk1.getAttribute('aria-pressed') === 'true' && /\b2\b/.test(txt(lk1)) && /Comentários 1/.test(txt(posts[0])) &&
       posts[0].querySelectorAll('.chip').length === 3 && !!cl.querySelector('[data-act="tab"][data-id="clube"]') && depois('.heroi', '.iclube'));
     check('alvos de 44 px no Clube', !!cl && Array.prototype.every.call(cl.querySelectorAll('button'), function (b) { return alto(b); }));
-    click(msgs); await wait(150);
+    check('com o membro falso montado, o app não sincroniza', __t.canSync() === false);
+    var lk2 = q('.iclube [data-act="like"][data-id="ui-p2"]'); if (lk2) lk2.focus();
+    click(lk2); await wait(150);
+    check('depois de Brindar, o foco fica no mesmo botão', !!lk2 && document.activeElement === q('.iclube [data-act="like"][data-id="ui-p2"]'));
+    var dsp = q('.iclube [data-act="avisook"]'); if (dsp) dsp.focus();
+    click(dsp); await wait(80);
+    check('Dispensar o aviso leva o foco para Avisos', !!dsp && !q('.iclube .aviso') && document.activeElement === q('.iclube [data-act="inicio-avisos"]'));
+    click(msgs = q('.iclube [data-act="inicio-msgs"]')); await wait(150);
     check('Mensagens abre o Perfil', S.tab === 'conta' && !!q('#msgs'));
     S.tab = 'inicio'; S.view = 'home'; C.me = JSON.parse(JSON.stringify(ME)); __t.render(); await wait(60);
-    click(q('.iclube [data-act="inicio-avisos"]')); await wait(150);
-    check('Avisos abre o Perfil na seção de avisos', S.tab === 'conta' && !!q('#avisos'));
+    API.opt.thread = [];
+    for (var ti = 0; ti < 14; ti++) API.opt.thread.push({ id: 'm' + ti, member_id: 'UI-EU', author_id: ti % 2 ? 'UI-EU' : 'A', from_admin: !(ti % 2),
+      body: 'Mensagem de teste número ' + ti + ', com texto bastante para ocupar uma linha inteira do celular.', created_at: iso(200 - ti) });
+    API.opt.avisos = [1, 2, 3, 4].map(function (k) { return { id: 'a' + k, body: 'Aviso de teste ' + k, created_at: iso(300 + k), author_id: 'A' }; });
+    API.opt.atraso = 30; C.club = { thread: [], avisos: [], members: [], invites: [], sec: 'inscritos', open: null, at: 0, sending: false, drafts: {} };
+    click(q('.iclube [data-act="inicio-avisos"]')); await wait(350);
+    var avr = q('#avisos') ? q('#avisos').getBoundingClientRect() : null;
+    check('Avisos abre o Perfil e para nos avisos, depois de a conversa carregar',
+      S.tab === 'conta' && !!avr && avr.top >= -2 && avr.top <= innerHeight * 0.5 && qa('#msgs .msg').length === 14);
+    API.opt.thread = []; API.opt.avisos = []; API.opt.atraso = 0; window.scrollTo(0, 0);
+    S.tab = 'inicio'; S.view = 'home'; C.me = JSON.parse(JSON.stringify(ME)); C.feed = FEED.slice(); __t.render(); await wait(60);
+    click(q('.iclube [data-act="post"][data-id="ui-p1"]')); await wait(80);
+    var volta1 = txt(q('[data-act="backclube"]')); click(q('[data-act="backclube"]')); await wait(80);
+    var deIni = S.view === 'home' && S.tab === 'inicio';
+    S.tab = 'clube'; __t.render(); await wait(60);
+    click(q('#app [data-act="post"][data-id="ui-p1"]')); await wait(80);
+    var volta2 = txt(q('[data-act="backclube"]')); click(q('[data-act="backclube"]')); await wait(80);
+    check('a degustação aberta pela Início volta para a Início; aberta pelo Clube, volta para o Clube',
+      deIni && /Voltar à Início/.test(volta1) && S.view === 'home' && S.tab === 'clube' && /Voltar ao clube/.test(volta2));
+    S.tab = 'inicio'; C.feed = []; C.feedError = 'Sem internet. Mostrando o último feed carregado.';
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: function () { return false; } }); onDef = true;
+    __t.render(); await wait(60);
+    var semNet = txt(q('.iclube'));
+    delete navigator.onLine; onDef = false; C.feedError = 'Falha de teste'; __t.render(); await wait(60);
+    var falhou = q('.iclube'), tenta = falhou && falhou.querySelector('[data-act="refreshfeed"]');
+    check('feed que não carregou: a Início avisa a falha, e não diz que não há degustações',
+      /Sem internet/.test(semNet) && !/Nenhuma degustação/.test(semNet) && /Não foi possível carregar as degustações/.test(txt(falhou)) && !!tenta && alto(tenta));
+    C.feedError = '';
+    C.clubMissing = true; C.me = null; C.feed = FEED.slice(); __t.render(); await wait(60);
+    check('sem o SQL do clube (fase 2): sem os atalhos Mensagens e Avisos, que não levariam a lugar nenhum',
+      !!q('.iclube') && !q('[data-act="inicio-msgs"]') && !q('[data-act="inicio-avisos"]') && q('.iclube').querySelectorAll('.ipost').length === 2);
+    C.clubMissing = false;
     S.tab = 'inicio'; S.view = 'home'; C.me = JSON.parse(JSON.stringify(ME)); C.feed = []; C.membros = null; __t.render(); await wait(60);
     cl = q('.iclube');
     check('membro sem feed e sem contagem: mensagem de vazio e sem linha de membros',
@@ -263,18 +317,19 @@
     var CURT = /curtir|curtid/i, CORACAO = 'M12 20s-7-4.4-7-10';
     var semCurtir = function () { var t = document.body.textContent, al = qa('[aria-label]').map(function (e) { return e.getAttribute('aria-label'); }).join(' | ');
       return !CURT.test(t) && !CURT.test(al) && document.body.innerHTML.indexOf(CORACAO) < 0; };
-    var rotuloBrinde = function (b) { return !!b && /Brindar/.test(txt(b)) && /^(Brindar|Remover brinde)\b/.test(b.getAttribute('aria-label') || ''); };
+    var rotuloBrinde = function (b) { return !!b && /Brindar/.test(txt(b)) && /^Brindar \(\d+\)$/.test(b.getAttribute('aria-label') || ''); };
     membro({ is_admin: false, suspended: false, unread_msgs: 0, aviso: null });
     C.membros = 8; C.feed = FEED.slice(); C.likes = { 'ui-p1': ['UI-EU'] }; C.comments = {};
     S.cigars = CIG.slice(); S.sessions = [FEITA]; S.tab = 'inicio'; S.view = 'home'; __t.render(); await wait(60);
     var brIni = qa('.iclube [data-act="like"]'), telas = [semCurtir()];
     S.tab = 'clube'; __t.render(); await wait(60);
     var brFeed = qa('#app .card [data-act="like"]'); telas.push(semCurtir());
-    check('no feed e na Início, o botão diz Brindar e o rótulo acessível diz Brindar ou Remover brinde',
+    check('no feed e na Início, o botão diz Brindar, o rótulo acessível é sempre "Brindar (N)" e o estado fica no aria-pressed',
       brIni.length === 2 && brIni.every(rotuloBrinde) && brFeed.length === 3 && brFeed.every(rotuloBrinde) &&
-      /^Remover brinde/.test(brFeed[0].getAttribute('aria-label')) && /^Brindar/.test(brFeed[1].getAttribute('aria-label')));
+      brFeed[0].getAttribute('aria-pressed') === 'true' && brFeed[1].getAttribute('aria-pressed') === 'false' && brIni[0].getAttribute('aria-pressed') === 'true');
     click(q('#app [data-act="post"][data-id="ui-p1"]')); await wait(80);
-    var brPost = q('#app [data-act="like"]'); telas.push(semCurtir() && !!brPost && /Brind/.test(txt(brPost)));
+    var brPost = q('#app [data-act="like"]'); telas.push(semCurtir() && !!brPost);
+    check('na degustação aberta, o botão também diz Brindar, com o estado no aria-pressed', !!brPost && /^Brindar/.test(txt(brPost)) && brPost.getAttribute('aria-pressed') === 'true');
     S.view = 'home'; S.tab = 'conta'; __t.render(); await wait(60); telas.push(semCurtir() && /Sair ou excluir/.test(txt(q('#app'))));
     var dSess = Object.assign({}, VIVA, { id: 'ui-fecha', visibility: 'club', thirds: TERCOS() });
     __t.sessao(dSess); S.step = 3; __t.render(); await wait(80); telas.push(semCurtir() && /Compartilhar no clube/.test(txt(q('#app'))));
@@ -301,7 +356,7 @@
     if (apiAntes && __t.setClubApi) __t.setClubApi(apiAntes);
     C.sb = bkC.sb; C.user = bkC.user; C.profile = bkC.profile; C.profileChecked = bkC.checked; C.me = bkC.me; C.clubMissing = bkC.missing;
     C.feed = bkC.feed; C.likes = bkC.likes; C.comments = bkC.comments; C.feedAt = bkC.feedAt; C.membros = bkC.membros; C.configured = bkC.configured;
-    C.authMode = bkC.authMode; C.ownerMismatch = bkC.mismatch; C.club = bkC.club;
+    C.authMode = bkC.authMode; C.ownerMismatch = bkC.mismatch; C.club = bkC.club; C.feedError = bkC.feedError;
     S.cigars = bk.c; S.sessions = bk.s; S.tab = bk.tab; S.view = bk.view; S.step = bk.step; S.proximaMissao = bk.missao; S.contaSec = bk.sec; S.msgVisto = bk.visto;
     var t = q('#toast'); if (t) t.hidden = true;
     __t.render(); await wait(80);
