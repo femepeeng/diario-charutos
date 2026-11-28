@@ -440,7 +440,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
 'use strict';
 var APP_ID='diario-degustacao', BACKUP_VERSION=1;
 /* Versão do app: atualize a cada publicação no GitHub (MAIOR.MENOR.CORREÇÃO). */
-var APP_VERSION='2.12.1', APP_BUILD='28/11/2026';
+var APP_VERSION='2.13.0', APP_BUILD='28/11/2026';
 /* @pure:base */
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 /* @end:base */
@@ -1247,11 +1247,12 @@ var MOMENTS=['Pós-almoço','Entardecer','Fim de noite'];
 var DRINKS=['Café','Água de coco','Caipirinha','Whisky','Rum','Cachaça envelhecida','Água','Outra'];
 var CAMERA_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>';
 var GALLERY_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M20.5 16l-5-5-8 8.5"></path></svg>';
-var HEART_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>';
+/* Brindar (2.13.0): duas taças no lugar do antigo coração. Os dados continuam em reactions e cloud.likes. */
+var CHEERS_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(-14 8 12)"><path d="M5 5h6l-.7 5.3A2.3 2.3 0 0 1 8 12.4a2.3 2.3 0 0 1-2.3-2.1z"></path><path d="M8 12.4V19M6 19h4"></path></g><g transform="rotate(14 16 12)"><path d="M13 5h6l-.7 5.3a2.3 2.3 0 0 1-2.3 2.1 2.3 2.3 0 0 1-2.3-2.1z"></path><path d="M16 12.4V19M14 19h4"></path></g><path d="M12 1.5v1.8M9.8 2.4l.9 1.2M14.2 2.4l-.9 1.2"></path></svg>';
 var CROWN_ICON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17.5 3 8l5 4 4-7 4 7 5-4-1 9.5z"></path><path d="M5 20.5h14"></path></svg>';
 var CHAT_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>';
 var TERMS_HTML='<p>O Clube é um grupo privado, por convite, para maiores de 18 anos registrarem e compartilharem degustações de charutos.</p>'+
-  '<p>Para o app funcionar guardamos no Supabase: seu nome de exibição, e-mail, senha (criptografada pelo Supabase), sessões, curtidas, comentários e fotos de anilhas. Sessões marcadas como "Só eu" não aparecem para outros membros.</p>'+
+  '<p>Para o app funcionar guardamos no Supabase: seu nome de exibição, e-mail, senha (criptografada pelo Supabase), sessões, brindes, comentários e fotos de anilhas. Sessões marcadas como "Só eu" não aparecem para outros membros.</p>'+
   '<p>Pelo app, o administrador vê de cada membro: nome, data de entrada, convite usado, último acesso e quantas sessões foram compartilhadas com o clube. Ele não vê pelo app o seu e-mail nem as sessões marcadas como "Só eu". As mensagens trocadas com a administração ficam guardadas no clube até a exclusão da sua conta.</p>'+
   '<p>Não é permitido anunciar, vender, divulgar preços, lojas ou links de compra de produtos de tabaco.</p>'+
   '<p>Você pode excluir sua conta e todos os seus dados do clube a qualquer momento em Conta › Perfil › Excluir minha conta. O diário guardado no seu celular continua com você.</p>'+
@@ -1885,12 +1886,12 @@ function inicioPostHtml(it){var name=(it.profiles&&it.profiles.display_name)||'M
   return '<article class="ipost"><div class="ptop"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="nm"><b>'+esc(name)+'</b><span>'+esc(relTime(it.ended_at||it.started_at))+'</span></div>'+
     (it.rating!=null?'<span class="pnota"><span class="sr">Nota </span>'+numStr(Number(it.rating))+'<small>/10</small></span>':'')+'</div>'+
     '<div class="pcig">'+esc(it.cigar_name)+'</div>'+(notes.length?'<div class="tags">'+notes.map(noteChip).join('')+'</div>':'')+
-    '<div class="iacts"><button type="button" class="iact" data-act="like" data-id="'+esc(it.uid)+'" aria-pressed="'+mine+'" aria-label="'+(mine?'Remover brinde':'Brindar')+' ('+likes.length+')">'+HEART_ICON+'Brindar <span class="n">'+likes.length+'</span></button>'+
+    '<div class="iacts"><button type="button" class="iact" data-act="like" data-id="'+esc(it.uid)+'" aria-pressed="'+mine+'" aria-label="'+(mine?'Remover brinde':'Brindar')+' ('+likes.length+')">'+CHEERS_ICON+'Brindar <span class="n">'+likes.length+'</span></button>'+
     '<button type="button" class="iact" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'Comentários <span class="n">'+cms.length+'</span></button></div></article>';}
 /* Clube na Início: só com o clube configurado. Convite sem login; uma linha para suspenso; para membro, atalhos, aviso e as 2 últimas degustações. */
 function clubeInicioHtml(){if(!cloud.configured)return '';
   if(!isMember())return '<section class="iconvite" aria-labelledby="cv-t"><div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cv-t">Clube do Diário</h2><span>Grupo fechado, por convite, para maiores de 18 anos</span></div></div>'+
-    '<ul><li>'+PESSOAS_ICON+'Compartilhe suas degustações com os amigos</li><li>'+FUMACA_ICON+'Veja quem está fumando agora</li><li>'+HEART_ICON+'Brinde, comente e troque mensagens</li></ul>'+
+    '<ul><li>'+PESSOAS_ICON+'Compartilhe suas degustações com os amigos</li><li>'+FUMACA_ICON+'Veja quem está fumando agora</li><li>'+CHEERS_ICON+'Brinde, comente e troque mensagens</li></ul>'+
     '<div class="row"><button type="button" class="btn primary" data-act="inicio-clube" data-v="criar">Entrar com convite</button><button type="button" class="btn ghost" data-act="inicio-clube" data-v="entrar">Já tenho conta</button></div></section>';
   function cab(sub,verTudo){return '<div class="isec-h"><span class="ico">'+CROWN_ICON+'</span><div class="tt"><h2 id="cl-t">Clube</h2>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>'+
     (verTudo?'<button type="button" class="ilink" data-act="tab" data-id="clube">Ver tudo'+SETA_ICON+'</button>':'')+'</div>';}
@@ -1978,7 +1979,7 @@ function postCard(it){
   if(key&&photoURL[key])h+=bandImg(key,'','Anilha do '+it.cigar_name);
   if(notes.length)h+='<div class="tags">'+notes.map(noteChip).join('')+'</div>';
   if(it.comment)h+='<p class="meta">“'+esc(it.comment.length>180?it.comment.slice(0,180)+'…':it.comment)+'”</p>';
-  h+='<div class="row"><button class="btn small like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'" aria-label="'+(mine?'Remover curtida':'Curtir')+'">'+HEART_ICON+'<span class="num">'+likes.length+'</span></button><button class="btn small ghost" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'<span class="num">'+cms.length+'</span> comentários</button></div></article>';
+  h+='<div class="row"><button class="btn small like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'" aria-label="'+(mine?'Remover brinde':'Brindar')+' ('+likes.length+')">'+CHEERS_ICON+'Brindar <span class="num">'+likes.length+'</span></button><button class="btn small ghost" data-act="post" data-id="'+esc(it.uid)+'">'+CHAT_ICON+'<span class="num">'+cms.length+'</span> comentários</button></div></article>';
   return h;
 }
 function viewClube(){
@@ -2212,7 +2213,7 @@ function memberPanel(){
   else if(p.is_admin){
     if(cloud.clubMissing)h+='<div class="alert err"><b>Atualização do banco pendente</b><span>Falta aplicar a atualização do banco (supabase-clube-fase2.sql) no SQL Editor do Supabase. Até lá, só os convites funcionam.</span></div>';
     h+='<div class="panel"><h3>Convidar amigos</h3><p class="muted">Cada link vale para até 10 pessoas. Mande só para quem você quer no clube.</p>'+inviteLinkHtml()+'</div>';}
-  h+='<div class="panel"><h3>Sair ou excluir</h3><p class="muted">Ao sair, o diário continua neste celular. Ao excluir a conta, suas sessões, curtidas, comentários e fotos são apagados do clube.</p>';
+  h+='<div class="panel"><h3>Sair ou excluir</h3><p class="muted">Ao sair, o diário continua neste celular. Ao excluir a conta, suas sessões, brindes, comentários e fotos são apagados do clube.</p>';
   if(state.confirm==='delete')h+='<div class="alert err"><b>Excluir sua conta do clube?</b><span>Não dá para desfazer. O diário deste celular é mantido.</span><div class="row" style="margin-top:8px"><button class="btn danger" data-act="deleteaccount"'+(cloud.authBusy?' disabled':'')+'>Excluir definitivamente</button><button class="btn ghost" data-act="cancelconfirm">Cancelar</button></div></div>';
   else h+='<div class="row"><button class="btn" data-act="signout">Sair</button><button class="btn danger" data-act="askconfirm" data-id="delete">Excluir minha conta</button></div>';
   return h+'</div>';
@@ -2312,7 +2313,7 @@ function viewSession(){
     h+='<fieldset><legend>Nota geral</legend><div class="rating"><b class="num" id="ratingOut">'+(typeof s.rating==='number'?numStr(s.rating):'—')+'</b><span class="muted">de 10</span></div><input type="range" id="rating" min="0" max="10" step="0.5" value="'+(typeof s.rating==='number'?s.rating:7)+'" data-input="rating" aria-label="Nota geral de 0 a 10"></fieldset>'+
       '<fieldset><legend>Recompraria?</legend>'+optBtns('rebuy',['Sim','Talvez','Não'],s.rebuy)+'<p class="hint" id="coh-hint"'+(cohMsg(s)?'':' hidden')+'>'+cohMsg(s)+'</p></fieldset>'+
       '<label class="f" for="s-comment">Impressão final<textarea id="s-comment" data-input="comment" placeholder="ex.: cremoso do início ao fim; casou muito bem com o bourbon">'+esc(s.comment)+'</textarea></label>';
-    if(cloud.configured)h+='<fieldset><legend>Compartilhar no clube</legend><div class="opts"><button type="button" class="opt" aria-pressed="'+(vis==='club')+'" data-act="vis" data-val="club">Clube</button><button type="button" class="opt" aria-pressed="'+(vis==='private')+'" data-act="vis" data-val="private">Só eu</button></div><p class="faint" style="font-size:13px">'+(vis==='club'?'Ao encerrar, os membros do clube veem esta sessão, a foto da anilha e podem curtir e comentar.':'Fica só no seu diário. Ninguém do clube vê.')+'</p></fieldset>';
+    if(cloud.configured)h+='<fieldset><legend>Compartilhar no clube</legend><div class="opts"><button type="button" class="opt" aria-pressed="'+(vis==='club')+'" data-act="vis" data-val="club">Clube</button><button type="button" class="opt" aria-pressed="'+(vis==='private')+'" data-act="vis" data-val="private">Só eu</button></div><p class="faint" style="font-size:13px">'+(vis==='club'?'Ao encerrar, os membros do clube veem esta sessão, a foto da anilha e podem brindar e comentar.':'Fica só no seu diário. Ninguém do clube vê.')+'</p></fieldset>';
     h+=(editing?'<div class="row"><button class="btn primary" data-act="finish">Salvar alterações</button></div></div>':'<div class="row"><button class="btn primary" data-act="finish">Encerrar e salvar sessão</button><button class="btn ghost" data-act="home">Salvar e continuar depois</button></div></div>');
   }
   return h;
@@ -2331,7 +2332,7 @@ function viewDetail(){
   if(s.bandId&&photoURL[s.bandId])h+=bandImg(s.bandId,'','Anilha do '+s.cigarName);
   h+='<div class="row" style="justify-content:space-between"><div class="rating"><b class="num">'+(typeof s.rating==='number'?numStr(s.rating):'—')+'</b><span class="muted">de 10</span></div>'+(s.rebuy?'<span class="chip">Recompraria: '+esc(s.rebuy)+'</span>':'')+'</div>';
   if(cloud.configured){var post=null;if(isMember())for(var i=0;i<cloud.feed.length;i++){var it=cloud.feed[i];if(it.owner_id===cloud.user.id&&it.local_id===s.id){post=it;break;}}
-    h+='<div class="row"><span class="badge">'+(s.visibility==='private'?'Só no seu diário':'Compartilhada com o clube')+'</span>'+(post?'<button class="btn small" data-act="post" data-id="'+esc(post.uid)+'">'+HEART_ICON+(cloud.likes[post.uid]||[]).length+' · '+CHAT_ICON+(cloud.comments[post.uid]||[]).length+' · ver no clube</button>':'')+'</div>';}
+    h+='<div class="row"><span class="badge">'+(s.visibility==='private'?'Só no seu diário':'Compartilhada com o clube')+'</span>'+(post?'<button class="btn small" data-act="post" data-id="'+esc(post.uid)+'">'+CHEERS_ICON+(cloud.likes[post.uid]||[]).length+' · '+CHAT_ICON+(cloud.comments[post.uid]||[]).length+' · ver no clube</button>':'')+'</div>';}
   var lc=s.cigarId&&cigarById(s.cigarId);
   if(s.mission&&famById(s.mission))h+='<div class="mission'+(missionDone(s)?' done':'')+'"><b>'+(missionDone(s)?'Missão cumprida: ':'Missão não cumprida: ')+esc(famById(s.mission).label)+'</b></div>';
   h+='<details class="terms panel"><summary>Ficha do charuto</summary><div>'+fichaHtml(lc,s.cigarName)+'</div></details>';
@@ -2350,7 +2351,7 @@ function viewPost(){
   var h='<header class="top"><button class="btn small ghost" style="align-self:flex-start" data-act="backclube">Voltar ao clube</button><div class="phead"><span class="avatar" aria-hidden="true">'+initials(name)+'</span><div class="who"><b>'+esc(name)+'</b><div class="meta">'+esc(fmtDateTime(it.ended_at||it.started_at))+'</div></div></div><h1 style="font-size:34px">'+esc(it.cigar_name)+'</h1><p class="muted">'+esc([it.moment,it.drink,it.duration_min?it.duration_min+' min':''].filter(Boolean).join(' · '))+'</p></header>';
   if(key&&photoURL[key])h+=bandImg(key,'','Anilha do '+it.cigar_name);
   h+='<div class="row" style="justify-content:space-between"><div class="rating"><b class="num">'+(it.rating!=null?numStr(Number(it.rating)):'—')+'</b><span class="muted">de 10</span></div>'+(it.rebuy?'<span class="chip">Recompraria: '+esc(it.rebuy)+'</span>':'')+'</div>';
-  h+='<div class="row"><button class="btn like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'">'+HEART_ICON+(mine?'Curtido':'Curtir')+' · <span class="num">'+likes.length+'</span></button></div>';
+  h+='<div class="row"><button class="btn like" aria-pressed="'+mine+'" data-act="like" data-id="'+esc(it.uid)+'">'+CHEERS_ICON+(mine?'Brindou':'Brindar')+' · <span class="num">'+likes.length+'</span></button></div>';
   h+=profileHtml(it.thirds)+factsHtml(it);
   if(it.comment)h+='<div class="panel"><span class="eyebrow">Impressão final</span><p>'+esc(it.comment)+'</p></div>';
   h+='<div><h2 style="margin-bottom:12px">Comentários</h2><div class="comments">';
@@ -2434,7 +2435,8 @@ function rodaFocoDepois(fz){if(!fz)return;var el;
   /* Chip tirado: o próximo chip; sem chip, a roda (nunca a busca, que abriria o teclado do celular). */
   if(!el&&fz.area==='roda-sel')el=document.querySelector('#roda-sel [data-act="note"]')||document.querySelector('#roda [data-act]');
   if(el)el.focus({preventScroll:true});}
-function leaveSession(){flush();draft=null;releaseWake();state.view='home';state.tab='acervo';render();window.scrollTo(0,0);}
+/* O botão "Início" da sessão volta para a Início, onde o herói mostra a sessão em andamento (2.13.0; antes ia para o Acervo). */
+function leaveSession(){flush();draft=null;releaseWake();state.view='home';state.tab='inicio';render();window.scrollTo(0,0);}
 function startTick(){stopTick();tick=setInterval(updateClock,1000);updateClock();}
 function stopTick(){if(tick){clearInterval(tick);tick=null;}}
 function updateClock(){if(!draft||draft.status==='concluida')return;var ms=elapsed(draft),c=document.getElementById('clock'),r=document.getElementById('ring');if(c)c.textContent=fmtClock(ms);if(r)r.setAttribute('stroke-dashoffset',String(100.53*(1-((ms/1000)%60)/60)));}

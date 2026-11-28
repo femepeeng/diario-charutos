@@ -154,6 +154,8 @@
     click(q('.heroi [data-act="inicio-encerrar"]')); await wait(150);
     var de = __t.sessao();
     check('Encerrar entra na sessão no Fechamento', S.view === 'session' && !!de && de.id === 'ui-viva' && S.step === 3);
+    click(q('.sbar [data-act="home"]')); await wait(120);
+    check('o botão Início da sessão volta para a Início, com o herói da sessão', S.view === 'home' && S.tab === 'inicio' && !__t.sessao() && !!q('#heroi-relogio'));
     __t.sessao(null); S.tab = 'inicio'; S.view = 'home'; __t.render(); await wait(60);
 
     // ---- Diário vazio ----
@@ -228,6 +230,31 @@
     C.configured = false; __t.render(); await wait(60);
     check('clube não configurado: sem a seção', !q('.iclube') && !q('.iconvite'));
     C.configured = bkC.configured;
+
+    // ---- Brindar (Task 5): textos e ícone em todas as telas do clube, com o clube falso ----
+    var CURT = /curtir|curtid/i, CORACAO = 'M12 20s-7-4.4-7-10';
+    var semCurtir = function () { var t = document.body.textContent, al = qa('[aria-label]').map(function (e) { return e.getAttribute('aria-label'); }).join(' | ');
+      return !CURT.test(t) && !CURT.test(al) && document.body.innerHTML.indexOf(CORACAO) < 0; };
+    var rotuloBrinde = function (b) { return !!b && /Brindar/.test(txt(b)) && /^(Brindar|Remover brinde)\b/.test(b.getAttribute('aria-label') || ''); };
+    membro({ is_admin: false, suspended: false, unread_msgs: 0, aviso: null });
+    C.membros = 8; C.feed = FEED.slice(); C.likes = { 'ui-p1': ['UI-EU'] }; C.comments = {};
+    S.cigars = CIG.slice(); S.sessions = [FEITA]; S.tab = 'inicio'; S.view = 'home'; __t.render(); await wait(60);
+    var brIni = qa('.iclube [data-act="like"]'), telas = [semCurtir()];
+    S.tab = 'clube'; __t.render(); await wait(60);
+    var brFeed = qa('#app .card [data-act="like"]'); telas.push(semCurtir());
+    check('no feed e na Início, o botão diz Brindar e o rótulo acessível diz Brindar ou Remover brinde',
+      brIni.length === 2 && brIni.every(rotuloBrinde) && brFeed.length === 3 && brFeed.every(rotuloBrinde) &&
+      /^Remover brinde/.test(brFeed[0].getAttribute('aria-label')) && /^Brindar/.test(brFeed[1].getAttribute('aria-label')));
+    click(q('#app [data-act="post"][data-id="ui-p1"]')); await wait(80);
+    var brPost = q('#app [data-act="like"]'); telas.push(semCurtir() && !!brPost && /Brind/.test(txt(brPost)));
+    S.view = 'home'; S.tab = 'conta'; __t.render(); await wait(60); telas.push(semCurtir() && /Sair ou excluir/.test(txt(q('#app'))));
+    var dSess = Object.assign({}, VIVA, { id: 'ui-fecha', visibility: 'club', thirds: TERCOS() });
+    __t.sessao(dSess); S.step = 3; __t.render(); await wait(80); telas.push(semCurtir() && /Compartilhar no clube/.test(txt(q('#app'))));
+    __t.sessao(null);
+    C.user = null; C.profile = null; C.me = null; C.authMode = 'criar'; S.tab = 'conta'; S.view = 'home'; __t.render(); await wait(60);
+    telas.push(semCurtir() && /Regras do clube/.test(txt(q('#app'))));
+    check('nenhum "curtir" ou "curtida" sobra no app (Início, Clube, degustação, Perfil, Fechamento e Termos)', telas.length === 6 && telas.every(Boolean));
+    C.authMode = bkC.authMode; S.tab = 'inicio';
 
     // ---- Largura ----
     membro({ is_admin: false, suspended: false, unread_msgs: 12, aviso: { id: 'av-ui2', body: 'Aviso com uma palavra longuíssima: Supercalifragilisticexpialidocious-e-mais-um-pouco.', created_at: iso(5) } });
