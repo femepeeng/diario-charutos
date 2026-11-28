@@ -24,7 +24,7 @@ function fonte(nome) {
 }
 /* Função que ainda não existe vira um comentário: o teste dela falha sozinho, sem derrubar o arquivo. */
 const APP = ['put', 'saveErr', 'pedById', 'pedGuardar', 'wipeLocalForAccount', 'clone', 'cigarById', 'upsertState', 'sortAll', 'uid',
-  'enviadosHtml', 'flush', 'finishSaved'].map(n => { try { return fonte(n); } catch (e) { return '/* ' + n + ' ausente */'; } }).join('\n');
+  'enviadosHtml', 'flush', 'finishSaved', 'newSession', 'iniciarSessao', 'openSession'].map(n => { try { return fonte(n); } catch (e) { return '/* ' + n + ' ausente */'; } }).join('\n');
 const DUBLES = `
 var T = { toasts: [], renders: 0, persisted: 0, loads: 0, writes: [], lsMap: {} };
 var state = { cigars: [], sessions: [], confirm: '', pedOpen: null };
@@ -41,7 +41,10 @@ function clearStore() { return Promise.resolve(); }
 function loadAll() { T.loads++; return OPT.loadAll ? OPT.loadAll() : Promise.resolve(); }
 var draft = null, saveTimer = null, sessionSaver = function (d) { return put('sessions', d); };
 function clearTimeout() {}
-T.anuncios = [];
+T.anuncios = []; T.entradas = [];
+function enterSession(s) { T.entradas.push(s); }
+function pickMission() { return 'terra'; }
+function lastMoment() { return ''; }
 function journey() { return { sessoes: state.sessions.length }; }
 function announce(antes, depois) { T.anuncios.push([antes, depois]); }
 `;
@@ -173,6 +176,36 @@ test('fim de sessão gravada: anuncia o que a sessão rendeu depois de "salva"; 
   assert.deepStrictEqual(plain(sb.T.anuncios[0]), [{ sessoes: 0 }, { sessoes: 1 }]);
   await sb.finishSaved(true, { sessoes: 1 }); await flush();
   assert.strictEqual(sb.T.anuncios.length, 1, 'anunciou numa edição');
+});
+
+// ---- 2.13.0: iniciar sessão pela Início ----
+test('iniciarSessao grava pelo sessionSaver, com o momento pedido, e entra na sessão', async () => {
+  const sb = app(() => Promise.resolve());
+  assert.strictEqual(typeof sb.iniciarSessao, 'function', 'iniciarSessao não encontrada');
+  const gravadas = []; sb.sessionSaver = d => { gravadas.push(d); return Promise.resolve(true); };
+  const s = sb.iniciarSessao({ id: 'k1', name: 'Cohiba Siglo II' }, { moment: 'Fim de noite' });
+  assert.ok(s && s.cigarName === 'Cohiba Siglo II' && s.moment === 'Fim de noite', JSON.stringify(s));
+  assert.strictEqual(gravadas.length, 1, 'não gravou pelo sessionSaver');
+  assert.strictEqual(sb.T.entradas.length, 1, 'não entrou na sessão');
+});
+test('iniciarSessao usa a missão já mostrada na Início e depois a esquece', async () => {
+  const sb = app(() => Promise.resolve());
+  assert.strictEqual(typeof sb.iniciarSessao, 'function', 'iniciarSessao não encontrada');
+  sb.sessionSaver = () => Promise.resolve(true); sb.state.proximaMissao = 'flor';
+  const s = sb.iniciarSessao({ id: 'k1', name: 'Cohiba Siglo II' }, {});
+  assert.strictEqual(s.mission, 'flor');
+  assert.strictEqual(sb.state.proximaMissao, null);
+  const s2 = sb.iniciarSessao({ id: '', name: 'Avulso' }, {});
+  assert.strictEqual(s2.mission, '', 'a sessão avulsa ganhou missão');
+});
+test('com sessão aberta, iniciarSessao avisa e não cria', async () => {
+  const sb = app(() => Promise.resolve());
+  assert.strictEqual(typeof sb.iniciarSessao, 'function', 'iniciarSessao não encontrada');
+  const gravadas = []; sb.sessionSaver = d => { gravadas.push(d); return Promise.resolve(true); };
+  sb.state.sessions = [{ id: 'x', status: 'aberta', cigarName: 'Aberta' }];
+  assert.strictEqual(sb.iniciarSessao({ id: 'k1', name: 'Outro' }, {}), null);
+  assert.strictEqual(gravadas.length, 0);
+  assert.strictEqual(sb.T.toasts[sb.T.toasts.length - 1], 'Termine ou retome a sessão em andamento primeiro.');
 });
 
 // ---- Troca de conta ----

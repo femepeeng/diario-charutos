@@ -247,6 +247,30 @@ legend{font-weight:600; font-size:15px; padding:0; margin-bottom:10px}
 .rsel .lbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
 .opt .x{font-family:var(--f-mono); color:var(--faint); margin-left:2px}
 .rsel .opt, #sabor-res .opt{min-height:44px}
+/* Início (2.13.0): botão de acender e folha "Iniciar sessão", que sobe do pé da tela por cima de tudo. */
+.acender{width:100%; min-height:56px; border:0; border-radius:16px; background:var(--ember); color:var(--ember-ink); font-weight:700; font-size:18px; display:flex; align-items:center; justify-content:center; gap:10px}
+.acender:disabled{opacity:.5; cursor:default}
+.ifscrim{position:fixed; inset:0; z-index:40; background:rgba(8,5,3,.62)}
+.ifsheet{position:fixed; left:0; right:0; bottom:0; z-index:41; max-height:90vh; overflow-y:auto; background:var(--surface); border-radius:22px 22px 0 0; border-top:1.5px solid var(--line);
+  padding:10px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))}
+.ifin{max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:14px}
+.ifin .grab{width:40px; height:5px; border-radius:999px; background:var(--line); margin:0 auto 2px}
+.ifhead{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.ifx{width:44px; height:44px; border-radius:12px; border:1.5px solid var(--line); background:transparent; display:inline-flex; align-items:center; justify-content:center}
+.ifseg{display:flex; gap:4px; padding:3px; border-radius:12px; background:var(--bg); border:1px solid var(--line)}
+.ifseg button{flex:1 1 0; min-height:44px; border:0; border-radius:9px; background:transparent; color:var(--muted); font-weight:600; font-size:14px}
+.ifseg button[aria-pressed="true"]{background:var(--surface2); color:var(--fg)}
+.iflista{display:flex; flex-direction:column; gap:8px}
+.ifopt{width:100%; min-height:56px; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:14px; border:1.5px solid var(--line); background:var(--bg); text-align:left; color:var(--fg)}
+.ifopt[aria-pressed="true"]{border-color:var(--ember)}
+.ifradio{width:22px; height:22px; border-radius:50%; border:2px solid var(--line); flex:none; display:inline-flex; align-items:center; justify-content:center}
+.ifopt[aria-pressed="true"] .ifradio{border-color:var(--ember)}
+.ifopt[aria-pressed="true"] .ifradio::after{content:""; width:10px; height:10px; border-radius:50%; background:var(--ember)}
+.iftxt{flex:1; min-width:0; display:flex; flex-direction:column}
+.iftxt b{overflow-wrap:anywhere}
+.iftxt span{font-size:13px; color:var(--muted)}
+.iflbl{font-size:12px; font-family:var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.ifin .opt{min-height:44px}
 .seg{display:flex; gap:6px}
 .seg button{flex:1; min-height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface); font-family:var(--f-mono); font-size:16px}
 .seg button[aria-pressed="true"]{background:var(--ember); border-color:var(--ember); color:var(--ember-ink)}
@@ -339,6 +363,7 @@ details.lesson summary{display:flex; justify-content:space-between; gap:10px}
     <p class="mode">Carregando seus registros…</p>
   </header>
 </div>
+<div id="inicio-folha"></div>
 <div class="toast" id="toast" hidden></div>
 <script src="config.js"></script>
 <script src="supabase.js"></script>
@@ -1749,7 +1774,7 @@ function welcomeHtml(){
   return '<div class="panel gwelcome"><h3>Comece seu diário</h3><p class="muted">Cadastre o primeiro charuto do seu acervo ou importe um backup de outro aparelho.'+(cloud.configured&&!isMember()?' Já é do clube? Toque na coroa no alto para entrar e trazer seus registros.':'')+'</p>'+
     '<div class="row"><button class="btn primary" data-act="novo-charuto">Adicionar primeiro charuto</button>'+(busy.importing?'<span class="muted">Importando…</span>':importButton(false))+'</div></div>';}
 function viewInicio(){
-  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=avisoBanner()+welcomeHtml()+'<section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
+  var d=guideOfDay(new Date()),n=GUIDE.length,dots='',h=avisoBanner()+welcomeHtml()+'<section class="heroi" aria-label="Sessão"><button type="button" class="acender" data-act="inicio-abrir">'+CHAMA_ICON+'Iniciar sessão</button></section><section class="ginicio" aria-label="Guia de bolso"><div class="ghead"><div class="eyebrow">Guia de bolso</div><span class="faint gcount">'+n+' tópicos · deslize</span></div><div class="gcar">';
   for(var k=0;k<n;k++){var i=(d+k)%n,g=GUIDE[i],tool=GUIDE_TOOL[i];
     h+='<button class="gcard'+(k===0?' today':'')+'" data-act="guia" data-id="'+i+'"><span class="gtags">'+(k===0?'<span class="gtag hot">Dica do dia</span>':'')+(tool?'<span class="gtag">Ferramenta</span>':'')+'</span><span class="gico">'+GUIDE_ICONS[i]+'</span><span class="gtitle">'+esc(g[0])+'</span><span class="grule">'+esc(g[2])+'</span><span class="gmore">'+(tool?'Abrir e usar a ferramenta':'Ler o tópico')+'</span></button>';
     dots+='<i'+(k===0?' class="on"':'')+'></i>';}
@@ -2195,10 +2220,42 @@ function viewPost(){
 /* ---------- ciclo da sessão ---------- */
 function lastMoment(){var d=done();return d.length?(d[0].moment||''):'';}
 function newSession(c){
-  return {id:uid(),cigarId:c.id,cigarName:c.name,status:'aberta',visibility:'club',createdAt:new Date().toISOString(),moment:c.id?lastMoment():'',drink:'',mission:c.id?pickMission():'',
+  /* Missão: a que a Início já mostrou (state.proximaMissao), ou uma sorteada agora; usada, a próxima é sorteada de novo. */
+  var m='';if(c.id){m=state.proximaMissao||pickMission();state.proximaMissao=null;}
+  return {id:uid(),cigarId:c.id,cigarName:c.name,status:'aberta',visibility:'club',createdAt:new Date().toISOString(),moment:c.id?lastMoment():'',drink:'',mission:m,
     thirds:[{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''},{notes:[],intensity:0,text:''}],
     strength:0,burn:'',draw:'',feel:'',rating:null,rebuy:'',comment:'',timer:{acc:0,running:true,resumedAt:Date.now()},durationMin:0};
 }
+/* Começa a sessão (folha da Início e cartão do Acervo). A gravação inicial passa pelo sessionSaver, que o teste de interface troca. */
+function iniciarSessao(c,opts){opts=opts||{};if(!c)return null;
+  if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return null;}
+  var s=newSession(c);if(opts.moment)s.moment=opts.moment;sessionSaver(s);enterSession(s);return s;}
+/* ---------- Início: folha "Iniciar sessão" (2.13.0), desenhada em #inicio-folha, fora do #app ---------- */
+var CHAMA_ICON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a6 6 0 0 0 6-6c0-4-3-5.5-4-9-2 1.5-3 3.5-3 5.5-1-.5-1.6-1.5-1.8-2.5C7.5 10.5 6 12.5 6 15a6 6 0 0 0 6 6z"></path></svg>';
+var FECHAR_ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>';
+function inicioListaHtml(lista,aba){
+  if(!lista.length)return '<p class="faint" style="font-size:14px">'+(aba==='estoque'?'Nada no estoque. Veja o Acervo ou use Avulso.':'Nenhum charuto com esse nome.')+'</p>';
+  return lista.map(function(c){var on=state.inicioEscolha===c.id;
+    return '<button type="button" class="ifopt" data-act="inicio-escolher" data-id="'+esc(c.id)+'" aria-pressed="'+on+'"><span class="ifradio" aria-hidden="true"></span><span class="iftxt"><b>'+esc(c.name)+'</b>'+(c.meta?'<span>'+esc(c.meta)+'</span>':'')+'</span></button>';}).join('');}
+function inicioPodeComecar(){return state.inicioAba==='avulso'?!!String(state.inicioAvulso||'').trim():!!(state.inicioEscolha&&cigarById(state.inicioEscolha));}
+function folhaInicioHtml(){var aba=state.inicioAba||'estoque',nE=inicioCharutos(state.cigars,'estoque','').length;
+  var h='<div class="ifscrim" data-act="inicio-fechar"></div><div class="ifsheet" role="dialog" aria-modal="true" aria-labelledby="if-t"><div class="ifin"><div class="grab" aria-hidden="true"></div>'+
+    '<div class="ifhead"><h2 id="if-t">Iniciar sessão</h2><button type="button" class="ifx" data-act="inicio-fechar" aria-label="Fechar">'+FECHAR_ICON+'</button></div>'+
+    '<div class="ifseg" role="group" aria-label="De onde vem o charuto">'+[['estoque','Estoque · '+nE],['acervo','Acervo'],['avulso','Avulso']].map(function(t){
+      return '<button type="button" data-act="inicio-aba" data-v="'+t[0]+'" aria-pressed="'+(aba===t[0])+'">'+t[1]+'</button>';}).join('')+'</div>';
+  if(aba==='avulso')h+='<label class="f" for="inicio-avulso">Nome do charuto<input type="text" id="inicio-avulso" value="'+esc(state.inicioAvulso||'')+'" placeholder="ex.: Robusto que ganhei" autocomplete="off" maxlength="120"></label>';
+  else{if(aba==='acervo')h+='<input type="search" id="inicio-busca" value="'+esc(state.inicioBusca||'')+'" placeholder="Buscar no acervo" aria-label="Buscar no acervo" autocomplete="off">';
+    h+='<div class="iflista" id="inicio-lista">'+inicioListaHtml(inicioCharutos(state.cigars,aba,state.inicioBusca),aba)+'</div>';}
+  h+='<span class="iflbl">Momento</span><div class="opts">'+MOMENTS.map(function(m){
+    return '<button type="button" class="opt" data-act="inicio-momento" data-v="'+esc(m)+'" aria-pressed="'+(state.inicioMomento===m)+'">'+esc(m)+'</button>';}).join('')+'</div>';
+  return h+'<button type="button" class="acender" data-act="inicio-comecar"'+(inicioPodeComecar()?'':' disabled')+'>'+CHAMA_ICON+'Começar sessão</button></div></div>';}
+function desenharFolha(foco){var el=document.getElementById('inicio-folha');if(!el)return;el.innerHTML=state.inicioFolha?folhaInicioHtml():'';
+  document.body.style.overflow=state.inicioFolha?'hidden':'';if(foco){var f=el.querySelector(foco);if(f)f.focus();}}
+/* Abre a folha; com escolha (a sugestão do herói), o charuto já vem marcado. Ao fechar, o foco volta ao botão do herói. */
+function abrirFolha(escolha){var c=escolha&&cigarById(escolha);state.inicioFolha=true;state.inicioEscolha=c?c.id:null;
+  state.inicioAba=c?(temEstoque(c)?'estoque':'acervo'):abaInicial(state.cigars);state.inicioBusca='';state.inicioAvulso='';state.inicioMomento=lastMoment()||'';
+  desenharFolha('[data-act="inicio-aba"]');}
+function fecharFolha(){state.inicioFolha=false;desenharFolha();var b=document.querySelector('[data-act="inicio-abrir"]');if(b)b.focus();}
 function enterSession(s){draft=clone(s);state.cigarCustom=!(draft.cigarId&&cigarById(draft.cigarId));if(!draft.thirds)draft.thirds=newSession({}).thirds;if(!draft.visibility)draft.visibility='club';state.view='session';state.step=0;rodaReset();render();window.scrollTo(0,0);requestWake();}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,600);}
 /* Gravador da sessão: o teste de interface troca por um falso (__t.setSessionSaver) para marcar notas sem gravar no IndexedDB. */
@@ -2267,7 +2324,14 @@ document.addEventListener('click',function(ev){
     case 'ritmo-per': ritmo.periodo=parseInt(id,10)||45; if(ritmo.on){ritmo.inicio=Date.now();ritmo.ciclo=0;} render(); break;
     case 'ritmo-toggle': if(ritmo.on)ritmoStop();else ritmoStart(); render(); break;
     case 'tab': if(b.hasAttribute('data-hub')){if(msgNaoVista()){id='conta';if(cloud.me.is_admin){cloud.club.sec='mensagens';cloud.club.open=null;}}else id=state.contaSec||'historico';} state.tab=id; state.view='home'; state.confirm=''; render(); if(id==='clube'&&isMember()&&Date.now()-cloud.feedAt>60000)loadFeed(); if(id==='conta'&&isMember())refreshClub(true); break;
-    case 'start': {var c=cigarById(id);if(!c)return;if(openSession()){toast('Termine ou retome a sessão em andamento primeiro.');return;}var s=newSession(c);put('sessions',s);enterSession(s);break;}
+    case 'start': {var c=cigarById(id);if(!c)return;iniciarSessao(c);break;}
+    case 'inicio-abrir': abrirFolha(id); break;
+    case 'inicio-fechar': fecharFolha(); break;
+    case 'inicio-aba': {var ab=b.getAttribute('data-v');state.inicioAba=ab;state.inicioEscolha=null;desenharFolha('[data-act="inicio-aba"][data-v="'+ab+'"]');break;}
+    case 'inicio-escolher': state.inicioEscolha=id; desenharFolha('[data-act="inicio-escolher"][data-id="'+CSS.escape(id)+'"]'); break;
+    case 'inicio-momento': {var mv=b.getAttribute('data-v');state.inicioMomento=state.inicioMomento===mv?'':mv;desenharFolha('[data-act="inicio-momento"][data-v="'+mv+'"]');break;}
+    case 'inicio-comecar': {if(!inicioPodeComecar())break;var cc=state.inicioAba==='avulso'?{id:'',name:String(state.inicioAvulso).trim()}:cigarById(state.inicioEscolha),mo=state.inicioMomento;
+      state.inicioFolha=false;desenharFolha();iniciarSessao(cc,{moment:mo});break;}
     case 'resume': case 'edit': {var s2=sessionById(id);if(s2){state.confirmDelete=false;enterSession(s2);}break;}
     case 'home': if(state.view==='session')leaveSession();else{state.view='home';state.confirmDelete=false;render();window.scrollTo(0,0);} break;
     case 'toggle': {var t=draft.timer;if(t.running){t.acc=(t.acc||0)+(Date.now()-t.resumedAt);t.running=false;t.resumedAt=null;}else{t.running=true;t.resumedAt=Date.now();}flush();render();break;}
@@ -2372,6 +2436,12 @@ document.addEventListener('input',function(ev){var el=ev.target,k=el.getAttribut
   var o=document.getElementById('umid-out');if(o){var r=humidorStatus(state.umid,state.temp);o.textContent=r.texto;o.className='gout '+r.nivel;}});
 /* Rascunhos de mensagem e de aviso: sobrevivem aos redesenhos. */
 document.addEventListener('input',function(ev){var el=ev.target,k=el&&el.getAttribute&&el.getAttribute('data-cin');if(k)cloud.club.drafts[k]=el.value;});
+/* Folha "Iniciar sessão": a busca e o avulso atualizam só a lista e o botão; Esc fecha. */
+document.addEventListener('input',function(ev){var el=ev.target;if(!el||!state.inicioFolha)return;
+  var bc=function(){var b=document.querySelector('[data-act="inicio-comecar"]');if(b)b.disabled=!inicioPodeComecar();};
+  if(el.id==='inicio-busca'){state.inicioBusca=el.value;var l=document.getElementById('inicio-lista');if(l)l.innerHTML=inicioListaHtml(inicioCharutos(state.cigars,'acervo',state.inicioBusca),'acervo');bc();}
+  else if(el.id==='inicio-avulso'){state.inicioAvulso=el.value;bc();}});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&state.inicioFolha){ev.preventDefault();fecharFolha();}});
 /* Busca da roda de sabores: atualiza só a lista, sem render(), para o campo não perder o foco. */
 document.addEventListener('input',function(ev){var el=ev.target;if(!el||!el.hasAttribute||!el.hasAttribute('data-saborq')||!draft)return;
   state.saborQ=el.value;var o=document.getElementById('sabor-res');if(o)o.innerHTML=rodaBuscaHtml(state.saborQ,draft.thirds[state.step].notes);});
