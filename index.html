@@ -548,6 +548,31 @@ function missaoCartao(s){var f=s&&s.mission?famById(s.mission):null;if(!f)return
   return '<div class="mission"><b>Missão de aroma: '+esc(f.label)+'</b><span class="muted">Uma das famílias que você menos marca. Abra '+esc(f.label)+' na roda e procure as '+f.notes.length+' opções ao longo da sessão.</span>'+
     '<div class="row"><button type="button" class="btn" data-act="roda-fam" data-id="'+f.id+'">Abrir na roda</button></div></div>';}
 /* @end:sabores */
+/* @pure:inicio */
+/* Nova Início (2.13.0): lista da folha "Iniciar sessão", progresso do nível e textos do herói. */
+function temEstoque(c){return String(c&&c.status||'').indexOf('estoque')>=0;}
+function inicioMeta(c){var p=[];if(c.origin)p.push(String(c.origin));if(c.strength)p.push('força '+c.strength+'/5');if(c.vitola)p.push(String(c.vitola));return p.join(' · ');}
+/* Estoque: só o que tem estoque. Acervo: todos, filtrados pelo nome sem acento. Ordem do Acervo (order, depois nome). */
+function inicioCharutos(cigars,aba,busca){var q=normSabor(busca||'');
+  var l=(cigars||[]).filter(function(c){if(aba==='estoque')return temEstoque(c);return !q||normSabor(c.name).indexOf(q)>=0;});
+  l.sort(function(a,b){var oa=a.order==null?1e9:a.order,ob=b.order==null?1e9:b.order;if(oa!==ob)return oa-ob;return String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
+  return l.map(function(c){return {id:c.id,name:c.name,meta:inicioMeta(c)};});}
+function abaInicial(cigars){cigars=cigars||[];if(cigars.some(temEstoque))return 'estoque';return cigars.length?'acervo':'avulso';}
+/* j vem de journey(): xp, name, floor e next ([pontos, nome] ou null no último nível). */
+function nivelProgresso(j){var pts=(j&&j.xp)||0,atual=(j&&j.name)||'',nx=j&&j.next;
+  if(!nx)return {atual:atual,proximo:'',pts:pts,alvo:pts,pct:100,faltam:0,max:true};
+  var floor=j.floor||0,alvo=nx[0],pct=alvo>floor?Math.round((pts-floor)/(alvo-floor)*100):100;
+  return {atual:atual,proximo:nx[1],pts:pts,alvo:alvo,pct:Math.max(0,Math.min(100,pct)),faltam:Math.max(0,alvo-pts),max:false};}
+/* Dias de calendário entre a data e agora: hoje, ontem, há N dias (até 29) ou a data. */
+function quandoTexto(iso,agora){var t=Date.parse(iso);if(isNaN(t))return '';var a=new Date(agora),d=new Date(t);
+  var dias=Math.round((new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/86400000);
+  if(dias<=0)return 'hoje';if(dias===1)return 'ontem';if(dias<30)return 'há '+dias+' dias';
+  return 'em '+('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);}
+function ultimaSessaoTexto(sessions,agora){var c=(sessions||[]).filter(function(s){return s&&s.status==='concluida';});if(!c.length)return '';
+  c.sort(function(a,b){return (Date.parse(b.endedAt||b.createdAt)||0)-(Date.parse(a.endedAt||a.createdAt)||0);});
+  var s=c[0],p=[String(s.cigarName||'Charuto')];if(typeof s.rating==='number')p.push('nota '+String(s.rating).replace('.',','));
+  var q=quandoTexto(s.endedAt||s.createdAt,agora);if(q)p.push(q);return 'Última sessão: '+p.join(' · ');}
+/* @end:inicio */
 /* Conhecimento adaptado de "O Guia Definitivo do Charuto" (Johny Oliveira), com trechos contraditórios ou de risco à saúde deixados de fora. */
 var TERROIR=[
   {k:/cuba|cuban|havan/i,t:'Cuba: Vuelta Abajo, Partido e Vuelta Arriba. Tabaco criollo, conhecido pela riqueza de sabor e complexidade.'},
